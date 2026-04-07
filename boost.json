@@ -1,0 +1,22 @@
+{
+    "agents": [
+        "codex",
+        "claude_code"
+    ],
+    "guidelines": true,
+    "mcp": true,
+    "nightwatch_mcp": false,
+    "packages": [
+        "laravel/ai",
+        "laravel/fortify"
+    ],
+    "sail": true,
+    "skills": [
+        "laravel-best-practices",
+        "wayfinder-development",
+        "inertia-react-development",
+        "tailwindcss-development",
+        "ai-sdk-development",
+        "fortify-development"
+    ]
+}
