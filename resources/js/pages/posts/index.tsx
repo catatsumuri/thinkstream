@@ -1,5 +1,7 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { login } from '@/routes';
 
 type Post = {
     id: number;
@@ -10,18 +12,25 @@ type Post = {
 };
 
 export default function Index({ posts }: { posts: Post[] }) {
+    const { auth } = usePage<{ auth: { user: { id: number; name: string } | null } }>().props;
+
     return (
         <>
             <Head title="ThinkStream" />
 
             <div className="min-h-screen bg-background">
                 <header className="border-b">
-                    <div className="mx-auto max-w-3xl px-4 py-6">
+                    <div className="mx-auto max-w-7xl px-4 py-6 flex items-center justify-between">
                         <h1 className="text-2xl font-bold">ThinkStream</h1>
+                        {!auth.user && (
+                            <Link href={login.url()} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                Login
+                            </Link>
+                        )}
                     </div>
                 </header>
 
-                <main className="mx-auto max-w-3xl px-4 py-10">
+                <main className="mx-auto max-w-7xl px-4 py-10">
                     {posts.length === 0 ? (
                         <p className="text-muted-foreground">No posts yet.</p>
                     ) : (
@@ -42,7 +51,7 @@ export default function Index({ posts }: { posts: Post[] }) {
                                         </time>
                                     </header>
                                     <div className="prose prose-neutral dark:prose-invert max-w-none">
-                                        <ReactMarkdown>{post.content}</ReactMarkdown>
+                                        <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
                                     </div>
                                 </article>
                             ))}

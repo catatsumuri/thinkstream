@@ -27,3 +27,5 @@ yarn-error.log
 /.vscode
 /.zed
 testing
+/tests/Browser/Screenshots
+/.playwright-cli

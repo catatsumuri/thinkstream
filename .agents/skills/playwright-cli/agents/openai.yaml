@@ -1,0 +1,7 @@
+interface:
+  display_name: "Playwright CLI"
+  short_description: "Automate a real browser from the terminal with playwright-cli."
+  default_prompt: "Use playwright-cli to inspect and automate the browser session."
+
+policy:
+  allow_implicit_invocation: true
