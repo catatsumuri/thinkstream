@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { Link as LinkIcon } from 'lucide-react';
 import type { Components } from 'react-markdown';
 
 export type Heading = { level: number; text: string; id: string };
@@ -29,18 +30,45 @@ function extractHeadings(content: string, postSlug: string): Heading[] {
     return headings;
 }
 
+function copyAnchorUrl(id: string): void {
+    if (typeof window === 'undefined') {
+        return;
+    }
+
+    const url = new URL(window.location.href);
+    url.hash = id;
+
+    window.history.replaceState(window.history.state, '', url);
+
+    void navigator.clipboard?.writeText(url.toString());
+}
+
 function makeHeadingComponents(postSlug: string): Components {
     const makeTag = (level: number) =>
         function Heading({ children }: { children?: React.ReactNode }) {
             const text = typeof children === 'string' ? children : String(children ?? '');
             const id = `${postSlug}-${slugify(text)}`;
             const Tag = `h${level}` as 'h1' | 'h2' | 'h3';
+
             return (
-                <Tag id={id} className="scroll-mt-6">
-                    {children}
+                <Tag id={id} className="group scroll-mt-6">
+                    <span className="inline-flex items-center gap-2">
+                        {children}
+                        <a
+                            href={`#${id}`}
+                            onClick={() => copyAnchorUrl(id)}
+                            aria-label={`Copy link to ${text}`}
+                            title="Copy link to this section"
+                            data-test={`heading-anchor-${id}`}
+                            className="text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none group-hover:opacity-100"
+                        >
+                            <LinkIcon className="size-4" />
+                        </a>
+                    </span>
                 </Tag>
             );
         };
+
     return { h1: makeTag(1), h2: makeTag(2), h3: makeTag(3) };
 }
 
