@@ -1,0 +1,62 @@
+import { useMemo } from 'react';
+import type { Components } from 'react-markdown';
+
+export type Heading = { level: number; text: string; id: string };
+
+export type TocEntry = {
+    headings: Heading[];
+    components: Components;
+};
+
+function slugify(text: string): string {
+    return text
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, '')
+        .replace(/[\s_]+/g, '-');
+}
+
+function extractHeadings(content: string, postSlug: string): Heading[] {
+    const regex = /^(#{1,3})\s+(.+)$/gm;
+    const headings: Heading[] = [];
+    let match;
+    while ((match = regex.exec(content)) !== null) {
+        headings.push({
+            level: match[1].length,
+            text: match[2].trim(),
+            id: `${postSlug}-${slugify(match[2].trim())}`,
+        });
+    }
+    return headings;
+}
+
+function makeHeadingComponents(postSlug: string): Components {
+    const makeTag = (level: number) =>
+        function Heading({ children }: { children?: React.ReactNode }) {
+            const text = typeof children === 'string' ? children : String(children ?? '');
+            const id = `${postSlug}-${slugify(text)}`;
+            const Tag = `h${level}` as 'h1' | 'h2' | 'h3';
+            return (
+                <Tag id={id} className="scroll-mt-6">
+                    {children}
+                </Tag>
+            );
+        };
+    return { h1: makeTag(1), h2: makeTag(2), h3: makeTag(3) };
+}
+
+/**
+ * Pre-computes TOC headings and custom heading components for a list of markdown posts.
+ * Results are memoized and keyed by post slug.
+ */
+export function useMarkdownToc(posts: Array<{ slug: string; content: string }>): Map<string, TocEntry> {
+    return useMemo(() => {
+        const map = new Map<string, TocEntry>();
+        for (const post of posts) {
+            map.set(post.slug, {
+                headings: extractHeadings(post.content, post.slug),
+                components: makeHeadingComponents(post.slug),
+            });
+        }
+        return map;
+    }, [posts]);
+}
