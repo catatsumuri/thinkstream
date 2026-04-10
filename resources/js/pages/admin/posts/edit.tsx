@@ -39,7 +39,10 @@ export default function Edit({ post }: { post: Post }) {
                     <p className="text-sm text-muted-foreground">{post.slug}</p>
                 </div>
 
-                <Form {...PostController.update.form(post.id)} className="space-y-6">
+                <Form
+                    {...PostController.update.form(post.slug)}
+                    className="space-y-6"
+                >
                     {({ processing, errors }) => (
                         <>
                             <div className="grid gap-2">
@@ -64,7 +67,8 @@ export default function Edit({ post }: { post: Post }) {
                                     required
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    Lowercase letters, numbers, and hyphens only.
+                                    Lowercase letters, numbers, and hyphens
+                                    only.
                                 </p>
                                 <InputError message={errors.slug} />
                             </div>
@@ -76,7 +80,9 @@ export default function Edit({ post }: { post: Post }) {
                             />
 
                             <div className="grid gap-2">
-                                <Label htmlFor="published_at">Publish date (optional)</Label>
+                                <Label htmlFor="published_at">
+                                    Publish date (optional)
+                                </Label>
                                 <Input
                                     id="published_at"
                                     name="published_at"

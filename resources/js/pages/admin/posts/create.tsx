@@ -41,7 +41,9 @@ export default function Create() {
             <div className="space-y-6 p-4">
                 <div>
                     <h1 className="text-2xl font-semibold">New Post</h1>
-                    <p className="text-sm text-muted-foreground">Create a new markdown post</p>
+                    <p className="text-sm text-muted-foreground">
+                        Create a new markdown post
+                    </p>
                 </div>
 
                 <Form {...PostController.store.form()} className="space-y-6">
@@ -70,16 +72,27 @@ export default function Create() {
                                     required
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    Lowercase letters, numbers, and hyphens only.
+                                    Lowercase letters, numbers, and hyphens
+                                    only.
                                 </p>
                                 <InputError message={errors.slug} />
                             </div>
 
-                            <MarkdownEditor name="content" error={errors.content} />
+                            <MarkdownEditor
+                                name="content"
+                                error={errors.content}
+                            />
 
                             <div className="grid gap-2">
-                                <Label htmlFor="published_at">Publish date (optional)</Label>
-                                <Input id="published_at" name="published_at" type="datetime-local" className="w-fit" />
+                                <Label htmlFor="published_at">
+                                    Publish date (optional)
+                                </Label>
+                                <Input
+                                    id="published_at"
+                                    name="published_at"
+                                    type="datetime-local"
+                                    className="w-fit"
+                                />
                                 <InputError message={errors.published_at} />
                             </div>
 

@@ -49,11 +49,17 @@ export default function Show({ post }: { post: Post }) {
 
                     <div className="flex shrink-0 gap-2">
                         <Button variant="outline" asChild>
-                            <Link href={PostController.edit.url(post.slug)}>Edit</Link>
+                            <Link href={PostController.edit.url(post.slug)}>
+                                Edit
+                            </Link>
                         </Button>
                         <Form {...PostController.destroy.form(post.slug)}>
                             {({ processing }) => (
-                                <Button type="submit" variant="destructive" disabled={processing}>
+                                <Button
+                                    type="submit"
+                                    variant="destructive"
+                                    disabled={processing}
+                                >
                                     Delete
                                 </Button>
                             )}
@@ -62,7 +68,7 @@ export default function Show({ post }: { post: Post }) {
                 </div>
 
                 <div className="rounded-xl border p-6">
-                    <div className="prose prose-neutral dark:prose-invert max-w-none">
+                    <div className="prose max-w-none prose-neutral dark:prose-invert">
                         <ReactMarkdown>{post.content}</ReactMarkdown>
                     </div>
                 </div>

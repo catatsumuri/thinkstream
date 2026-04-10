@@ -74,7 +74,10 @@ function copyAnchorUrl(id: string): void {
 function makeHeadingComponents(postSlug: string): Components {
     const makeTag = (level: number) =>
         function Heading({ children }: { children?: React.ReactNode }) {
-            const text = typeof children === 'string' ? children : String(children ?? '');
+            const text =
+                typeof children === 'string'
+                    ? children
+                    : String(children ?? '');
             const id = `${postSlug}-${slugify(text)}`;
             const Tag = `h${level}` as 'h1' | 'h2' | 'h3';
 
@@ -88,7 +91,7 @@ function makeHeadingComponents(postSlug: string): Components {
                             aria-label={`Copy link to ${text}`}
                             title="Copy link to this section"
                             data-test={`heading-anchor-${id}`}
-                            className="text-muted-foreground opacity-0 transition-opacity hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none group-hover:opacity-100"
+                            className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none"
                         >
                             <LinkIcon className="size-4" />
                         </a>
@@ -104,7 +107,9 @@ function makeHeadingComponents(postSlug: string): Components {
  * Pre-computes TOC headings and custom heading components for a list of markdown posts.
  * Results are memoized and keyed by post slug.
  */
-export function useMarkdownToc(posts: Array<{ slug: string; content: string }>): Map<string, TocEntry> {
+export function useMarkdownToc(
+    posts: Array<{ slug: string; content: string }>,
+): Map<string, TocEntry> {
     return useMemo(() => {
         const map = new Map<string, TocEntry>();
         for (const post of posts) {

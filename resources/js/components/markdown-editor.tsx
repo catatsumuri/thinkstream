@@ -12,7 +12,12 @@ type Props = {
     error?: string;
 };
 
-export default function MarkdownEditor({ name, label = 'Content', defaultValue = '', error }: Props) {
+export default function MarkdownEditor({
+    name,
+    label = 'Content',
+    defaultValue = '',
+    error,
+}: Props) {
     const [value, setValue] = useState(defaultValue);
 
     return (
@@ -27,8 +32,8 @@ export default function MarkdownEditor({ name, label = 'Content', defaultValue =
                         value={value}
                         onChange={(e) => setValue(e.target.value)}
                         className={cn(
-                            'border-input placeholder:text-muted-foreground h-[600px] w-full resize-y rounded-md border bg-transparent px-3 py-2 font-mono text-sm shadow-xs outline-none',
-                            'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+                            'h-[600px] w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-xs outline-none placeholder:text-muted-foreground',
+                            'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
                             error && 'border-destructive',
                         )}
                         placeholder="Write markdown here..."
@@ -36,13 +41,17 @@ export default function MarkdownEditor({ name, label = 'Content', defaultValue =
                 </div>
                 <div className="grid gap-1">
                     <p className="text-xs text-muted-foreground">Preview</p>
-                    <div className="border-input h-[600px] overflow-y-auto rounded-md border bg-transparent px-3 py-2 text-sm">
+                    <div className="h-[600px] overflow-y-auto rounded-md border border-input bg-transparent px-3 py-2 text-sm">
                         {value ? (
-                            <div className="prose prose-sm dark:prose-invert max-w-none">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{value}</ReactMarkdown>
+                            <div className="prose prose-sm max-w-none dark:prose-invert">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                    {value}
+                                </ReactMarkdown>
                             </div>
                         ) : (
-                            <p className="text-muted-foreground">Nothing to preview</p>
+                            <p className="text-muted-foreground">
+                                Nothing to preview
+                            </p>
                         )}
                     </div>
                 </div>
