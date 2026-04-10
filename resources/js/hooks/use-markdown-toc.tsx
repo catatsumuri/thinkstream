@@ -17,16 +17,44 @@ function slugify(text: string): string {
 }
 
 function extractHeadings(content: string, postSlug: string): Heading[] {
-    const regex = /^(#{1,3})\s+(.+)$/gm;
     const headings: Heading[] = [];
-    let match;
-    while ((match = regex.exec(content)) !== null) {
+
+    let activeFenceMarker: '```' | '~~~' | null = null;
+
+    for (const line of content.split('\n')) {
+        const trimmedLine = line.trimStart();
+
+        if (trimmedLine.startsWith('```') || trimmedLine.startsWith('~~~')) {
+            const fenceMarker = trimmedLine.startsWith('```') ? '```' : '~~~';
+
+            if (activeFenceMarker === fenceMarker) {
+                activeFenceMarker = null;
+            } else if (activeFenceMarker === null) {
+                activeFenceMarker = fenceMarker;
+            }
+
+            continue;
+        }
+
+        if (activeFenceMarker !== null) {
+            continue;
+        }
+
+        const match = /^(#{1,3})\s+(.+)$/.exec(trimmedLine);
+
+        if (match === null) {
+            continue;
+        }
+
+        const text = match[2].trim();
+
         headings.push({
             level: match[1].length,
-            text: match[2].trim(),
-            id: `${postSlug}-${slugify(match[2].trim())}`,
+            text,
+            id: `${postSlug}-${slugify(text)}`,
         });
     }
+
     return headings;
 }
 
