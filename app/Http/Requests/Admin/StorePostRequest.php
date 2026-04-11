@@ -18,9 +18,17 @@ class StorePostRequest extends FormRequest
      */
     public function rules(): array
     {
+        $namespaceId = $this->route('namespace')?->id;
+
         return [
             'title' => ['required', 'string', 'max:255'],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::unique('posts', 'slug')],
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                Rule::unique('posts', 'slug')->where('namespace_id', $namespaceId),
+            ],
             'content' => ['required', 'string'],
             'published_at' => ['nullable', 'date'],
         ];
