@@ -11,3 +11,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
 require __DIR__.'/settings.php';
 require __DIR__.'/admin.php';
+
+// Wildcard routes — registered last to avoid conflicting with more specific routes
+Route::get('/{namespace:slug}', [PostController::class, 'namespace'])->name('posts.namespace');
+Route::get('/{namespace:slug}/{post:slug}', [PostController::class, 'show'])->name('posts.show')->scopeBindings();
