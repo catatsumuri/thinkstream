@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\Post;
+use App\Models\PostNamespace;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -17,6 +18,7 @@ class PostFactory extends Factory
         $title = fake()->sentence(4);
 
         return [
+            'namespace_id' => PostNamespace::factory(),
             'user_id' => User::factory(),
             'title' => $title,
             'slug' => Str::slug($title),

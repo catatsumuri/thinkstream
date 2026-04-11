@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Post;
+use App\Models\PostNamespace;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -15,7 +16,16 @@ class PostSeeder extends Seeder
             ['name' => 'Test User', 'password' => bcrypt('password')],
         );
 
+        $namespace = PostNamespace::updateOrCreate(
+            ['slug' => 'guides'],
+            [
+                'name' => 'Guides',
+                'description' => 'Practical guides, walkthroughs, and reference notes for writing and publishing posts.',
+            ],
+        );
+
         Post::create([
+            'namespace_id' => $namespace->id,
             'user_id' => $user->id,
             'title' => 'Markdown Syntax Guide',
             'slug' => 'index',
