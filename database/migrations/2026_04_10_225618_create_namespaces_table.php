@@ -16,7 +16,9 @@ return new class extends Migration
             $table->string('slug')->unique();
             $table->string('name');
             $table->text('description')->nullable();
+            $table->string('cover_image')->nullable();
             $table->boolean('is_published')->default(true);
+            $table->json('post_order')->nullable();
             $table->timestamps();
         });
     }
