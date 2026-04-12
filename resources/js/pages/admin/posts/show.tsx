@@ -1,5 +1,6 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
 import ReactMarkdown from 'react-markdown';
+import { CodeBlock } from '@/components/code-block';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
 import {
@@ -100,7 +101,9 @@ export default function Show({
 
                 <div className="rounded-xl border p-6">
                     <div className="prose max-w-none prose-neutral dark:prose-invert">
-                        <ReactMarkdown>{post.content}</ReactMarkdown>
+                        <ReactMarkdown components={{ code: CodeBlock }}>
+                            {post.content}
+                        </ReactMarkdown>
                     </div>
                 </div>
             </div>

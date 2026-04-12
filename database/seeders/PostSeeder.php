@@ -139,6 +139,10 @@ Nested lists:
 
 ## Fenced Code Blocks
 
+```
+Plain code blocks
+```
+
 ```php
 <?php
 
