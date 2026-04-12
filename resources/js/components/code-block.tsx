@@ -8,6 +8,7 @@ import 'prismjs/components/prism-jsx';
 import 'prismjs/components/prism-markup-templating';
 import 'prismjs/components/prism-php';
 import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-sql';
 import 'prismjs/components/prism-tsx';
 import 'prismjs/components/prism-typescript';
 import type { ComponentPropsWithoutRef } from 'react';
@@ -58,7 +59,7 @@ export function CodeBlock({ className, children }: CodeBlockProps) {
     const highlightLang = language === 'blade' ? 'html' : language;
 
     return (
-        <div className="not-prose relative my-4 overflow-hidden rounded-lg border border-gray-700 bg-gray-900">
+        <div className="not-prose relative my-4 overflow-hidden rounded-lg border border-gray-700 bg-[#282c34]">
             <div className="absolute top-2 right-2 flex gap-1">
                 <button
                     type="button"
@@ -80,7 +81,9 @@ export function CodeBlock({ className, children }: CodeBlockProps) {
                 <button
                     type="button"
                     onClick={handleCopy}
-                    aria-label={copied ? 'Copied code to clipboard' : 'Copy code'}
+                    aria-label={
+                        copied ? 'Copied code to clipboard' : 'Copy code'
+                    }
                     className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-200"
                     title="Copy"
                 >
@@ -88,7 +91,8 @@ export function CodeBlock({ className, children }: CodeBlockProps) {
                 </button>
             </div>
             <pre
-                className={`bg-[#282c34] px-4 py-3 pr-20 font-mono text-sm text-gray-300 ${wrap ? 'break-words whitespace-pre-wrap' : 'overflow-x-auto'}`}
+                className={`px-4 py-3 pr-20 font-mono text-sm text-gray-300 ${wrap ? 'break-words whitespace-pre-wrap' : 'overflow-x-auto'}`}
+                style={{ background: '#282c34' }}
             >
                 <code
                     className={
