@@ -14,6 +14,7 @@ type PostNamespace = {
     id: number;
     slug: string;
     name: string;
+    cover_image_url: string | null;
 };
 
 type Post = {
@@ -44,6 +45,15 @@ export default function Namespace({
             <Head title={namespace.name} />
 
             <div className="min-h-screen bg-background">
+                {namespace.cover_image_url && (
+                    <div className="h-48 w-full overflow-hidden md:h-64">
+                        <img
+                            src={namespace.cover_image_url}
+                            alt={namespace.name}
+                            className="h-full w-full object-cover"
+                        />
+                    </div>
+                )}
                 <header className="border-b">
                     <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6">
                         <div className="flex items-baseline gap-2">

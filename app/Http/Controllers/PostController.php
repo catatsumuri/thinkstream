@@ -16,7 +16,7 @@ class PostController extends Controller
             'namespaces' => PostNamespace::published()
                 ->withCount(['posts' => fn ($q) => $q->whereNotNull('published_at')])
                 ->orderBy('name')
-                ->get(['id', 'slug', 'name', 'description']),
+                ->get(['id', 'slug', 'name', 'description', 'cover_image']),
         ]);
     }
 

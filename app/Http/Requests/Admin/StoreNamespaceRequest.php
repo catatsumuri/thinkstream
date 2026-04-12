@@ -31,6 +31,7 @@ class StoreNamespaceRequest extends FormRequest
             'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::notIn(['admin']), Rule::unique('namespaces', 'slug')],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
+            'cover_image' => ['nullable', 'image', 'max:2048'],
             'is_published' => ['boolean'],
         ];
     }

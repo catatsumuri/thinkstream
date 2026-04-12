@@ -6,6 +6,7 @@ use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\User;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Storage;
 
 class PostSeeder extends Seeder
 {
@@ -16,20 +17,27 @@ class PostSeeder extends Seeder
             ['name' => 'Test User', 'password' => bcrypt('password')],
         );
 
+        $coverImagePath = Storage::disk('public')->putFileAs(
+            'namespaces',
+            database_path('seeders/images/guide.png'),
+            'guide.png',
+        );
+
         $namespace = PostNamespace::updateOrCreate(
             ['slug' => 'guides'],
             [
                 'name' => 'Guides',
                 'description' => 'Practical guides, walkthroughs, and reference notes for writing and publishing posts.',
+                'cover_image' => $coverImagePath,
             ],
         );
 
-        Post::create([
-            'namespace_id' => $namespace->id,
-            'user_id' => $user->id,
-            'title' => 'Markdown Syntax Guide',
-            'slug' => 'index',
-            'content' => trim(<<<'MD'
+        Post::updateOrCreate(
+            ['namespace_id' => $namespace->id, 'slug' => 'index'],
+            [
+                'user_id' => $user->id,
+                'title' => 'Markdown Syntax Guide',
+                'content' => trim(<<<'MD'
 # What is Markdown?
 
 Markdown is a lightweight markup language for formatting plain text. You use simple symbols to define structure, and it converts to HTML or other formats for display.
@@ -188,7 +196,7 @@ npm run dev
 | JavaScript | Programming   | Hard       |
 | Markdown   | Documentation | Easy       |
 MD),
-            'published_at' => now(),
-        ]);
+                'published_at' => now(),
+            ]);
     }
 }

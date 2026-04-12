@@ -108,6 +108,20 @@ export default function Create() {
                                 <InputError message={errors.description} />
                             </div>
 
+                            <div className="grid gap-2">
+                                <Label htmlFor="cover_image">Cover Image</Label>
+                                <Input
+                                    id="cover_image"
+                                    name="cover_image"
+                                    type="file"
+                                    accept="image/*"
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Optional. JPEG, PNG, GIF, or WebP. Max 2MB.
+                                </p>
+                                <InputError message={errors.cover_image} />
+                            </div>
+
                             <div className="flex items-center gap-2">
                                 <input
                                     type="hidden"

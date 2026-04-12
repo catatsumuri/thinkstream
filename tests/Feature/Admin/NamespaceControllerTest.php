@@ -3,6 +3,8 @@
 use App\Models\PostNamespace;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -187,4 +189,61 @@ test('updating a namespace can toggle is_published', function () {
         ->assertRedirect(route('admin.posts.index'));
 
     expect($namespace->fresh()->is_published)->toBeFalse();
+});
+
+test('storing a namespace with a cover image saves the file', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $image = UploadedFile::fake()->image('cover.jpg', 800, 400);
+
+    $this->actingAs($user)
+        ->post(route('admin.namespaces.store'), [
+            'slug' => 'guides',
+            'name' => 'Guides',
+            'cover_image' => $image,
+        ])
+        ->assertRedirect(route('admin.posts.index'));
+
+    $namespace = PostNamespace::where('slug', 'guides')->first();
+    expect($namespace->cover_image)->not->toBeNull();
+    Storage::disk('public')->assertExists($namespace->cover_image);
+});
+
+test('updating a namespace with a new cover image replaces the old file', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+
+    $oldImage = UploadedFile::fake()->image('old.jpg');
+    $oldPath = $oldImage->store('namespaces', 'public');
+    $namespace = PostNamespace::factory()->create(['cover_image' => $oldPath]);
+
+    $newImage = UploadedFile::fake()->image('new.jpg');
+
+    $this->actingAs($user)
+        ->put(route('admin.namespaces.update', $namespace), [
+            'slug' => $namespace->slug,
+            'name' => $namespace->name,
+            'cover_image' => $newImage,
+        ])
+        ->assertRedirect(route('admin.posts.index'));
+
+    Storage::disk('public')->assertMissing($oldPath);
+    $newPath = $namespace->fresh()->cover_image;
+    expect($newPath)->not->toBe($oldPath);
+    Storage::disk('public')->assertExists($newPath);
+});
+
+test('deleting a namespace removes the cover image file', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+
+    $image = UploadedFile::fake()->image('cover.jpg');
+    $path = $image->store('namespaces', 'public');
+    $namespace = PostNamespace::factory()->create(['cover_image' => $path]);
+
+    $this->actingAs($user)
+        ->delete(route('admin.namespaces.destroy', $namespace))
+        ->assertRedirect(route('admin.posts.index'));
+
+    Storage::disk('public')->assertMissing($path);
 });

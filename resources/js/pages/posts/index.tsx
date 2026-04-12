@@ -1,4 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { login } from '@/routes';
 import { index as adminPosts } from '@/routes/admin/posts';
 import { namespace as namespaceRoute } from '@/routes/posts';
@@ -8,6 +9,7 @@ type PostNamespace = {
     slug: string;
     name: string;
     description: string | null;
+    cover_image_url: string | null;
     posts_count: number;
 };
 
@@ -48,33 +50,43 @@ export default function Index({ namespaces }: { namespaces: PostNamespace[] }) {
                             No namespaces yet.
                         </p>
                     ) : (
-                        <ul className="space-y-3">
+                        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                             {namespaces.map((ns) => (
-                                <li key={ns.id}>
-                                    <Link
-                                        href={namespaceRoute.url(ns.slug)}
-                                        className="flex items-center justify-between gap-6 rounded-lg border px-5 py-4 transition-colors hover:bg-muted/50"
-                                    >
-                                        <span className="min-w-0">
-                                            <span className="block font-medium">
-                                                {ns.name}
-                                            </span>
-                                            {ns.description && (
-                                                <span className="mt-1 block text-sm text-muted-foreground">
-                                                    {ns.description}
-                                                </span>
-                                            )}
+                                <Link
+                                    key={ns.id}
+                                    href={namespaceRoute.url(ns.slug)}
+                                    className="group overflow-hidden rounded-xl border transition-colors hover:bg-muted/50"
+                                >
+                                    <div className="relative aspect-video overflow-hidden border-b">
+                                        {ns.cover_image_url ? (
+                                            <img
+                                                src={ns.cover_image_url}
+                                                alt={ns.name}
+                                                className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                            />
+                                        ) : (
+                                            <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+                                        )}
+                                    </div>
+                                    <div className="flex flex-col gap-1 p-5">
+                                        <span className="leading-snug font-semibold">
+                                            {ns.name}
                                         </span>
-                                        <span className="text-sm text-muted-foreground">
+                                        {ns.description && (
+                                            <span className="line-clamp-2 text-sm text-muted-foreground">
+                                                {ns.description}
+                                            </span>
+                                        )}
+                                        <span className="mt-2 text-xs text-muted-foreground">
                                             {ns.posts_count}{' '}
                                             {ns.posts_count === 1
                                                 ? 'post'
                                                 : 'posts'}
                                         </span>
-                                    </Link>
-                                </li>
+                                    </div>
+                                </Link>
                             ))}
-                        </ul>
+                        </div>
                     )}
                 </div>
             </div>

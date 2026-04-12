@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class PostNamespace extends Model
 {
@@ -19,14 +20,22 @@ class PostNamespace extends Model
         'slug',
         'name',
         'description',
+        'cover_image',
         'is_published',
     ];
+
+    protected $appends = ['cover_image_url'];
 
     protected function casts(): array
     {
         return [
             'is_published' => 'boolean',
         ];
+    }
+
+    public function getCoverImageUrlAttribute(): ?string
+    {
+        return $this->cover_image ? Storage::url($this->cover_image) : null;
     }
 
     public function getRouteKeyName(): string
