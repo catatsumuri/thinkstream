@@ -1,14 +1,24 @@
-import { useState } from 'react';
 import { Head } from '@inertiajs/react';
 import { Form } from '@inertiajs/react';
-import PostController from '@/actions/App/Http/Controllers/Admin/PostController';
-import MarkdownEditor from '@/components/markdown-editor';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
+import MarkdownEditor from '@/components/markdown-editor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes';
-import { index, create } from '@/routes/admin/posts';
+import {
+    index,
+    namespace as namespaceRoute,
+    create,
+    store,
+} from '@/routes/admin/posts';
+
+type Namespace = {
+    id: number;
+    slug: string;
+    name: string;
+};
 
 function toSlug(value: string): string {
     return value
@@ -19,7 +29,7 @@ function toSlug(value: string): string {
         .replace(/-+/g, '-');
 }
 
-export default function Create() {
+export default function Create({ namespace }: { namespace: Namespace }) {
     const [slug, setSlug] = useState('');
     const [slugTouched, setSlugTouched] = useState(false);
 
@@ -42,11 +52,11 @@ export default function Create() {
                 <div>
                     <h1 className="text-2xl font-semibold">New Post</h1>
                     <p className="text-sm text-muted-foreground">
-                        Create a new markdown post
+                        in <span className="font-medium">{namespace.name}</span>
                     </p>
                 </div>
 
-                <Form {...PostController.store.form()} className="space-y-6">
+                <Form {...store.form(namespace.slug)} className="space-y-6">
                     {({ processing, errors }) => (
                         <>
                             <div className="grid gap-2">
@@ -101,7 +111,13 @@ export default function Create() {
                                     Create Post
                                 </Button>
                                 <Button type="button" variant="outline" asChild>
-                                    <a href={index.url()}>Cancel</a>
+                                    <a
+                                        href={namespaceRoute.url(
+                                            namespace.slug,
+                                        )}
+                                    >
+                                        Cancel
+                                    </a>
                                 </Button>
                             </div>
                         </>
@@ -113,9 +129,13 @@ export default function Create() {
 }
 
 Create.layout = {
-    breadcrumbs: [
+    breadcrumbs: (props: { namespace: Namespace }) => [
         { title: 'Dashboard', href: dashboard() },
         { title: 'Posts', href: index.url() },
-        { title: 'New Post', href: create.url() },
+        {
+            title: props.namespace.name,
+            href: namespaceRoute.url(props.namespace.slug),
+        },
+        { title: 'New Post', href: create.url(props.namespace.slug) },
     ],
 };

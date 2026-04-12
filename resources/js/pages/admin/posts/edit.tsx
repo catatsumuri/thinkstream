@@ -1,22 +1,38 @@
 import { Form, Head, setLayoutProps } from '@inertiajs/react';
-import PostController from '@/actions/App/Http/Controllers/Admin/PostController';
-import MarkdownEditor from '@/components/markdown-editor';
 import InputError from '@/components/input-error';
+import MarkdownEditor from '@/components/markdown-editor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes';
-import { index, edit } from '@/routes/admin/posts';
+import {
+    index,
+    namespace as namespaceRoute,
+    edit,
+    update,
+} from '@/routes/admin/posts';
+
+type Namespace = {
+    id: number;
+    slug: string;
+    name: string;
+};
 
 type Post = {
     id: number;
-    title: string;
     slug: string;
+    title: string;
     content: string;
     published_at: string | null;
 };
 
-export default function Edit({ post }: { post: Post }) {
+export default function Edit({
+    namespace,
+    post,
+}: {
+    namespace: Namespace;
+    post: Post;
+}) {
     const publishedAt = post.published_at
         ? new Date(post.published_at).toISOString().slice(0, 16)
         : '';
@@ -25,7 +41,11 @@ export default function Edit({ post }: { post: Post }) {
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
             { title: 'Posts', href: index.url() },
-            { title: post.title, href: edit.url(post.slug) },
+            { title: namespace.name, href: namespaceRoute.url(namespace.slug) },
+            {
+                title: post.title,
+                href: edit.url({ namespace: namespace.slug, post: post.slug }),
+            },
         ],
     });
 
@@ -36,11 +56,16 @@ export default function Edit({ post }: { post: Post }) {
             <div className="space-y-6 p-4">
                 <div>
                     <h1 className="text-2xl font-semibold">Edit Post</h1>
-                    <p className="text-sm text-muted-foreground">{post.slug}</p>
+                    <p className="text-sm text-muted-foreground">
+                        {namespace.slug}/{post.slug}
+                    </p>
                 </div>
 
                 <Form
-                    {...PostController.update.form(post.slug)}
+                    {...update.form({
+                        namespace: namespace.slug,
+                        post: post.slug,
+                    })}
                     className="space-y-6"
                 >
                     {({ processing, errors }) => (
@@ -98,7 +123,13 @@ export default function Edit({ post }: { post: Post }) {
                                     Save Changes
                                 </Button>
                                 <Button type="button" variant="outline" asChild>
-                                    <a href={index.url()}>Cancel</a>
+                                    <a
+                                        href={namespaceRoute.url(
+                                            namespace.slug,
+                                        )}
+                                    >
+                                        Cancel
+                                    </a>
                                 </Button>
                             </div>
                         </>

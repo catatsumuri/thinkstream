@@ -3,32 +3,31 @@ import { Form } from '@inertiajs/react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
-import { create as namespaceCreate } from '@/routes/admin/namespaces';
-import { index, namespace as namespaceRoute } from '@/routes/admin/posts';
+import { create } from '@/routes/admin/namespaces';
+import { index } from '@/routes/admin/posts';
 
 type Namespace = {
     id: number;
     slug: string;
     name: string;
-    is_published: boolean;
     posts_count: number;
 };
 
 export default function Index({ namespaces }: { namespaces: Namespace[] }) {
     return (
         <>
-            <Head title="Posts" />
+            <Head title="Namespaces" />
 
             <div className="space-y-6 p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold">Posts</h1>
+                        <h1 className="text-2xl font-semibold">Namespaces</h1>
                         <p className="text-sm text-muted-foreground">
-                            Manage namespaces and their posts
+                            Manage namespaces for your posts
                         </p>
                     </div>
                     <Button asChild>
-                        <Link href={namespaceCreate.url()}>New Namespace</Link>
+                        <Link href={create.url()}>New Namespace</Link>
                     </Button>
                 </div>
 
@@ -37,11 +36,8 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                         <p className="text-muted-foreground">
                             No namespaces yet.
                         </p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Create a namespace to start adding posts.
-                        </p>
                         <Button asChild className="mt-4">
-                            <Link href={namespaceCreate.url()}>
+                            <Link href={create.url()}>
                                 Create your first namespace
                             </Link>
                         </Button>
@@ -52,13 +48,10 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                             <thead>
                                 <tr className="border-b bg-muted/50">
                                     <th className="px-4 py-3 text-left font-medium">
-                                        Namespace
+                                        Name
                                     </th>
                                     <th className="px-4 py-3 text-left font-medium">
                                         Slug
-                                    </th>
-                                    <th className="px-4 py-3 text-left font-medium">
-                                        Status
                                     </th>
                                     <th className="px-4 py-3 text-left font-medium">
                                         Posts
@@ -75,30 +68,10 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                                         className="border-b last:border-0"
                                     >
                                         <td className="px-4 py-3 font-medium">
-                                            <Link
-                                                href={namespaceRoute.url(
-                                                    ns.slug,
-                                                )}
-                                                className="text-primary hover:underline"
-                                            >
-                                                {ns.name}
-                                            </Link>
+                                            {ns.name}
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
                                             {ns.slug}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <span
-                                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                                                    ns.is_published
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                                        : 'bg-muted text-muted-foreground'
-                                                }`}
-                                            >
-                                                {ns.is_published
-                                                    ? 'Published'
-                                                    : 'Draft'}
-                                            </span>
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
                                             {ns.posts_count}
@@ -152,6 +125,6 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
 Index.layout = {
     breadcrumbs: [
         { title: 'Dashboard', href: dashboard() },
-        { title: 'Posts', href: index.url() },
+        { title: 'Namespaces', href: index.url() },
     ],
 };

@@ -1,10 +1,19 @@
-import { Head, Link, setLayoutProps } from '@inertiajs/react';
-import { Form } from '@inertiajs/react';
+import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
 import ReactMarkdown from 'react-markdown';
-import PostController from '@/actions/App/Http/Controllers/Admin/PostController';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
-import { index } from '@/routes/admin/posts';
+import {
+    destroy,
+    edit,
+    index,
+    namespace as namespaceRoute,
+} from '@/routes/admin/posts';
+
+type Namespace = {
+    id: number;
+    name: string;
+    slug: string;
+};
 
 type Post = {
     id: number;
@@ -15,12 +24,22 @@ type Post = {
     created_at: string;
 };
 
-export default function Show({ post }: { post: Post }) {
+export default function Show({
+    namespace,
+    post,
+}: {
+    namespace: Namespace;
+    post: Post;
+}) {
     setLayoutProps({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
             { title: 'Posts', href: index.url() },
-            { title: post.title, href: PostController.show.url(post.slug) },
+            { title: namespace.name, href: namespaceRoute.url(namespace.slug) },
+            {
+                title: post.title,
+                href: edit.url({ namespace: namespace.slug, post: post.slug }),
+            },
         ],
     });
 
@@ -33,7 +52,9 @@ export default function Show({ post }: { post: Post }) {
                     <div className="space-y-1">
                         <h1 className="text-2xl font-semibold">{post.title}</h1>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            <span>{post.slug}</span>
+                            <span>
+                                {namespace.slug}/{post.slug}
+                            </span>
                             <span>·</span>
                             {post.published_at ? (
                                 <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
@@ -49,11 +70,21 @@ export default function Show({ post }: { post: Post }) {
 
                     <div className="flex shrink-0 gap-2">
                         <Button variant="outline" asChild>
-                            <Link href={PostController.edit.url(post.slug)}>
+                            <Link
+                                href={edit.url({
+                                    namespace: namespace.slug,
+                                    post: post.slug,
+                                })}
+                            >
                                 Edit
                             </Link>
                         </Button>
-                        <Form {...PostController.destroy.form(post.slug)}>
+                        <Form
+                            {...destroy.form({
+                                namespace: namespace.slug,
+                                post: post.slug,
+                            })}
+                        >
                             {({ processing }) => (
                                 <Button
                                     type="submit"
