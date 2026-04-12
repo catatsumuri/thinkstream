@@ -20,19 +20,25 @@ class PostController extends Controller
         ]);
     }
 
-    public function namespace(PostNamespace $namespace): Response|RedirectResponse
+    public function namespace(PostNamespace $namespace): RedirectResponse
     {
         if (! $namespace->is_published) {
             abort(404);
         }
 
-        return Inertia::render('posts/namespace', [
-            'namespace' => $namespace,
-            'posts' => $namespace->posts()
-                ->whereNotNull('published_at')
-                ->orderByDesc('published_at')
-                ->get(),
-        ]);
+        $posts = $namespace->posts()
+            ->whereNotNull('published_at')
+            ->orderBy('published_at')
+            ->orderBy('id')
+            ->get(['id', 'slug']);
+
+        $firstPost = $namespace->sortPosts($posts)->first();
+
+        if (! $firstPost) {
+            abort(404);
+        }
+
+        return redirect()->route('posts.show', [$namespace->slug, $firstPost->slug]);
     }
 
     public function show(PostNamespace $namespace, Post $post): Response|RedirectResponse
@@ -41,9 +47,16 @@ class PostController extends Controller
             abort(404);
         }
 
+        $posts = $namespace->posts()
+            ->whereNotNull('published_at')
+            ->orderBy('published_at')
+            ->orderBy('id')
+            ->get(['id', 'slug', 'title', 'published_at']);
+
         return Inertia::render('posts/show', [
-            'namespace' => $namespace,
+            'namespace' => $namespace->only(['id', 'slug', 'name', 'cover_image_url']),
             'post' => $post,
+            'posts' => $namespace->sortPosts($posts),
         ]);
     }
 }

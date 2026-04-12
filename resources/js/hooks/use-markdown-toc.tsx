@@ -20,24 +20,31 @@ function slugify(text: string): string {
 function extractHeadings(content: string, postSlug: string): Heading[] {
     const headings: Heading[] = [];
 
-    let activeFenceMarker: '```' | '~~~' | null = null;
+    // Track the exact opening fence (e.g. "```" or "````") so nested shorter
+    // fences inside quad-backtick meta-examples don't prematurely close it.
+    let activeFence: string | null = null;
 
     for (const line of content.split('\n')) {
         const trimmedLine = line.trimStart();
 
-        if (trimmedLine.startsWith('```') || trimmedLine.startsWith('~~~')) {
-            const fenceMarker = trimmedLine.startsWith('```') ? '```' : '~~~';
+        const fenceMatch = /^(`{3,}|~{3,})/.exec(trimmedLine);
 
-            if (activeFenceMarker === fenceMarker) {
-                activeFenceMarker = null;
-            } else if (activeFenceMarker === null) {
-                activeFenceMarker = fenceMarker;
+        if (fenceMatch) {
+            const fence = fenceMatch[1];
+
+            if (activeFence === null) {
+                activeFence = fence;
+            } else if (
+                fence[0] === activeFence[0] &&
+                fence.length >= activeFence.length
+            ) {
+                activeFence = null;
             }
 
             continue;
         }
 
-        if (activeFenceMarker !== null) {
+        if (activeFence !== null) {
             continue;
         }
 

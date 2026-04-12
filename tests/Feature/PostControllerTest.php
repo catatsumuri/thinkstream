@@ -31,10 +31,12 @@ test('unpublished namespace returns 404 on namespace page', function () {
     $this->get(route('posts.namespace', $namespace))->assertNotFound();
 });
 
-test('published namespace shows its posts', function () {
+test('published namespace redirects to first post', function () {
     $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create();
 
-    $this->get(route('posts.namespace', $namespace))->assertOk();
+    $this->get(route('posts.namespace', $namespace))
+        ->assertRedirect(route('posts.show', [$namespace, $post]));
 });
 
 test('unpublished namespace returns 404 on post show page', function () {
