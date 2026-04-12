@@ -168,6 +168,14 @@ npm install react-markdown
 npm run dev
 ```
 
+## Wide Code Block Example
+
+Long lines scroll horizontally on desktop and wrap on mobile.
+
+```sql
+SELECT users.id, users.name, orders.id AS order_id, orders.total, orders.status FROM users INNER JOIN orders ON orders.user_id = users.id WHERE orders.status IN ('pending', 'processing') ORDER BY orders.created_at DESC;
+```
+
 ---
 
 # Links and Images
@@ -199,6 +207,7 @@ npm run dev
 | CSS        | Styling       | Medium     |
 | JavaScript | Programming   | Hard       |
 | Markdown   | Documentation | Easy       |
+
 MD),
                 'published_at' => now(),
             ]);
