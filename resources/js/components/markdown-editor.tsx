@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import { CodeBlock } from '@/components/code-block';
 import InputError from '@/components/input-error';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
@@ -44,7 +45,10 @@ export default function MarkdownEditor({
                     <div className="h-[600px] overflow-y-auto rounded-md border border-input bg-transparent px-3 py-2 text-sm">
                         {value ? (
                             <div className="prose prose-sm max-w-none dark:prose-invert">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                <ReactMarkdown
+                                    remarkPlugins={[remarkGfm]}
+                                    components={{ code: CodeBlock }}
+                                >
                                     {value}
                                 </ReactMarkdown>
                             </div>

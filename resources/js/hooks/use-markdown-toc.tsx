@@ -1,6 +1,7 @@
-import { useMemo } from 'react';
 import { Link as LinkIcon } from 'lucide-react';
+import { useMemo } from 'react';
 import type { Components } from 'react-markdown';
+import { CodeBlock } from '@/components/code-block';
 
 export type Heading = { level: number; text: string; id: string };
 
@@ -100,7 +101,7 @@ function makeHeadingComponents(postSlug: string): Components {
             );
         };
 
-    return { h1: makeTag(1), h2: makeTag(2), h3: makeTag(3) };
+    return { h1: makeTag(1), h2: makeTag(2), h3: makeTag(3), code: CodeBlock };
 }
 
 /**
@@ -112,12 +113,14 @@ export function useMarkdownToc(
 ): Map<string, TocEntry> {
     return useMemo(() => {
         const map = new Map<string, TocEntry>();
+
         for (const post of posts) {
             map.set(post.slug, {
                 headings: extractHeadings(post.content, post.slug),
                 components: makeHeadingComponents(post.slug),
             });
         }
+
         return map;
     }, [posts]);
 }
