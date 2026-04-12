@@ -14,11 +14,13 @@ return new class extends Migration
         Schema::create('posts', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('namespace_id')->constrained('namespaces');
             $table->string('title');
-            $table->string('slug')->unique();
+            $table->string('slug');
             $table->longText('content');
             $table->timestamp('published_at')->nullable();
             $table->timestamps();
+            $table->unique(['namespace_id', 'slug']);
         });
     }
 

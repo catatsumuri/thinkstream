@@ -13,6 +13,7 @@ class Post extends Model
     use HasFactory;
 
     protected $fillable = [
+        'namespace_id',
         'title',
         'slug',
         'content',
@@ -30,6 +31,11 @@ class Post extends Model
     public function getRouteKeyName(): string
     {
         return 'slug';
+    }
+
+    public function namespace(): BelongsTo
+    {
+        return $this->belongsTo(PostNamespace::class, 'namespace_id');
     }
 
     public function user(): BelongsTo

@@ -15,20 +15,22 @@ export default function TableOfContents({ posts }: { posts: TocPost[] }) {
                 <div key={post.id} className="space-y-1">
                     <a
                         href={`#post-${post.slug}`}
-                        className="font-medium text-foreground hover:text-primary transition-colors leading-snug block"
+                        className="block leading-snug font-medium text-foreground transition-colors hover:text-primary"
                     >
                         {post.title}
                     </a>
                     {post.headings.length > 0 && (
-                        <ul className="space-y-1 border-l border-border ml-0.5">
+                        <ul className="ml-0.5 space-y-1 border-l border-border">
                             {post.headings.map((h) => (
                                 <li
                                     key={h.id}
-                                    style={{ paddingLeft: `${(h.level - 1) * 12 + 8}px` }}
+                                    style={{
+                                        paddingLeft: `${(h.level - 1) * 12 + 8}px`,
+                                    }}
                                 >
                                     <a
                                         href={`#${h.id}`}
-                                        className="text-muted-foreground hover:text-foreground transition-colors block leading-snug py-0.5"
+                                        className="block py-0.5 leading-snug text-muted-foreground transition-colors hover:text-foreground"
                                     >
                                         {h.text}
                                     </a>
