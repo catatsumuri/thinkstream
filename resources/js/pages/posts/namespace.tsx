@@ -54,7 +54,7 @@ export default function Namespace({
                         />
                     </div>
                 )}
-                <header className="border-b">
+                <header className="sticky top-0 z-50 border-b bg-background">
                     <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6">
                         <div className="flex items-baseline gap-2">
                             <Link
