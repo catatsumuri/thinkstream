@@ -1,4 +1,4 @@
-import { MoveHorizontal, WrapText } from 'lucide-react';
+import { Check, Copy, MoveHorizontal, WrapText } from 'lucide-react';
 import Prism from 'prismjs';
 import 'prismjs/components/prism-bash';
 import 'prismjs/components/prism-css';
@@ -13,6 +13,7 @@ import 'prismjs/components/prism-typescript';
 import type { ComponentPropsWithoutRef } from 'react';
 import { useState } from 'react';
 import type { ExtraProps } from 'react-markdown';
+import { useClipboard } from '@/hooks/use-clipboard';
 
 type CodeBlockProps = ComponentPropsWithoutRef<'code'> & ExtraProps;
 
@@ -25,9 +26,22 @@ const isMobileViewport = () =>
 
 export function CodeBlock({ className, children }: CodeBlockProps) {
     const [wrap, setWrap] = useState(isMobileViewport);
+    const [copied, setCopied] = useState(false);
+    const [, copy] = useClipboard();
 
     const rawContent = String(children);
     const content = rawContent.replace(/\n$/, '');
+
+    const handleCopy = async () => {
+        const didCopy = await copy(content);
+
+        if (!didCopy) {
+            return;
+        }
+
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
     const languageMatch = /language-(\w+)/.exec(className || '');
     const language = languageMatch?.[1] ?? '';
     // react-markdown v10: fenced code blocks always have a trailing newline in children
@@ -45,21 +59,36 @@ export function CodeBlock({ className, children }: CodeBlockProps) {
 
     return (
         <div className="not-prose relative my-4 overflow-hidden rounded-lg border border-gray-700 bg-gray-900">
-            <button
-                type="button"
-                onClick={() => setWrap((v) => !v)}
-                aria-label={
-                    wrap
-                        ? 'Enable horizontal scrolling'
-                        : 'Enable line wrapping'
-                }
-                className="absolute top-2 right-2 rounded p-1 text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-200"
-                title={wrap ? 'Scroll' : 'Wrap'}
-            >
-                {wrap ? <MoveHorizontal size={20} /> : <WrapText size={20} />}
-            </button>
+            <div className="absolute top-2 right-2 flex gap-1">
+                <button
+                    type="button"
+                    onClick={() => setWrap((v) => !v)}
+                    aria-label={
+                        wrap
+                            ? 'Enable horizontal scrolling'
+                            : 'Enable line wrapping'
+                    }
+                    className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-200"
+                    title={wrap ? 'Scroll' : 'Wrap'}
+                >
+                    {wrap ? (
+                        <MoveHorizontal size={20} />
+                    ) : (
+                        <WrapText size={20} />
+                    )}
+                </button>
+                <button
+                    type="button"
+                    onClick={handleCopy}
+                    aria-label={copied ? 'Copied code to clipboard' : 'Copy code'}
+                    className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-200"
+                    title="Copy"
+                >
+                    {copied ? <Check size={20} /> : <Copy size={20} />}
+                </button>
+            </div>
             <pre
-                className={`bg-[#282c34] px-4 py-3 pr-10 font-mono text-sm text-gray-300 ${wrap ? 'break-words whitespace-pre-wrap' : 'overflow-x-auto'}`}
+                className={`bg-[#282c34] px-4 py-3 pr-20 font-mono text-sm text-gray-300 ${wrap ? 'break-words whitespace-pre-wrap' : 'overflow-x-auto'}`}
             >
                 <code
                     className={
