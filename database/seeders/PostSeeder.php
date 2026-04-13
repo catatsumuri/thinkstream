@@ -692,6 +692,32 @@ Place italic text on the next line to display it like a caption.
 ```
 
 [![](/storage/namespaces/guide.png =250x)](https://zenn.dev)
+
+## Message
+
+Wrap content in `:::message` to display an info callout.
+
+```md
+:::message
+Your message here
+:::
+```
+
+:::message
+Your message here
+:::
+
+Use `:::message alert` for warnings.
+
+```md
+:::message alert
+Your warning here
+:::
+```
+
+:::message alert
+Your warning here
+:::
 MD),
                 'published_at' => now(),
             ]);

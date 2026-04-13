@@ -89,6 +89,10 @@ function rewriteImageLine(line: string, caption?: string): string | null {
     return null;
 }
 
+export function preprocessZennSyntax(markdown: string): string {
+    return markdown.replace(/:::message\s+alert\b/g, ':::message{.alert}');
+}
+
 export function preprocessZennMarkdown(markdown: string): string {
     const lines = markdown.split('\n');
     const processedLines: string[] = [];

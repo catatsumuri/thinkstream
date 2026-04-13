@@ -1,8 +1,5 @@
 import { Link as LinkIcon } from 'lucide-react';
-import {
-    Children,
-    isValidElement,
-} from 'react';
+import { Children, isValidElement } from 'react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import type { Components } from 'react-markdown';
 import { CodeBlock } from '@/components/code-block';
