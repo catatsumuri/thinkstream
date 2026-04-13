@@ -1,8 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { PanelRightClose, PanelRightOpen } from 'lucide-react';
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import MarkdownContent from '@/components/markdown-content';
 import TableOfContents from '@/components/table-of-contents';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -161,15 +160,13 @@ export default function Namespace({
                                             </time>
                                         </header>
                                         <div className="prose max-w-none prose-neutral dark:prose-invert">
-                                            <ReactMarkdown
-                                                remarkPlugins={[remarkGfm]}
+                                            <MarkdownContent
+                                                content={post.content}
                                                 components={
                                                     toc.get(post.slug)!
                                                         .components
                                                 }
-                                            >
-                                                {post.content}
-                                            </ReactMarkdown>
+                                            />
                                         </div>
                                     </article>
                                 ))}

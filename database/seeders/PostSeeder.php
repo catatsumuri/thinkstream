@@ -29,7 +29,7 @@ class PostSeeder extends Seeder
                 'name' => 'Guides',
                 'description' => 'Practical guides, walkthroughs, and reference notes for writing and publishing posts.',
                 'cover_image' => $coverImagePath,
-                'post_order' => ['index', 'extended-syntax'],
+                'post_order' => ['index', 'extended-syntax', 'zenn-syntax'],
             ],
         );
 
@@ -631,6 +631,67 @@ Without the plugin these render as literal text. You can always paste the emoji 
 ---
 
 > **WIP:** More examples coming soon.
+MD),
+                'published_at' => now(),
+            ]);
+
+        Post::updateOrCreate(
+            ['namespace_id' => $namespace->id, 'slug' => 'zenn-syntax'],
+            [
+                'user_id' => $user->id,
+                'title' => 'Zenn Syntax',
+                'content' => trim(<<<'MD'
+# Zenn Syntax
+
+> **WIP:** This page is still under construction.
+
+Zenn supports a few convenient image patterns on top of regular Markdown.
+
+## Basic Image
+
+```md
+![](/storage/namespaces/guide.png)
+```
+
+![](/storage/namespaces/guide.png)
+
+## Sized Image
+
+Use `=250x` after the image URL to set the width in pixels.
+
+```md
+![](/storage/namespaces/guide.png =250x)
+```
+
+![](/storage/namespaces/guide.png =250x)
+
+## Alt Text
+
+```md
+![Guide cover](/storage/namespaces/guide.png =250x)
+```
+
+![Guide cover](/storage/namespaces/guide.png =250x)
+
+## Caption
+
+Place italic text on the next line to display it like a caption.
+
+```md
+![](/storage/namespaces/guide.png =250x)
+*Guide cover image*
+```
+
+![](/storage/namespaces/guide.png =250x)
+*Guide cover image*
+
+## Linked Image
+
+```md
+[![](/storage/namespaces/guide.png =250x)](https://zenn.dev)
+```
+
+[![](/storage/namespaces/guide.png =250x)](https://zenn.dev)
 MD),
                 'published_at' => now(),
             ]);

@@ -7,8 +7,7 @@ import {
     PanelRightOpen,
 } from 'lucide-react';
 import { useState } from 'react';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import MarkdownContent from '@/components/markdown-content';
 import TableOfContents from '@/components/table-of-contents';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
 import { useIsMobile } from '@/hooks/use-mobile';
@@ -238,12 +237,10 @@ export default function Show({
                                 </time>
                             </header>
                             <div className="prose max-w-none prose-neutral dark:prose-invert">
-                                <ReactMarkdown
-                                    remarkPlugins={[remarkGfm]}
+                                <MarkdownContent
+                                    content={post.content}
                                     components={entry?.components}
-                                >
-                                    {post.content}
-                                </ReactMarkdown>
+                                />
                             </div>
                         </article>
                     </main>
