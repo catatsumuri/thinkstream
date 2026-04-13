@@ -76,6 +76,8 @@ Minimal loop:
 - Prefer explicit commands over `eval` and `run-code`.
 - Use `--headed` when a visual check matters.
 - Store captured artifacts under `output/playwright/`.
+- Prefer the wrapper script unless the user explicitly asks for raw `playwright-cli` or `npx playwright`.
+- Only switch to Playwright test authoring when the user explicitly asks for tests or test debugging.
 
 ## References
 
@@ -83,3 +85,12 @@ Open only what you need:
 
 - `references/cli.md` for the command surface
 - `references/workflows.md` for repeatable task flows
+- `references/playwright-tests.md` for running or debugging Playwright tests
+- `references/request-mocking.md` for routing and API mocking
+- `references/running-code.md` for advanced `run-code` snippets
+- `references/storage-state.md` for cookies, storage, and auth state reuse
+- `references/session-management.md` for multiple browser sessions and persistent profiles
+- `references/tracing.md` for traces and DOM/network debugging
+- `references/video-recording.md` for screencasts and narrated demo capture
+- `references/test-generation.md` for turning CLI interactions into Playwright code
+- `references/element-attributes.md` for inspecting ids, classes, `data-*`, and computed styles
