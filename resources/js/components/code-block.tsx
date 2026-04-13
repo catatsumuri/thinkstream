@@ -3,6 +3,7 @@ import Prism from 'prismjs';
 import type { ComponentPropsWithoutRef } from 'react';
 import { useState } from 'react';
 import type { ExtraProps } from 'react-markdown';
+import { MermaidBlock } from '@/components/mermaid-block';
 import { useClipboard } from '@/hooks/use-clipboard';
 
 type CodeBlockProps = ComponentPropsWithoutRef<'code'> & ExtraProps;
@@ -46,6 +47,10 @@ export function CodeBlock({ className, children }: CodeBlockProps) {
     }
 
     const highlightLang = language === 'blade' ? 'html' : language;
+
+    if (highlightLang === 'mermaid') {
+        return <MermaidBlock code={content} />;
+    }
 
     return (
         <div className="not-prose relative my-4 overflow-hidden rounded-lg border border-gray-700 bg-[#282c34]">
