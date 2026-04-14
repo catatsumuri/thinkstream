@@ -23,13 +23,23 @@ class PostFactory extends Factory
             'title' => $title,
             'slug' => Str::slug($title),
             'content' => implode("\n\n", fake()->paragraphs(3)),
-            'published_at' => null,
+            'is_draft' => false,
+            'published_at' => now(),
         ];
+    }
+
+    public function draft(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_draft' => true,
+            'published_at' => null,
+        ]);
     }
 
     public function published(): static
     {
         return $this->state(fn (array $attributes) => [
+            'is_draft' => false,
             'published_at' => now(),
         ]);
     }

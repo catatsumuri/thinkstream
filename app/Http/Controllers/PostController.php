@@ -14,7 +14,7 @@ class PostController extends Controller
     {
         return Inertia::render('posts/index', [
             'namespaces' => PostNamespace::published()
-                ->withCount(['posts' => fn ($q) => $q->whereNotNull('published_at')])
+                ->withCount(['posts' => fn ($q) => $q->where('is_draft', false)])
                 ->orderBy('name')
                 ->get(['id', 'slug', 'name', 'description', 'cover_image']),
         ]);
@@ -27,7 +27,7 @@ class PostController extends Controller
         }
 
         $posts = $namespace->posts()
-            ->whereNotNull('published_at')
+            ->where('is_draft', false)
             ->orderBy('published_at')
             ->orderBy('id')
             ->get(['id', 'slug']);
@@ -48,7 +48,7 @@ class PostController extends Controller
         }
 
         $posts = $namespace->posts()
-            ->whereNotNull('published_at')
+            ->where('is_draft', false)
             ->orderBy('published_at')
             ->orderBy('id')
             ->get(['id', 'slug', 'title', 'published_at']);

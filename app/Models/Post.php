@@ -18,12 +18,14 @@ class Post extends Model
         'slug',
         'content',
         'user_id',
+        'is_draft',
         'published_at',
     ];
 
     protected function casts(): array
     {
         return [
+            'is_draft' => 'boolean',
             'published_at' => 'datetime',
         ];
     }

@@ -30,6 +30,7 @@ class StorePostRequest extends FormRequest
                 Rule::unique('posts', 'slug')->where('namespace_id', $namespaceId),
             ],
             'content' => ['required', 'string'],
+            'is_draft' => ['boolean'],
             'published_at' => ['nullable', 'date'],
         ];
     }

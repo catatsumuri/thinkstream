@@ -24,7 +24,7 @@ class PostController extends Controller
     {
         return Inertia::render('admin/posts/namespace', [
             'namespace' => $namespace,
-            'posts' => $namespace->posts()->latest()->get(['id', 'title', 'slug', 'published_at', 'created_at']),
+            'posts' => $namespace->posts()->latest()->get(['id', 'title', 'slug', 'is_draft', 'published_at', 'created_at']),
         ]);
     }
 
