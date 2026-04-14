@@ -1,7 +1,9 @@
 import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownEditor from '@/components/markdown-editor';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes';
@@ -23,6 +25,7 @@ type Post = {
     slug: string;
     title: string;
     content: string;
+    is_draft: boolean;
     published_at: string | null;
 };
 
@@ -36,6 +39,8 @@ export default function Edit({
     const publishedAt = post.published_at
         ? new Date(post.published_at).toISOString().slice(0, 16)
         : '';
+
+    const [isDraft, setIsDraft] = useState(post.is_draft);
 
     setLayoutProps({
         breadcrumbs: [
@@ -104,6 +109,22 @@ export default function Edit({
                                 error={errors.content}
                             />
 
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="hidden"
+                                    name="is_draft"
+                                    value={isDraft ? '1' : '0'}
+                                />
+                                <Checkbox
+                                    id="is_draft"
+                                    checked={isDraft}
+                                    onCheckedChange={(checked) =>
+                                        setIsDraft(checked === true)
+                                    }
+                                />
+                                <Label htmlFor="is_draft">Save as draft</Label>
+                            </div>
+
                             <div className="grid gap-2">
                                 <Label htmlFor="published_at">
                                     Publish date (optional)
@@ -114,7 +135,11 @@ export default function Edit({
                                     type="datetime-local"
                                     defaultValue={publishedAt}
                                     className="w-fit"
+                                    disabled={isDraft}
                                 />
+                                <p className="text-xs text-muted-foreground">
+                                    Leave blank to publish immediately.
+                                </p>
                                 <InputError message={errors.published_at} />
                             </div>
 

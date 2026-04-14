@@ -3,6 +3,7 @@ import { useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownEditor from '@/components/markdown-editor';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes';
@@ -40,6 +41,7 @@ export default function Create({ namespace }: { namespace: Namespace }) {
 
     const [slug, setSlug] = useState('');
     const [slugTouched, setSlugTouched] = useState(false);
+    const [isDraft, setIsDraft] = useState(false);
 
     function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
         if (!slugTouched) {
@@ -101,6 +103,22 @@ export default function Create({ namespace }: { namespace: Namespace }) {
                                 error={errors.content}
                             />
 
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="hidden"
+                                    name="is_draft"
+                                    value={isDraft ? '1' : '0'}
+                                />
+                                <Checkbox
+                                    id="is_draft"
+                                    checked={isDraft}
+                                    onCheckedChange={(checked) =>
+                                        setIsDraft(checked === true)
+                                    }
+                                />
+                                <Label htmlFor="is_draft">Save as draft</Label>
+                            </div>
+
                             <div className="grid gap-2">
                                 <Label htmlFor="published_at">
                                     Publish date (optional)
@@ -110,13 +128,17 @@ export default function Create({ namespace }: { namespace: Namespace }) {
                                     name="published_at"
                                     type="datetime-local"
                                     className="w-fit"
+                                    disabled={isDraft}
                                 />
+                                <p className="text-xs text-muted-foreground">
+                                    Leave blank to publish immediately.
+                                </p>
                                 <InputError message={errors.published_at} />
                             </div>
 
                             <div className="flex gap-3">
                                 <Button type="submit" disabled={processing}>
-                                    Create Post
+                                    {isDraft ? 'Save Draft' : 'Create Post'}
                                 </Button>
                                 <Button type="button" variant="outline" asChild>
                                     <a

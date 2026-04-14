@@ -32,6 +32,7 @@ class UpdatePostRequest extends FormRequest
                     ->ignore($this->route('post')),
             ],
             'content' => ['required', 'string'],
+            'is_draft' => ['boolean'],
             'published_at' => ['nullable', 'date'],
         ];
     }

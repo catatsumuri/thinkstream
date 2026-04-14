@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('title');
             $table->string('slug');
             $table->longText('content');
+            $table->boolean('is_draft')->default(false);
             $table->timestamp('published_at')->nullable();
             $table->timestamps();
             $table->unique(['namespace_id', 'slug']);
