@@ -3,6 +3,8 @@ import type { Components } from 'react-markdown';
 import ReactMarkdown from 'react-markdown';
 import remarkDirective from 'remark-directive';
 import remarkGfm from 'remark-gfm';
+import { EmbedCard } from '@/components/embed-card';
+import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
 import { remarkZennDirective } from '@/lib/remark-zenn-directive';
 import { cn } from '@/lib/utils';
 import {
@@ -60,8 +62,30 @@ export default function MarkdownContent({
 }: MarkdownContentProps) {
     return (
         <ReactMarkdown
-            remarkPlugins={[remarkGfm, remarkDirective, remarkZennDirective]}
-            components={{ aside: MessageBox, ...components }}
+            remarkPlugins={[
+                remarkGfm,
+                remarkDirective,
+                remarkZennDirective,
+                remarkLinkifyToCard,
+            ]}
+            components={{
+                aside: MessageBox,
+                div: (props: React.ComponentPropsWithoutRef<'div'>) => {
+                    const embedType = (props as Record<string, unknown>)[
+                        'data-embed-type'
+                    ] as 'youtube' | 'card' | undefined;
+                    const embedUrl = (props as Record<string, unknown>)[
+                        'data-embed-url'
+                    ] as string | undefined;
+
+                    if (embedType && embedUrl) {
+                        return <EmbedCard type={embedType} url={embedUrl} />;
+                    }
+
+                    return <div {...props} />;
+                },
+                ...components,
+            }}
         >
             {preprocessZennMarkdown(preprocessZennSyntax(content))}
         </ReactMarkdown>

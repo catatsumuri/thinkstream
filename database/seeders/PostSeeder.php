@@ -718,6 +718,32 @@ Your warning here
 :::message alert
 Your warning here
 :::
+
+## Link Card
+
+A URL placed alone on its own line is automatically displayed as a card.
+
+```md
+https://zenn.dev
+```
+
+https://zenn.dev
+
+Use the `@[card](URL)` form for URLs that contain underscores.
+
+```md
+@[card](https://zenn.dev/zenn/articles/markdown-guide)
+```
+
+@[card](https://zenn.dev/zenn/articles/markdown-guide)
+
+YouTube URLs are automatically embedded as a video player.
+
+```md
+https://www.youtube.com/watch?v=WRVsOCh907o
+```
+
+https://www.youtube.com/watch?v=WRVsOCh907o
 MD),
                 'published_at' => now(),
             ]);
