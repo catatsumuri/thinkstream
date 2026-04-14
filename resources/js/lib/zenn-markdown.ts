@@ -98,6 +98,8 @@ export function preprocessZennSyntax(markdown: string): string {
             .replace(/:::details\s+(.+?)(\r?\n)/g, ':::details[$1]$2')
             // Convert @[card](URL) to a bare URL line so remark-linkify-to-card picks it up.
             .replace(/^@\[card\]\((https?:\/\/[^\s)]+)\)$/gm, '$1')
+            // Convert @[github](URL) to a bare URL line so remark-linkify-to-card picks it up.
+            .replace(/^@\[github\]\((https?:\/\/[^\s)]+)\)$/gm, '$1')
     );
 }
 

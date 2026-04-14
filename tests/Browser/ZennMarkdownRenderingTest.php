@@ -128,3 +128,35 @@ MARKDOWN,
         ->assertPresent('[data-test="embed-card-youtube"]')
         ->assertPresent('iframe[src*="youtube-nocookie.com"]');
 });
+
+test('GitHub URL renders as github embed', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => <<<'MARKDOWN'
+# GitHub
+
+https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.show', [$namespace, $post]));
+
+    $page->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="embed-github"]');
+});
+
+test('@[github](URL) directive renders as github embed', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => <<<'MARKDOWN'
+# GitHub
+
+@[github](https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json)
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.show', [$namespace, $post]));
+
+    $page->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="embed-github"]');
+});

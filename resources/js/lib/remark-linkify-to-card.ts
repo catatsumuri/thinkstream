@@ -7,9 +7,9 @@
  */
 import type { Link, Paragraph, Root, Text } from 'mdast';
 import { visit } from 'unist-util-visit';
-import { isYoutubeUrl } from './url-matcher';
+import { isGithubUrl, isYoutubeUrl } from './url-matcher';
 
-export type EmbedType = 'youtube' | 'card';
+export type EmbedType = 'youtube' | 'card' | 'github';
 
 /**
  * Returns the link node if the paragraph contains only a single standalone link,
@@ -52,6 +52,10 @@ function isStandaloneLinkInParagraph(paragraph: Paragraph): Link | null {
 function detectEmbedType(url: string): EmbedType {
     if (isYoutubeUrl(url)) {
         return 'youtube';
+    }
+
+    if (isGithubUrl(url)) {
+        return 'github';
     }
 
     return 'card';

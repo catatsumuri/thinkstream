@@ -1,10 +1,11 @@
 import { ExternalLink } from 'lucide-react';
 import React from 'react';
+import { GithubEmbed } from '@/components/github-embed';
 import { extractYoutubeVideoParameters } from '@/lib/url-matcher';
 
 interface EmbedCardProps {
     url: string;
-    type: 'youtube' | 'card';
+    type: 'youtube' | 'card' | 'github';
 }
 
 /**
@@ -174,6 +175,10 @@ function LinkCard({ url }: { url: string }) {
 export function EmbedCard({ url, type }: EmbedCardProps) {
     if (type === 'youtube') {
         return <YoutubeEmbed url={url} />;
+    }
+
+    if (type === 'github') {
+        return <GithubEmbed url={url} />;
     }
 
     return <LinkCard url={url} />;
