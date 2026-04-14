@@ -98,8 +98,8 @@ test(':::details directive renders as details/summary element', function () {
         'content' => <<<'MARKDOWN'
 # Details Test
 
-:::details 詳細を見る
-隠れているコンテンツ
+:::details Show details
+Hidden content
 :::
 MARKDOWN,
     ]);
@@ -109,7 +109,7 @@ MARKDOWN,
     $page
         ->assertNoJavaScriptErrors()
         ->assertPresent('[data-test="details-block"]')
-        ->assertSee('詳細を見る');
+        ->assertSee('Show details');
 });
 
 test('YouTube URL renders as iframe embed', function () {

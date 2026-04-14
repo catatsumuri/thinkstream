@@ -38,7 +38,7 @@ export function remarkZennDirective() {
             }
 
             if (directiveNode.name === 'details') {
-                let summaryText = '詳細';
+                let summaryText = 'Details';
                 const bodyChildren = [...directiveNode.children];
 
                 if (
