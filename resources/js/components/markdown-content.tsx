@@ -10,6 +10,7 @@ import remarkEmoji from 'remark-emoji';
 import remarkGfm from 'remark-gfm';
 import remarkSupersub from 'remark-supersub';
 import { EmbedCard } from '@/components/embed-card';
+import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
 import { remarkMark } from '@/lib/remark-mark';
 import { remarkZennDirective } from '@/lib/remark-zenn-directive';
@@ -71,6 +72,7 @@ export default function MarkdownContent({
         <ReactMarkdown
             remarkPlugins={[
                 [remarkGfm, { singleTilde: false }],
+                remarkCodeMeta,
                 remarkDirective,
                 remarkZennDirective,
                 remarkLinkifyToCard,

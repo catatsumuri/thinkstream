@@ -643,8 +643,6 @@ MD),
                 'content' => trim(<<<'MD'
 # Zenn Syntax
 
-> **WIP:** This page is still under construction.
-
 Zenn supports a few convenient image patterns on top of regular Markdown.
 
 ## Basic Image
@@ -744,6 +742,49 @@ https://www.youtube.com/watch?v=WRVsOCh907o
 ```
 
 https://www.youtube.com/watch?v=WRVsOCh907o
+
+## Code Block with Filename
+
+Add `:filename` after the language name to display a filename label above the code block.
+
+Use `` ```php:index.php `` to attach a filename:
+
+```php:index.php
+<?php
+
+echo 'Hello, world!';
+```
+
+Use `` ```ts:src/utils.ts `` to attach a path:
+
+```ts:src/utils.ts
+export function greet(name: string): string {
+    return `Hello, ${name}!`;
+}
+```
+
+## Diff Highlighting
+
+Start the fence with `diff` followed by the language name to enable diff highlighting. Lines beginning with `+` are shown in green and lines beginning with `-` in red.
+
+Use `` ```diff js `` for diff highlighting:
+
+```diff js
+@@ -4,6 +4,5 @@
++    const foo = bar.baz([1, 2, 3]) + 1;
+-    let foo = bar.baz([1, 2, 3]);
+     return foo;
+```
+
+You can combine `diff` with a filename using `` ```diff ts:src/utils.ts ``:
+
+```diff ts:src/utils.ts
+@@ -1,5 +1,5 @@
+-export function greet(name: string) {
++export function greet(name: string): string {
+     return `Hello, ${name}!`;
+ }
+```
 MD),
                 'published_at' => now(),
             ]);
