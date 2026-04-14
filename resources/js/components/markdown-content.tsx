@@ -1,10 +1,17 @@
 import { AlertCircle, Info } from 'lucide-react';
 import type { Components } from 'react-markdown';
 import ReactMarkdown from 'react-markdown';
+import {
+    defListHastHandlers,
+    remarkDefinitionList,
+} from 'remark-definition-list';
 import remarkDirective from 'remark-directive';
+import remarkEmoji from 'remark-emoji';
 import remarkGfm from 'remark-gfm';
+import remarkSupersub from 'remark-supersub';
 import { EmbedCard } from '@/components/embed-card';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
+import { remarkMark } from '@/lib/remark-mark';
 import { remarkZennDirective } from '@/lib/remark-zenn-directive';
 import { cn } from '@/lib/utils';
 import {
@@ -63,13 +70,45 @@ export default function MarkdownContent({
     return (
         <ReactMarkdown
             remarkPlugins={[
-                remarkGfm,
+                [remarkGfm, { singleTilde: false }],
                 remarkDirective,
                 remarkZennDirective,
                 remarkLinkifyToCard,
+                remarkSupersub,
+                remarkDefinitionList,
+                remarkEmoji,
+                remarkMark,
             ]}
+            remarkRehypeOptions={{
+                handlers: {
+                    ...defListHastHandlers,
+                    mark: (state: any, node: any) => ({
+                        type: 'element' as const,
+                        tagName: 'mark',
+                        properties: {},
+                        children: state.all(node),
+                    }),
+                } as any,
+            }}
             components={{
                 aside: MessageBox,
+                dl: ({ node, ...props }) => {
+                    void node;
+
+                    return <dl className="my-4 space-y-1" {...props} />;
+                },
+                dt: ({ node, ...props }) => {
+                    void node;
+
+                    return <dt className="font-semibold" {...props} />;
+                },
+                dd: ({ node, ...props }) => {
+                    void node;
+
+                    return (
+                        <dd className="ml-4 text-muted-foreground" {...props} />
+                    );
+                },
                 div: (props: React.ComponentPropsWithoutRef<'div'>) => {
                     const embedType = (props as Record<string, unknown>)[
                         'data-embed-type'
