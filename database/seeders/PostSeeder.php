@@ -717,6 +717,70 @@ Your warning here
 Your warning here
 :::
 
+## Details (Collapsible)
+
+Wrap content in `:::details` followed by a title to create a collapsible block. The content is hidden until the reader clicks to expand it.
+
+```md
+:::details Click to expand
+This content is hidden by default.
+:::
+```
+
+:::details Click to expand
+This content is hidden by default.
+:::
+
+Any block content can go inside — paragraphs, code, lists, and even other directives.
+
+```md
+:::details Show code example
+Here is some hidden code:
+
+```ts
+function add(a: number, b: number): number {
+    return a + b;
+}
+` ``
+
+And a list:
+
+- Item one
+- Item two
+:::
+```
+
+:::details Show code example
+Here is some hidden code:
+
+```ts
+function add(a: number, b: number): number {
+    return a + b;
+}
+```
+
+And a list:
+
+- Item one
+- Item two
+:::
+
+To nest directives, use more colons on the outer block.
+
+```md
+::::details Details with a nested callout
+:::message
+This note is inside a collapsible section.
+:::
+::::
+```
+
+::::details Details with a nested callout
+:::message
+This note is inside a collapsible section.
+:::
+::::
+
 ## Link Card
 
 A URL placed alone on its own line is automatically displayed as a card.

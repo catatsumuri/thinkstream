@@ -94,6 +94,8 @@ export function preprocessZennSyntax(markdown: string): string {
         markdown
             // Normalize :::message alert to the attribute form remark-directive expects.
             .replace(/:::message\s+alert\b/g, ':::message{.alert}')
+            // Convert :::details title to the label form remark-directive expects.
+            .replace(/:::details\s+(.+?)(\r?\n)/g, ':::details[$1]$2')
             // Convert @[card](URL) to a bare URL line so remark-linkify-to-card picks it up.
             .replace(/^@\[card\]\((https?:\/\/[^\s)]+)\)$/gm, '$1')
     );
