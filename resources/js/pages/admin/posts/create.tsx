@@ -1,5 +1,4 @@
-import { Head } from '@inertiajs/react';
-import { Form } from '@inertiajs/react';
+import { Head, Form, setLayoutProps } from '@inertiajs/react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownEditor from '@/components/markdown-editor';
@@ -30,6 +29,15 @@ function toSlug(value: string): string {
 }
 
 export default function Create({ namespace }: { namespace: Namespace }) {
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Dashboard', href: dashboard() },
+            { title: 'Posts', href: index.url() },
+            { title: namespace.name, href: namespaceRoute.url(namespace.slug) },
+            { title: 'New Post', href: create.url(namespace.slug) },
+        ],
+    });
+
     const [slug, setSlug] = useState('');
     const [slugTouched, setSlugTouched] = useState(false);
 
@@ -127,15 +135,3 @@ export default function Create({ namespace }: { namespace: Namespace }) {
         </>
     );
 }
-
-Create.layout = {
-    breadcrumbs: (props: { namespace: Namespace }) => [
-        { title: 'Dashboard', href: dashboard() },
-        { title: 'Posts', href: index.url() },
-        {
-            title: props.namespace.name,
-            href: namespaceRoute.url(props.namespace.slug),
-        },
-        { title: 'New Post', href: create.url(props.namespace.slug) },
-    ],
-};
