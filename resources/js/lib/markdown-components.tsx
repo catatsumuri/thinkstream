@@ -75,17 +75,15 @@ function MarkdownParagraph({
 function makeHeadingComponents(
     postSlug?: string,
 ): Pick<Components, 'h1' | 'h2' | 'h3'> {
-    if (!postSlug) {
-        return {};
-    }
-
     const makeTag = (level: 1 | 2 | 3) =>
         function Heading({ children }: { children?: ReactNode }) {
             const text =
                 typeof children === 'string'
                     ? children
                     : String(children ?? '');
-            const id = `${postSlug}-${slugify(text)}`;
+            const id = postSlug
+                ? `${postSlug}-${slugify(text)}`
+                : slugify(text);
             const Tag = `h${level}` as 'h1' | 'h2' | 'h3';
 
             return (

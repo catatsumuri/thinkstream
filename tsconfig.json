@@ -109,7 +109,8 @@
         "skipLibCheck": true /* Skip type checking all .d.ts files. */,
         "baseUrl": ".",
         "paths": {
-            "@/*": ["./resources/js/*"]
+            "@/*": ["./resources/js/*"],
+            "mdast-util-mark": ["./node_modules/mdast-util-mark/index.d.ts"]
         },
         "jsx": "react-jsx"
     },

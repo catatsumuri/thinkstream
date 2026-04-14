@@ -78,9 +78,9 @@ export function remarkLinkifyToCard() {
             const embedType = detectEmbedType(url);
 
             const data = (node.data ??= {});
-             
+
             (data as any).hName = 'div';
-             
+
             (data as any).hProperties = {
                 'data-embed-type': embedType,
                 'data-embed-url': url,
