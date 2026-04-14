@@ -90,7 +90,13 @@ function rewriteImageLine(line: string, caption?: string): string | null {
 }
 
 export function preprocessZennSyntax(markdown: string): string {
-    return markdown.replace(/:::message\s+alert\b/g, ':::message{.alert}');
+    return (
+        markdown
+            // Normalize :::message alert to the attribute form remark-directive expects.
+            .replace(/:::message\s+alert\b/g, ':::message{.alert}')
+            // Convert @[card](URL) to a bare URL line so remark-linkify-to-card picks it up.
+            .replace(/^@\[card\]\((https?:\/\/[^\s)]+)\)$/gm, '$1')
+    );
 }
 
 export function preprocessZennMarkdown(markdown: string): string {

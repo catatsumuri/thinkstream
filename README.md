@@ -26,6 +26,7 @@ Current seeded examples cover:
 3. Linked images with the same width metadata handling
 4. `:::message` and `:::message alert` callout blocks
 5. Fenced `mermaid` code blocks rendered as diagrams
+6. Link cards from standalone URLs and `@[card](URL)` directives, with OGP metadata fetched server-side and YouTube URLs rendered as iframe embeds
 
 ### Adding more Zenn syntax
 
