@@ -1,7 +1,8 @@
 {
     "agents": [
         "codex",
-        "claude_code"
+        "claude_code",
+        "copilot"
     ],
     "guidelines": true,
     "mcp": true,

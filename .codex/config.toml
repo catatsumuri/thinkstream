@@ -1,4 +1,4 @@
 [mcp_servers.laravel-boost]
 command = "vendor/bin/sail"
 args = ["artisan", "boost:mcp"]
-cwd = "/opt/home-admin/thinkstream"
+cwd = "/var/www/html"
