@@ -92,6 +92,26 @@ MARKDOWN,
         ->assertPresent('[data-test="embed-card-card"]');
 });
 
+test(':::details directive renders as details/summary element', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => <<<'MARKDOWN'
+# Details Test
+
+:::details Show details
+Hidden content
+:::
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.show', [$namespace, $post]));
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="details-block"]')
+        ->assertSee('Show details');
+});
+
 test('YouTube URL renders as iframe embed', function () {
     $namespace = PostNamespace::factory()->create(['is_published' => true]);
     $post = Post::factory()->for($namespace, 'namespace')->published()->create([

@@ -20,6 +20,35 @@ import {
     preprocessZennSyntax,
 } from '@/lib/zenn-markdown';
 
+function DetailsBox({
+    children,
+    ...props
+}: React.ComponentPropsWithoutRef<'details'>) {
+    return (
+        <details
+            className="details-block not-prose my-4 rounded-md border border-border text-sm"
+            data-test="details-block"
+            {...props}
+        >
+            {children}
+        </details>
+    );
+}
+
+function SummaryEl({
+    children,
+    ...props
+}: React.ComponentPropsWithoutRef<'summary'>) {
+    return (
+        <summary
+            className="cursor-pointer rounded-md bg-muted px-4 py-2 leading-relaxed font-medium select-none"
+            {...props}
+        >
+            {children}
+        </summary>
+    );
+}
+
 function MessageBox({
     children,
     className,
@@ -94,6 +123,8 @@ export default function MarkdownContent({
             }}
             components={{
                 aside: MessageBox,
+                details: DetailsBox,
+                summary: SummaryEl,
                 dl: ({ node, ...props }) => {
                     void node;
 
