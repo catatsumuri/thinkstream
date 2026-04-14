@@ -145,7 +145,7 @@ export default function MarkdownContent({
                 div: (props: React.ComponentPropsWithoutRef<'div'>) => {
                     const embedType = (props as Record<string, unknown>)[
                         'data-embed-type'
-                    ] as 'youtube' | 'card' | undefined;
+                    ] as 'youtube' | 'card' | 'github' | undefined;
                     const embedUrl = (props as Record<string, unknown>)[
                         'data-embed-url'
                     ] as string | undefined;

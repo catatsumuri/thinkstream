@@ -33,6 +33,9 @@ test('post seeder creates the zenn syntax guide with code block examples', funct
     expect($post->content)->toContain('```php:index.php');
     expect($post->content)->toContain('## Diff Highlighting');
     expect($post->content)->toContain('```diff ts:src/utils.ts');
+    expect($post->content)->toContain('## GitHub Embed');
+    expect($post->content)->toContain('https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json');
+    expect($post->content)->toContain('@[github](https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json)');
     expect($post->content)->toContain('![Guide cover](/storage/namespaces/guide.png =250x)');
     expect($post->content)->toContain('![](/storage/namespaces/guide.png =250x)');
     expect($post->content)->toContain('*Guide cover image*');

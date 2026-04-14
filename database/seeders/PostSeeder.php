@@ -849,6 +849,32 @@ You can combine `diff` with a filename using `` ```diff ts:src/utils.ts ``:
      return `Hello, ${name}!`;
  }
 ```
+
+## GitHub Embed
+
+A GitHub file URL placed alone on its own line is automatically embedded as a code block.
+
+```md
+https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json
+```
+
+https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json
+
+Use a line range with `#L{start}-L{end}` to show a specific section.
+
+```md
+https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json#L1-L3
+```
+
+https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json#L1-L3
+
+The `@[github](URL)` form also works.
+
+```md
+@[github](https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json)
+```
+
+@[github](https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json)
 MD),
                 'published_at' => now(),
             ]);
