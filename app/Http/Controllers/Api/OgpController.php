@@ -17,7 +17,7 @@ class OgpController extends Controller
     ) {}
 
     /**
-     * OGPメタデータを取得する。
+     * Fetch OGP metadata for the given URL.
      */
     public function fetch(Request $request): JsonResponse
     {
