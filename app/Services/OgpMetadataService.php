@@ -41,9 +41,9 @@ class OgpMetadataService
     }
 
     /**
-     * URLからOGPメタデータを取得する。
+     * Fetch OGP metadata for the given URL.
      *
-     * @param  string  $url  取得対象のURL
+     * @param  string  $url  The URL to fetch.
      * @return array{title: string, description: ?string, image: ?string, url: string}|null
      */
     public function fetch(string $url): ?array
