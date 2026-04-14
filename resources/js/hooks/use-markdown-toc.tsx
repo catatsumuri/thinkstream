@@ -30,12 +30,14 @@ function extractHeadings(content: string, postSlug: string): Heading[] {
 
         if (fenceMatch) {
             const fence = fenceMatch[1];
+            const remainder = trimmedLine.slice(fence.length);
 
             if (activeFence === null) {
                 activeFence = fence;
             } else if (
                 fence[0] === activeFence[0] &&
-                fence.length >= activeFence.length
+                fence.length >= activeFence.length &&
+                remainder.trim() === ''
             ) {
                 activeFence = null;
             }
