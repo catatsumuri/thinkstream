@@ -64,4 +64,4 @@ jobs:
         run: npm run build
 
       - name: Markdown Browser Tests
-        run: ./vendor/bin/pest --ci tests/Browser/ZennMarkdownRenderingTest.php tests/Browser/MintlifyTabsRenderingTest.php
+        run: ./vendor/bin/pest --ci tests/Browser/ZennMarkdownRenderingTest.php tests/Browser/MintlifyTabsRenderingTest.php tests/Browser/CodeBlockHighlightingTest.php
