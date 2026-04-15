@@ -11,16 +11,16 @@ import remarkGfm from 'remark-gfm';
 import remarkSupersub from 'remark-supersub';
 import { EmbedCard } from '@/components/embed-card';
 import { MarkdownTab, MarkdownTabs } from '@/components/markdown-tabs';
+import {
+    preprocessMarkdownContent,
+    preprocessMarkdownSyntax,
+} from '@/lib/markdown-syntax';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
 import { remarkMark } from '@/lib/remark-mark';
 import { remarkTabsDirective } from '@/lib/remark-tabs-directive';
 import { remarkZennDirective } from '@/lib/remark-zenn-directive';
 import { cn } from '@/lib/utils';
-import {
-    preprocessZennMarkdown,
-    preprocessZennSyntax,
-} from '@/lib/zenn-markdown';
 
 function DetailsBox({
     children,
@@ -167,7 +167,7 @@ export default function MarkdownContent({
             }}
             components={markdownComponents}
         >
-            {preprocessZennMarkdown(preprocessZennSyntax(content))}
+            {preprocessMarkdownContent(preprocessMarkdownSyntax(content))}
         </ReactMarkdown>
     );
 }

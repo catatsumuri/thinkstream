@@ -6,11 +6,11 @@ The app renders markdown through `resources/js/components/markdown-content.tsx`,
 
 Custom markdown behavior is split into three layers:
 
-1. `resources/js/lib/zenn-markdown.ts`
+1. `resources/js/lib/markdown-syntax.ts`
    - Preprocesses source text before `react-markdown` parses it.
-   - `preprocessZennSyntax()` normalizes shorthand Zenn directive syntax such as `:::message alert` into directive attributes that `remark-directive` can understand.
+   - `preprocessMarkdownSyntax()` normalizes shorthand Zenn directive syntax such as `:::message alert` into directive attributes that `remark-directive` can understand.
    - The same preprocessing layer also normalizes selected Mintlify-style JSX snippets such as `<Tabs>` / `<Tab>` into directive syntax before parsing.
-   - `preprocessZennMarkdown()` rewrites image syntax like `![](/path/to/image.png =250x)` and carries width, height, and caption metadata through the URL while skipping fenced code blocks.
+   - `preprocessMarkdownContent()` rewrites image syntax like `![](/path/to/image.png =250x)` and carries width, height, and caption metadata through the URL while skipping fenced code blocks.
 2. `resources/js/lib/remark-zenn-directive.ts`
    - Converts parsed Zenn container directives into HTML nodes that React can render.
    - Current support maps `:::message` and `:::message alert` into `<aside>` nodes with message or alert styling.
@@ -45,8 +45,8 @@ Planned components tracked in the `mintlify-syntax` seeded post (WIP):
 
 When adding a new Zenn-style snippet or block syntax:
 
-1. Normalize shorthand source syntax in `preprocessZennSyntax()` when the parser needs a more explicit form.
-2. Extend `preprocessZennMarkdown()` when the feature is best represented as rewritten markdown or encoded metadata.
+1. Normalize shorthand source syntax in `preprocessMarkdownSyntax()` when the parser needs a more explicit form.
+2. Extend `preprocessMarkdownContent()` when the feature is best represented as rewritten markdown or encoded metadata.
 3. Add or update `remarkZennDirective()` when the feature should become a custom markdown node after parsing.
 4. Add or update a renderer in `createMarkdownComponents()` when the final HTML needs custom React output.
 5. Add seeded example content in `database/seeders/PostSeeder.php`.
@@ -60,7 +60,7 @@ Mintlify uses JSX-like tags (`<Tabs>`, `<Tab>`, `<Accordion>`, …) that `react-
 
 The two-pass approach for any new component is:
 
-1. **Preprocessor** (`preprocessMintlifySyntax` in `zenn-markdown.ts`) — strip JSX tags and emit directive syntax.
+1. **Preprocessor** (`preprocessMintlifySyntax` in `markdown-syntax.ts`) — strip JSX tags and emit directive syntax.
 2. **Remark plugin** (`remark-tabs-directive.ts` or a new file) — set `hName` and `hProperties` on the AST node.
 3. **React component** (`markdown-content.tsx` component map) — render the final HTML.
 

@@ -1,6 +1,6 @@
 import type { ComponentPropsWithoutRef } from 'react';
+import { parseMarkdownImageMetadata } from '@/lib/markdown-syntax';
 import { cn } from '@/lib/utils';
-import { parseZennImageMetadata } from '@/lib/zenn-markdown';
 
 type MarkdownImageProps = ComponentPropsWithoutRef<'img'>;
 
@@ -11,7 +11,7 @@ export function MarkdownImage({
     style,
     ...props
 }: MarkdownImageProps) {
-    const image = parseZennImageMetadata(src);
+    const image = parseMarkdownImageMetadata(src);
 
     return (
         <img

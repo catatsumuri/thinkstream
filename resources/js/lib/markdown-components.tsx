@@ -4,7 +4,7 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import type { Components } from 'react-markdown';
 import { CodeBlock } from '@/components/code-block';
 import { MarkdownImage } from '@/components/markdown-image';
-import { parseZennImageMetadata } from '@/lib/zenn-markdown';
+import { parseMarkdownImageMetadata } from '@/lib/markdown-syntax';
 
 function slugify(text: string): string {
     return text
@@ -32,7 +32,7 @@ function extractCaptionFromNode(node: ReactNode): string | undefined {
     }
 
     if (typeof node.props.src === 'string') {
-        return parseZennImageMetadata(node.props.src).caption;
+        return parseMarkdownImageMetadata(node.props.src).caption;
     }
 
     const children = Children.toArray(node.props.children);
