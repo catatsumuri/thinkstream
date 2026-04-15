@@ -167,7 +167,14 @@ export function preprocessMintlifySyntax(markdown: string): string {
     let activeFence: string | null = null;
     let mintlifyTabsDepth = 0;
     const mintlifyTagStack: Array<
-        'Tabs' | 'Tab' | 'Card' | 'CardGroup' | 'Accordion' | MintlifyCalloutTag
+        | 'Tabs'
+        | 'Tab'
+        | 'Card'
+        | 'CardGroup'
+        | 'Accordion'
+        | 'Steps'
+        | 'Step'
+        | MintlifyCalloutTag
     > = [];
 
     const pushLine = (value: string): void => {
@@ -383,6 +390,56 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
         if (trimmedLine === '</Accordion>') {
             if (mintlifyTagStack.at(-1) === 'Accordion') {
+                mintlifyTagStack.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine(':::');
+
+            continue;
+        }
+
+        const stepsOpenMatch = /^<Steps(?<attributes>[^>]*)>$/.exec(
+            trimmedLine,
+        );
+
+        if (stepsOpenMatch) {
+            pushBlankLineIfNeeded();
+            pushLine('::::steps');
+            pushLine('');
+            mintlifyTagStack.push('Steps');
+
+            continue;
+        }
+
+        if (trimmedLine === '</Steps>') {
+            if (mintlifyTagStack.at(-1) === 'Steps') {
+                mintlifyTagStack.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine('::::');
+
+            continue;
+        }
+
+        const stepOpenMatch = /^<Step(?<attributes>[^>]*)>$/.exec(trimmedLine);
+
+        if (stepOpenMatch) {
+            const attributes = parseJsxAttributes(
+                stepOpenMatch.groups?.attributes ?? '',
+            );
+
+            pushBlankLineIfNeeded();
+            pushLine(`:::step${buildDirectiveAttributes(attributes)}`);
+            pushLine('');
+            mintlifyTagStack.push('Step');
+
+            continue;
+        }
+
+        if (trimmedLine === '</Step>') {
+            if (mintlifyTagStack.at(-1) === 'Step') {
                 mintlifyTagStack.pop();
             }
 

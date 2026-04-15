@@ -1153,18 +1153,40 @@ Mintlify is a documentation platform.
 
 # Steps
 
-Step-based walkthroughs can be expressed like this:
+Step-based walkthroughs use `<Steps>` and `<Step title="...">` to produce a numbered sequential guide.
+
+Live example:
+
+<Steps>
+  <Step title="Create a file">
+    Create a new MDX file in your docs directory.
+  </Step>
+  <Step title="Add frontmatter">
+    Add YAML frontmatter with `title` and `description`.
+  </Step>
+  <Step title="Write content">
+    Write your documentation using MDX syntax.
+  </Step>
+  <Step title="Preview">
+    Run `mint dev` to preview your changes.
+  </Step>
+</Steps>
+
+Source:
 
 ```mdx
 <Steps>
-  <Step title="Install dependencies">
-    Run your package manager.
+  <Step title="Create a file">
+    Create a new MDX file in your docs directory.
   </Step>
-  <Step title="Create content">
-    Add an `.mdx` page and frontmatter.
+  <Step title="Add frontmatter">
+    Add YAML frontmatter with `title` and `description`.
   </Step>
-  <Step title="Publish">
-    Verify navigation and deploy.
+  <Step title="Write content">
+    Write your documentation using MDX syntax.
+  </Step>
+  <Step title="Preview">
+    Run `mint dev` to preview your changes.
   </Step>
 </Steps>
 ```
