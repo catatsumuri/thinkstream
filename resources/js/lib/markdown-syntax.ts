@@ -93,10 +93,11 @@ function parseJsxAttributes(
     attributeSource: string,
 ): Record<string, string | boolean> {
     const attributes: Record<string, string | boolean> = {};
-    const attributePattern = /(\w+)(?:=(?:"([^"]*)"|\{(true|false)\}))?/g;
+    const attributePattern =
+        /(\w+)(?:=(?:"([^"]*)"|\{(true|false|\d+(?:\.\d+)?)\}))?/g;
 
     for (const match of attributeSource.matchAll(attributePattern)) {
-        const [, key, quotedValue, booleanValue] = match;
+        const [, key, quotedValue, jsxValue] = match;
 
         if (!key) {
             continue;
@@ -107,8 +108,15 @@ function parseJsxAttributes(
             continue;
         }
 
-        if (booleanValue !== undefined) {
-            attributes[key] = booleanValue === 'true';
+        if (jsxValue !== undefined) {
+            if (jsxValue === 'true') {
+                attributes[key] = true;
+            } else if (jsxValue === 'false') {
+                attributes[key] = false;
+            } else {
+                // Numeric value — store as string
+                attributes[key] = jsxValue;
+            }
             continue;
         }
 
@@ -122,7 +130,7 @@ function buildDirectiveAttributes(
     attributes: Record<string, string | boolean>,
 ): string {
     const supportedEntries = Object.entries(attributes).filter(([key]) =>
-        ['title', 'icon', 'sync', 'borderBottom'].includes(key),
+        ['title', 'icon', 'sync', 'borderBottom', 'href', 'cols'].includes(key),
     );
 
     if (supportedEntries.length === 0) {
@@ -147,7 +155,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
     const processedLines: string[] = [];
     let activeFence: string | null = null;
     let mintlifyTabsDepth = 0;
-    const mintlifyTagStack: Array<'Tabs' | 'Tab'> = [];
+    const mintlifyTagStack: Array<'Tabs' | 'Tab' | 'Card' | 'CardGroup'> = [];
 
     const pushLine = (value: string): void => {
         processedLines.push(value);
@@ -189,6 +197,68 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
         if (activeFence !== null) {
             processedLines.push(effectiveLine);
+
+            continue;
+        }
+
+        const cardGroupOpenMatch = /^<CardGroup(?<attributes>[^>]*)>$/.exec(
+            trimmedLine,
+        );
+
+        if (cardGroupOpenMatch) {
+            const attributes = parseJsxAttributes(
+                cardGroupOpenMatch.groups?.attributes ?? '',
+            );
+
+            pushBlankLineIfNeeded();
+            pushLine(`::::cardgroup${buildDirectiveAttributes(attributes)}`);
+            pushLine('');
+            mintlifyTagStack.push('CardGroup');
+
+            continue;
+        }
+
+        if (trimmedLine === '</CardGroup>') {
+            if (mintlifyTagStack.at(-1) === 'CardGroup') {
+                mintlifyTagStack.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine('::::');
+
+            continue;
+        }
+
+        const cardTagMatch = /^<Card(?<attributes>[^>]*)>$/.exec(trimmedLine);
+
+        if (cardTagMatch) {
+            const rawAttrs = cardTagMatch.groups?.attributes ?? '';
+            const isSelfClosing = rawAttrs.trimEnd().endsWith('/');
+            const cleanAttrs = isSelfClosing
+                ? rawAttrs.trimEnd().slice(0, -1)
+                : rawAttrs;
+            const attributes = parseJsxAttributes(cleanAttrs);
+
+            pushBlankLineIfNeeded();
+            pushLine(`:::card${buildDirectiveAttributes(attributes)}`);
+            pushLine('');
+
+            if (isSelfClosing) {
+                pushLine(':::');
+            } else {
+                mintlifyTagStack.push('Card');
+            }
+
+            continue;
+        }
+
+        if (trimmedLine === '</Card>') {
+            if (mintlifyTagStack.at(-1) === 'Card') {
+                mintlifyTagStack.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine(':::');
 
             continue;
         }
@@ -330,9 +400,7 @@ export function preprocessMarkdownContent(markdown: string): string {
     return processedLines.join('\n');
 }
 
-export function parseMarkdownImageMetadata(
-    url?: string | null,
-): ImageMetadata {
+export function parseMarkdownImageMetadata(url?: string | null): ImageMetadata {
     if (!url) {
         return { src: '' };
     }

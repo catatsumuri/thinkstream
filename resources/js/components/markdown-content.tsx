@@ -10,11 +10,16 @@ import remarkEmoji from 'remark-emoji';
 import remarkGfm from 'remark-gfm';
 import remarkSupersub from 'remark-supersub';
 import { EmbedCard } from '@/components/embed-card';
+import {
+    MarkdownCard,
+    MarkdownCardGroup,
+} from '@/components/markdown-card-group';
 import { MarkdownTab, MarkdownTabs } from '@/components/markdown-tabs';
 import {
     preprocessMarkdownContent,
     preprocessMarkdownSyntax,
 } from '@/lib/markdown-syntax';
+import { remarkCardDirective } from '@/lib/remark-card-directive';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
 import { remarkMark } from '@/lib/remark-mark';
@@ -102,12 +107,22 @@ export default function MarkdownContent({
     const markdownComponents: Components & {
         tabs?: (props: Record<string, unknown>) => React.ReactElement;
         tab?: (props: Record<string, unknown>) => React.ReactElement;
+        card?: (props: Record<string, unknown>) => React.ReactElement;
+        cardgroup?: (props: Record<string, unknown>) => React.ReactElement;
     } = {
         aside: MessageBox,
         details: DetailsBox,
         summary: SummaryEl,
         tabs: (props: Record<string, unknown>) => <MarkdownTabs {...props} />,
         tab: (props: Record<string, unknown>) => <MarkdownTab {...props} />,
+        card: (props: Record<string, unknown>) => (
+            <MarkdownCard {...(props as Parameters<typeof MarkdownCard>[0])} />
+        ),
+        cardgroup: (props: Record<string, unknown>) => (
+            <MarkdownCardGroup
+                {...(props as Parameters<typeof MarkdownCardGroup>[0])}
+            />
+        ),
         dl: ({ node, ...props }) => {
             void node;
 
@@ -148,6 +163,7 @@ export default function MarkdownContent({
                 remarkDirective,
                 remarkZennDirective,
                 remarkTabsDirective,
+                remarkCardDirective,
                 remarkLinkifyToCard,
                 remarkSupersub,
                 remarkDefinitionList,
