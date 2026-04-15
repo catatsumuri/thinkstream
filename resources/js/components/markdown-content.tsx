@@ -14,12 +14,14 @@ import {
     MarkdownCard,
     MarkdownCardGroup,
 } from '@/components/markdown-card-group';
+import { MarkdownStep, MarkdownSteps } from '@/components/markdown-steps';
 import { MarkdownTab, MarkdownTabs } from '@/components/markdown-tabs';
 import {
     preprocessMarkdownContent,
     preprocessMarkdownSyntax,
 } from '@/lib/markdown-syntax';
 import { remarkCardDirective } from '@/lib/remark-card-directive';
+import { remarkStepsDirective } from '@/lib/remark-steps-directive';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
 import { remarkMark } from '@/lib/remark-mark';
@@ -140,6 +142,8 @@ export default function MarkdownContent({
         tab?: (props: Record<string, unknown>) => React.ReactElement;
         card?: (props: Record<string, unknown>) => React.ReactElement;
         cardgroup?: (props: Record<string, unknown>) => React.ReactElement;
+        steps?: (props: Record<string, unknown>) => React.ReactElement;
+        step?: (props: Record<string, unknown>) => React.ReactElement;
     } = {
         pre: ({ children }) => <>{children}</>,
         aside: MessageBox,
@@ -154,6 +158,12 @@ export default function MarkdownContent({
             <MarkdownCardGroup
                 {...(props as Parameters<typeof MarkdownCardGroup>[0])}
             />
+        ),
+        steps: (props: Record<string, unknown>) => (
+            <MarkdownSteps {...(props as Parameters<typeof MarkdownSteps>[0])} />
+        ),
+        step: (props: Record<string, unknown>) => (
+            <MarkdownStep {...(props as Parameters<typeof MarkdownStep>[0])} />
         ),
         dl: ({ node, ...props }) => {
             void node;
@@ -196,6 +206,7 @@ export default function MarkdownContent({
                 remarkZennDirective,
                 remarkTabsDirective,
                 remarkCardDirective,
+                remarkStepsDirective,
                 remarkLinkifyToCard,
                 remarkSupersub,
                 remarkDefinitionList,

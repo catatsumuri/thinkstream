@@ -158,6 +158,37 @@ test('preprocessMarkdownSyntax converts Mintlify Accordion to details directive'
     assert.match(output, /Follow our quickstart guide\./);
 });
 
+test('preprocessMarkdownSyntax converts Mintlify Steps/Step to directive syntax', () => {
+    const output = preprocessMarkdownSyntax(`<Steps>
+  <Step title="Create a file">
+    Create a new MDX file in your docs directory.
+  </Step>
+  <Step title="Add frontmatter">
+    Add YAML frontmatter with title and description.
+  </Step>
+</Steps>`);
+
+    assert.match(output, /::::steps/);
+    assert.match(output, /:::step\{title="Create a file"\}/);
+    assert.match(output, /:::step\{title="Add frontmatter"\}/);
+    assert.match(output, /Create a new MDX file/);
+    assert.match(output, /Add YAML frontmatter/);
+});
+
+test('preprocessMarkdownSyntax leaves Steps tags untouched inside fenced code blocks', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`mdx
+<Steps>
+  <Step title="Create a file">
+    Create a new MDX file.
+  </Step>
+</Steps>
+\`\`\``);
+
+    assert.doesNotMatch(output, /::::steps/);
+    assert.match(output, /<Steps>/);
+    assert.match(output, /<Step title="Create a file">/);
+});
+
 test('preprocessMarkdownSyntax leaves Accordion tags untouched inside fenced code blocks', () => {
     const output = preprocessMarkdownSyntax(`\`\`\`mdx
 <Accordion title="What is Mintlify?">
