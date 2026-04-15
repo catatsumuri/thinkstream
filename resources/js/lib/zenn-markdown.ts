@@ -89,9 +89,179 @@ function rewriteImageLine(line: string, caption?: string): string | null {
     return null;
 }
 
+function parseJsxAttributes(
+    attributeSource: string,
+): Record<string, string | boolean> {
+    const attributes: Record<string, string | boolean> = {};
+    const attributePattern = /(\w+)(?:=(?:"([^"]*)"|\{(true|false)\}))?/g;
+
+    for (const match of attributeSource.matchAll(attributePattern)) {
+        const [, key, quotedValue, booleanValue] = match;
+
+        if (!key) {
+            continue;
+        }
+
+        if (quotedValue !== undefined) {
+            attributes[key] = quotedValue;
+            continue;
+        }
+
+        if (booleanValue !== undefined) {
+            attributes[key] = booleanValue === 'true';
+            continue;
+        }
+
+        attributes[key] = true;
+    }
+
+    return attributes;
+}
+
+function buildDirectiveAttributes(
+    attributes: Record<string, string | boolean>,
+): string {
+    const supportedEntries = Object.entries(attributes).filter(([key]) =>
+        ['title', 'icon', 'sync', 'borderBottom'].includes(key),
+    );
+
+    if (supportedEntries.length === 0) {
+        return '';
+    }
+
+    const serialized = supportedEntries
+        .map(([key, value]) => {
+            if (typeof value === 'boolean') {
+                return `${key}="${value ? 'true' : 'false'}"`;
+            }
+
+            return `${key}="${value.replaceAll('"', '&quot;')}"`;
+        })
+        .join(' ');
+
+    return `{${serialized}}`;
+}
+
+export function preprocessMintlifySyntax(markdown: string): string {
+    const lines = markdown.split('\n');
+    const processedLines: string[] = [];
+    let activeFence: string | null = null;
+    let mintlifyTabsDepth = 0;
+    const mintlifyTagStack: Array<'Tabs' | 'Tab'> = [];
+
+    const pushLine = (value: string): void => {
+        processedLines.push(value);
+    };
+
+    const pushBlankLineIfNeeded = (): void => {
+        if (processedLines.at(-1) !== '') {
+            processedLines.push('');
+        }
+    };
+
+    for (const line of lines) {
+        const trimmedLine = line.trim();
+        const indentWidth = mintlifyTagStack.length * 2;
+        const effectiveLine =
+            mintlifyTagStack.length > 0
+                ? line.replace(new RegExp(`^ {0,${indentWidth}}`), '')
+                : line;
+        const fenceMatch = /^(`{3,}|~{3,})/.exec(trimmedLine);
+
+        if (fenceMatch) {
+            const fence = fenceMatch[1];
+            const remainder = trimmedLine.slice(fence.length);
+
+            if (activeFence === null) {
+                activeFence = fence;
+            } else if (
+                fence[0] === activeFence[0] &&
+                fence.length >= activeFence.length &&
+                remainder.trim() === ''
+            ) {
+                activeFence = null;
+            }
+
+            processedLines.push(effectiveLine);
+
+            continue;
+        }
+
+        if (activeFence !== null) {
+            processedLines.push(effectiveLine);
+
+            continue;
+        }
+
+        const tabsOpenMatch = /^<Tabs(?<attributes>[^>]*)>$/.exec(trimmedLine);
+
+        if (tabsOpenMatch) {
+            const attributes = parseJsxAttributes(
+                tabsOpenMatch.groups?.attributes ?? '',
+            );
+
+            pushBlankLineIfNeeded();
+            pushLine(`::::tabs${buildDirectiveAttributes(attributes)}`);
+            pushLine('');
+            mintlifyTabsDepth++;
+            mintlifyTagStack.push('Tabs');
+
+            continue;
+        }
+
+        const tabOpenMatch = /^<Tab(?<attributes>[^>]*)>$/.exec(trimmedLine);
+
+        if (tabOpenMatch) {
+            const attributes = parseJsxAttributes(
+                tabOpenMatch.groups?.attributes ?? '',
+            );
+
+            pushBlankLineIfNeeded();
+            pushLine(`:::tab${buildDirectiveAttributes(attributes)}`);
+            pushLine('');
+            mintlifyTagStack.push('Tab');
+
+            continue;
+        }
+
+        if (trimmedLine === '</Tab>') {
+            if (mintlifyTagStack.at(-1) === 'Tab') {
+                mintlifyTagStack.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine(':::');
+
+            continue;
+        }
+
+        if (trimmedLine === '</Tabs>') {
+            if (mintlifyTagStack.at(-1) === 'Tabs') {
+                mintlifyTagStack.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine(mintlifyTabsDepth > 0 ? '::::' : ':::');
+            mintlifyTabsDepth = Math.max(0, mintlifyTabsDepth - 1);
+
+            continue;
+        }
+
+        if (mintlifyTagStack.length > 0) {
+            processedLines.push(effectiveLine);
+
+            continue;
+        }
+
+        processedLines.push(line);
+    }
+
+    return processedLines.join('\n');
+}
+
 export function preprocessZennSyntax(markdown: string): string {
     return (
-        markdown
+        preprocessMintlifySyntax(markdown)
             // Normalize :::message alert to the attribute form remark-directive expects.
             .replace(/:::message\s+alert\b/g, ':::message{.alert}')
             // Convert :::details title to the label form remark-directive expects.

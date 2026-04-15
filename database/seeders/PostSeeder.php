@@ -29,7 +29,7 @@ class PostSeeder extends Seeder
                 'name' => 'Guides',
                 'description' => 'Practical guides, walkthroughs, and reference notes for writing and publishing posts.',
                 'cover_image' => $coverImagePath,
-                'post_order' => ['index', 'extended-syntax', 'zenn-syntax'],
+                'post_order' => ['index', 'extended-syntax', 'zenn-syntax', 'mintlify-syntax'],
             ],
         );
 
@@ -875,6 +875,190 @@ The `@[github](URL)` form also works.
 ```
 
 @[github](https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json)
+MD),
+                'published_at' => now(),
+            ]);
+
+        Post::updateOrCreate(
+            ['namespace_id' => $namespace->id, 'slug' => 'mintlify-syntax'],
+            [
+                'user_id' => $user->id,
+                'title' => 'Mintlify Syntax (WIP)',
+                'content' => trim(<<<'MD'
+# Mintlify Syntax
+
+Mintlify ships with MDX-flavored components for docs sites. This page is a working draft that collects syntax examples we may support or document later.
+
+> **WIP:** Some examples below are shown as reference syntax only. They may not render with the current ThinkStream Markdown pipeline yet.
+
+---
+
+# Cards
+
+Mintlify uses `<Card>` blocks to create linked navigation tiles.
+
+```mdx
+<Card title="Tabs" icon="folder" href="/components/tabs">
+  Organize related content into a switchable tab UI.
+</Card>
+```
+
+Reference example:
+
+```mdx
+<Card title="Callouts" icon="message-square-warning" href="/components/callouts">
+  Highlight important information with styled alerts.
+</Card>
+```
+
+---
+
+# Card Groups
+
+Cards are often grouped to create documentation indexes.
+
+```mdx
+<CardGroup cols={2}>
+  <Card title="Tabs" icon="folder" href="/components/tabs" />
+  <Card title="Steps" icon="list-ordered" href="/components/steps" />
+</CardGroup>
+```
+
+For now, treat this as syntax documentation rather than a guaranteed rendered component.
+
+---
+
+# Tabs
+
+Mintlify commonly uses `<Tabs>` and `<Tab>` to switch between examples.
+
+Live example:
+
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn install
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm install
+    ```
+  </Tab>
+</Tabs>
+
+Source example:
+
+````mdx
+<Tabs>
+  <Tab title="npm">
+    ```bash
+    npm install
+    ```
+  </Tab>
+  <Tab title="yarn">
+    ```bash
+    yarn install
+    ```
+  </Tab>
+  <Tab title="pnpm">
+    ```bash
+    pnpm install
+    ```
+  </Tab>
+</Tabs>
+````
+
+Possible fallback if tabs are unsupported: split content into headings such as `## npm` and `## pnpm`.
+
+---
+
+# Accordions
+
+Expandable sections are typically written like this:
+
+```mdx
+<Accordion title="Supported formats">
+  - Markdown
+  - MDX
+  - HTML snippets
+</Accordion>
+```
+
+This page keeps the original Mintlify syntax visible so we can decide later how to transform it.
+
+---
+
+# Callouts
+
+Callouts are useful for note, warning, and info states.
+
+```mdx
+<Callout type="info">
+  This syntax is still under review.
+</Callout>
+```
+
+```mdx
+<Callout type="warning">
+  Rendering support may require custom component mapping.
+</Callout>
+```
+
+---
+
+# Steps
+
+Step-based walkthroughs can be expressed like this:
+
+```mdx
+<Steps>
+  <Step title="Install dependencies">
+    Run your package manager.
+  </Step>
+  <Step title="Create content">
+    Add an `.mdx` page and frontmatter.
+  </Step>
+  <Step title="Publish">
+    Verify navigation and deploy.
+  </Step>
+</Steps>
+```
+
+---
+
+# API Blocks
+
+Mintlify also provides API-oriented components.
+
+```mdx
+<ResponseField name="id" type="string" required>
+  Unique identifier for the resource.
+</ResponseField>
+```
+
+```mdx
+<ParamField path="slug" type="string" required>
+  Slug used to resolve the page.
+</ParamField>
+```
+
+These are good candidates for a later conversion layer if we want richer API docs inside ThinkStream.
+
+---
+
+# Temporary Notes
+
+- Keep importing example syntax from Mintlify docs.
+- Decide which components should render natively versus stay as literal code samples.
+- Add transformation rules only after we have a clear supported subset.
+
+> **WIP:** Next pass can include Banner, Badge, CodeGroup, Frame, and Mermaid examples.
 MD),
                 'published_at' => now(),
             ]);
