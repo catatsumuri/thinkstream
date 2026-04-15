@@ -1,10 +1,20 @@
 import { Check, Copy, MoveHorizontal, WrapText } from 'lucide-react';
+import Prism from 'prismjs';
+import 'prismjs/components/prism-bash';
+import 'prismjs/components/prism-css';
+import 'prismjs/components/prism-javascript';
+import 'prismjs/components/prism-json';
+import 'prismjs/components/prism-jsx';
+import 'prismjs/components/prism-markup-templating'; // required by prism-php
+import 'prismjs/components/prism-php';
+import 'prismjs/components/prism-python';
+import 'prismjs/components/prism-tsx';
+import 'prismjs/components/prism-typescript';
 import type { ComponentPropsWithoutRef } from 'react';
 import { useState } from 'react';
 import type { ExtraProps } from 'react-markdown';
 import { MermaidBlock } from '@/components/mermaid-block';
 import { useClipboard } from '@/hooks/use-clipboard';
-import Prism from '@/lib/prism';
 
 type CodeBlockProps = ComponentPropsWithoutRef<'code'> & ExtraProps;
 
