@@ -1,20 +1,10 @@
 import { Check, Copy, MoveHorizontal, WrapText } from 'lucide-react';
-import Prism from 'prismjs';
-import 'prismjs/components/prism-bash';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-json';
-import 'prismjs/components/prism-jsx';
-import 'prismjs/components/prism-markup-templating'; // required by prism-php
-import 'prismjs/components/prism-php';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-tsx';
-import 'prismjs/components/prism-typescript';
 import type { ComponentPropsWithoutRef } from 'react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { ExtraProps } from 'react-markdown';
 import { MermaidBlock } from '@/components/mermaid-block';
 import { useClipboard } from '@/hooks/use-clipboard';
+import Prism, { ensurePrismLoaded } from '@/lib/prism';
 
 type CodeBlockProps = ComponentPropsWithoutRef<'code'> & ExtraProps;
 
@@ -77,7 +67,26 @@ function parseCodeMeta(
 export function CodeBlock({ className, children, node }: CodeBlockProps) {
     const [wrap, setWrap] = useState(isMobileViewport);
     const [copied, setCopied] = useState(false);
+    const [prismReady, setPrismReady] = useState(() => Boolean(Prism.languages.php));
     const [, copy] = useClipboard();
+
+    useEffect(() => {
+        if (prismReady) {
+            return;
+        }
+
+        let active = true;
+
+        void ensurePrismLoaded().then(() => {
+            if (active) {
+                setPrismReady(true);
+            }
+        });
+
+        return () => {
+            active = false;
+        };
+    }, [prismReady]);
 
     const rawContent = String(children);
     const content = rawContent.replace(/\n$/, '');
@@ -160,7 +169,7 @@ export function CodeBlock({ className, children, node }: CodeBlockProps) {
     // --- diff rendering ---
     if (isDiff) {
         const prismLanguage =
-            highlightLang && Prism.languages[highlightLang]
+            prismReady && highlightLang && Prism.languages[highlightLang]
                 ? Prism.languages[highlightLang]
                 : null;
 
@@ -262,11 +271,13 @@ export function CodeBlock({ className, children, node }: CodeBlockProps) {
                         }
                         style={{ background: 'transparent' }}
                         dangerouslySetInnerHTML={{
-                            __html:
-                                highlightLang && Prism.languages[highlightLang]
-                                    ? Prism.highlight(
-                                          content,
-                                          Prism.languages[highlightLang],
+                             __html:
+                                 prismReady &&
+                                 highlightLang &&
+                                 Prism.languages[highlightLang]
+                                     ? Prism.highlight(
+                                           content,
+                                           Prism.languages[highlightLang],
                                           highlightLang,
                                       )
                                     : escapeHtml(content),
@@ -328,11 +339,13 @@ export function CodeBlock({ className, children, node }: CodeBlockProps) {
                             : {}),
                     }}
                     dangerouslySetInnerHTML={{
-                        __html:
-                            highlightLang && Prism.languages[highlightLang]
-                                ? Prism.highlight(
-                                      content,
-                                      Prism.languages[highlightLang],
+                         __html:
+                             prismReady &&
+                             highlightLang &&
+                             Prism.languages[highlightLang]
+                                 ? Prism.highlight(
+                                       content,
+                                       Prism.languages[highlightLang],
                                       highlightLang,
                                   )
                                 : escapeHtml(content),

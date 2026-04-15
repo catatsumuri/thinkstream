@@ -29,5 +29,10 @@ MARKDOWN,
         ->assertNoJavaScriptErrors()
         ->assertSee('index.php')
         ->assertPresent('code.language-php')
-        ->assertPresent('code.language-php .token.keyword');
+        ->wait(0.5);
+
+    expect($page->script('Boolean(window.Prism?.languages?.php)'))->toBeTrue();
+    expect($page->script(<<<'JS'
+        (() => document.querySelector('code.language-php')?.innerHTML.includes('token keyword') ?? false)()
+    JS))->toBeTrue();
 });

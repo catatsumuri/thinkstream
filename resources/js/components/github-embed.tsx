@@ -1,16 +1,6 @@
 import { ExternalLink, FileCode } from 'lucide-react';
-import Prism from 'prismjs';
-import 'prismjs/components/prism-bash';
-import 'prismjs/components/prism-css';
-import 'prismjs/components/prism-javascript';
-import 'prismjs/components/prism-json';
-import 'prismjs/components/prism-jsx';
-import 'prismjs/components/prism-markup-templating';
-import 'prismjs/components/prism-php';
-import 'prismjs/components/prism-python';
-import 'prismjs/components/prism-tsx';
-import 'prismjs/components/prism-typescript';
 import React from 'react';
+import Prism, { ensurePrismLoaded } from '@/lib/prism';
 import { parseGithubUrl } from '@/lib/url-matcher';
 
 /** Maximum number of lines to display when no line range is specified. */
@@ -56,6 +46,25 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
     const [lines, setLines] = React.useState<string[] | null>(null);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(false);
+    const [prismReady, setPrismReady] = React.useState(() => Boolean(Prism.languages.php));
+
+    React.useEffect(() => {
+        if (prismReady) {
+            return;
+        }
+
+        let active = true;
+
+        void ensurePrismLoaded().then(() => {
+            if (active) {
+                setPrismReady(true);
+            }
+        });
+
+        return () => {
+            active = false;
+        };
+    }, [prismReady]);
 
     React.useEffect(() => {
         setLines(null);
@@ -193,7 +202,7 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
     }
 
     const highlightedLines = lines.map((line) => {
-        if (language && Prism.languages[language]) {
+        if (prismReady && language && Prism.languages[language]) {
             try {
                 return Prism.highlight(
                     line,
