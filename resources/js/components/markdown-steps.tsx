@@ -29,11 +29,8 @@ export function MarkdownStep({
     return (
         <div
             role="listitem"
-            className="step-item relative flex items-start pb-5 last:pb-0 [counter-increment:step]"
+            className="step-item relative flex items-start pb-5 last:pb-0 [counter-increment:step] after:absolute after:top-[2.75rem] after:left-0 after:h-[calc(100%-2.75rem)] after:w-px after:bg-border after:content-[''] last:after:hidden"
         >
-            {/* Vertical connector line — hidden on the last step */}
-            <div className="absolute w-px h-[calc(100%-2.75rem)] top-[2.75rem] bg-border last:hidden" />
-
             {/* Number badge */}
             <div className="absolute ml-[-13px] py-2">
                 <div className="relative size-7 shrink-0 rounded-full bg-muted text-xs font-semibold text-foreground flex items-center justify-center before:content-[counter(step)]" />
