@@ -131,7 +131,22 @@ function buildDirectiveAttributes(
     attributes: Record<string, string | boolean>,
 ): string {
     const supportedEntries = Object.entries(attributes).filter(([key]) =>
-        ['title', 'icon', 'sync', 'borderBottom', 'href', 'cols'].includes(key),
+        [
+            'title',
+            'icon',
+            'sync',
+            'borderBottom',
+            'href',
+            'cols',
+            'name',
+            'type',
+            'required',
+            'default',
+            'deprecated',
+            'path',
+            'query',
+            'body',
+        ].includes(key),
     );
 
     if (supportedEntries.length === 0) {
@@ -174,6 +189,8 @@ export function preprocessMintlifySyntax(markdown: string): string {
         | 'Accordion'
         | 'Steps'
         | 'Step'
+        | 'ResponseField'
+        | 'ParamField'
         | MintlifyCalloutTag
     > = [];
 
@@ -440,6 +457,77 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
         if (trimmedLine === '</Step>') {
             if (mintlifyTagStack.at(-1) === 'Step') {
+                mintlifyTagStack.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine(':::');
+
+            continue;
+        }
+
+        const responseFieldTagMatch =
+            /^<ResponseField(?<attributes>[^>]*)>$/.exec(trimmedLine);
+
+        if (responseFieldTagMatch) {
+            const rawAttrs = responseFieldTagMatch.groups?.attributes ?? '';
+            const isSelfClosing = rawAttrs.trimEnd().endsWith('/');
+            const cleanAttrs = isSelfClosing
+                ? rawAttrs.trimEnd().slice(0, -1)
+                : rawAttrs;
+            const attributes = parseJsxAttributes(cleanAttrs);
+
+            pushBlankLineIfNeeded();
+            pushLine(`:::responsefield${buildDirectiveAttributes(attributes)}`);
+            pushLine('');
+
+            if (isSelfClosing) {
+                pushLine(':::');
+            } else {
+                mintlifyTagStack.push('ResponseField');
+            }
+
+            continue;
+        }
+
+        if (trimmedLine === '</ResponseField>') {
+            if (mintlifyTagStack.at(-1) === 'ResponseField') {
+                mintlifyTagStack.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine(':::');
+
+            continue;
+        }
+
+        const paramFieldTagMatch = /^<ParamField(?<attributes>[^>]*)>$/.exec(
+            trimmedLine,
+        );
+
+        if (paramFieldTagMatch) {
+            const rawAttrs = paramFieldTagMatch.groups?.attributes ?? '';
+            const isSelfClosing = rawAttrs.trimEnd().endsWith('/');
+            const cleanAttrs = isSelfClosing
+                ? rawAttrs.trimEnd().slice(0, -1)
+                : rawAttrs;
+            const attributes = parseJsxAttributes(cleanAttrs);
+
+            pushBlankLineIfNeeded();
+            pushLine(`:::paramfield${buildDirectiveAttributes(attributes)}`);
+            pushLine('');
+
+            if (isSelfClosing) {
+                pushLine(':::');
+            } else {
+                mintlifyTagStack.push('ParamField');
+            }
+
+            continue;
+        }
+
+        if (trimmedLine === '</ParamField>') {
+            if (mintlifyTagStack.at(-1) === 'ParamField') {
                 mintlifyTagStack.pop();
             }
 
