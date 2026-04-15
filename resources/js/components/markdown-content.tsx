@@ -160,7 +160,9 @@ export default function MarkdownContent({
             />
         ),
         steps: (props: Record<string, unknown>) => (
-            <MarkdownSteps {...(props as Parameters<typeof MarkdownSteps>[0])} />
+            <MarkdownSteps
+                {...(props as Parameters<typeof MarkdownSteps>[0])}
+            />
         ),
         step: (props: Record<string, unknown>) => (
             <MarkdownStep {...(props as Parameters<typeof MarkdownStep>[0])} />
