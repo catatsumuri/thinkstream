@@ -1117,17 +1117,37 @@ Possible fallback if tabs are unsupported: split content into headings such as `
 
 # Accordions
 
-Expandable sections are typically written like this:
+Accordion components create collapsible sections. The `title` attribute sets the visible label. An optional `icon` attribute is accepted but ignored by this renderer.
+
+Live examples:
+
+<Accordion title="What is Mintlify?">
+  Mintlify is a documentation platform that helps you create beautiful, performant documentation sites.
+</Accordion>
+
+<Accordion title="How do I get started?" icon="rocket">
+  Follow our [quickstart guide](/quickstart) to set up your documentation site in minutes.
+</Accordion>
+
+Source:
 
 ```mdx
-<Accordion title="Supported formats">
-  - Markdown
-  - MDX
-  - HTML snippets
+<Accordion title="What is Mintlify?">
+  Mintlify is a documentation platform that helps you create beautiful, performant documentation sites.
+</Accordion>
+
+<Accordion title="How do I get started?" icon="rocket">
+  Follow our [quickstart guide](/quickstart) to set up your documentation site in minutes.
 </Accordion>
 ```
 
-This page keeps the original Mintlify syntax visible so we can decide later how to transform it.
+You can also use the underlying Zenn `:::details` syntax directly:
+
+```md
+:::details What is Mintlify?
+Mintlify is a documentation platform.
+:::
+```
 
 ---
 

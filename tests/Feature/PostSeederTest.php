@@ -67,7 +67,8 @@ test('post seeder creates the mintlify syntax page', function () {
     expect($post->content)->toContain('<Tabs>');
     expect($post->content)->toContain('<Tab title="yarn">');
     expect($post->content)->toContain('yarn install');
-    expect($post->content)->toContain('<Accordion title="Supported formats">');
+    expect($post->content)->toContain('<Accordion title="What is Mintlify?">');
+    expect($post->content)->toContain('<Accordion title="How do I get started?" icon="rocket">');
     expect($post->content)->toContain('<Note>');
     expect($post->content)->toContain('<Warning>');
     expect($post->content)->toContain('<Check>');

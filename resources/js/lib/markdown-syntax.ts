@@ -167,7 +167,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
     let activeFence: string | null = null;
     let mintlifyTabsDepth = 0;
     const mintlifyTagStack: Array<
-        'Tabs' | 'Tab' | 'Card' | 'CardGroup' | MintlifyCalloutTag
+        'Tabs' | 'Tab' | 'Card' | 'CardGroup' | 'Accordion' | MintlifyCalloutTag
     > = [];
 
     const pushLine = (value: string): void => {
@@ -358,6 +358,36 @@ export function preprocessMintlifySyntax(markdown: string): string {
             pushBlankLineIfNeeded();
             pushLine(mintlifyTabsDepth > 0 ? '::::' : ':::');
             mintlifyTabsDepth = Math.max(0, mintlifyTabsDepth - 1);
+
+            continue;
+        }
+
+        const accordionOpenMatch = /^<Accordion(?<attributes>[^>]*)>$/.exec(
+            trimmedLine,
+        );
+
+        if (accordionOpenMatch) {
+            const attributes = parseJsxAttributes(
+                accordionOpenMatch.groups?.attributes ?? '',
+            );
+            const title =
+                typeof attributes.title === 'string' ? attributes.title : '';
+
+            pushBlankLineIfNeeded();
+            pushLine(`:::details ${title}`);
+            pushLine('');
+            mintlifyTagStack.push('Accordion');
+
+            continue;
+        }
+
+        if (trimmedLine === '</Accordion>') {
+            if (mintlifyTagStack.at(-1) === 'Accordion') {
+                mintlifyTagStack.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine(':::');
 
             continue;
         }

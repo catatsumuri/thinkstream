@@ -143,6 +143,32 @@ test('preprocessMarkdownSyntax leaves inline code literals untouched', () => {
     assert.doesNotMatch(output, /:::message\{\.alert\}/);
 });
 
+test('preprocessMarkdownSyntax converts Mintlify Accordion to details directive', () => {
+    const output = preprocessMarkdownSyntax(`<Accordion title="What is Mintlify?">
+  Mintlify is a documentation platform.
+</Accordion>
+
+<Accordion title="How do I get started?" icon="rocket">
+  Follow our quickstart guide.
+</Accordion>`);
+
+    assert.match(output, /:::details\[What is Mintlify\?\]/);
+    assert.match(output, /:::details\[How do I get started\?\]/);
+    assert.match(output, /Mintlify is a documentation platform\./);
+    assert.match(output, /Follow our quickstart guide\./);
+});
+
+test('preprocessMarkdownSyntax leaves Accordion tags untouched inside fenced code blocks', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`mdx
+<Accordion title="What is Mintlify?">
+  Mintlify is a documentation platform.
+</Accordion>
+\`\`\``);
+
+    assert.doesNotMatch(output, /:::details/);
+    assert.match(output, /<Accordion title="What is Mintlify\?">/);
+});
+
 test('preprocessMarkdownContent encodes image metadata outside fences only', () => {
     const output = preprocessMarkdownContent(`![Guide cover](/storage/guide.png =250x)
 *Guide cover image*
