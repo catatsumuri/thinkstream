@@ -21,9 +21,7 @@ interface CodeGroupTabInfo {
 }
 
 function capitalize(value: string): string {
-    return value.length > 0
-        ? value[0].toUpperCase() + value.slice(1)
-        : value;
+    return value.length > 0 ? value[0].toUpperCase() + value.slice(1) : value;
 }
 
 export function remarkCodeGroupDirective() {
@@ -49,8 +47,7 @@ export function remarkCodeGroupDirective() {
 
                 const codeNode = child as Code;
                 const lang = codeNode.lang ?? '';
-                const title =
-                    codeNode.meta?.trim() || capitalize(lang) || lang;
+                const title = codeNode.meta?.trim() || capitalize(lang) || lang;
 
                 tabs.push({
                     lang,

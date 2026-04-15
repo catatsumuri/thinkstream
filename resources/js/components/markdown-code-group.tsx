@@ -112,7 +112,9 @@ export function MarkdownCodeGroup({
                     setStoredTitle(title);
 
                     if (typeof window !== 'undefined') {
-                        window.dispatchEvent(new Event(CODE_GROUP_CHANGE_EVENT));
+                        window.dispatchEvent(
+                            new Event(CODE_GROUP_CHANGE_EVENT),
+                        );
                     }
                 }}
             >
