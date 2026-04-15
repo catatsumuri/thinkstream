@@ -14,6 +14,10 @@ import {
     MarkdownCard,
     MarkdownCardGroup,
 } from '@/components/markdown-card-group';
+import {
+    MarkdownParamField,
+    MarkdownResponseField,
+} from '@/components/markdown-api-fields';
 import { MarkdownStep, MarkdownSteps } from '@/components/markdown-steps';
 import { MarkdownTab, MarkdownTabs } from '@/components/markdown-tabs';
 import {
@@ -21,6 +25,7 @@ import {
     preprocessMarkdownSyntax,
 } from '@/lib/markdown-syntax';
 import { remarkCardDirective } from '@/lib/remark-card-directive';
+import { remarkApiFieldsDirective } from '@/lib/remark-api-fields-directive';
 import { remarkStepsDirective } from '@/lib/remark-steps-directive';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
@@ -144,6 +149,8 @@ export default function MarkdownContent({
         cardgroup?: (props: Record<string, unknown>) => React.ReactElement;
         steps?: (props: Record<string, unknown>) => React.ReactElement;
         step?: (props: Record<string, unknown>) => React.ReactElement;
+        responsefield?: (props: Record<string, unknown>) => React.ReactElement;
+        paramfield?: (props: Record<string, unknown>) => React.ReactElement;
     } = {
         pre: ({ children }) => <>{children}</>,
         aside: MessageBox,
@@ -166,6 +173,16 @@ export default function MarkdownContent({
         ),
         step: (props: Record<string, unknown>) => (
             <MarkdownStep {...(props as Parameters<typeof MarkdownStep>[0])} />
+        ),
+        responsefield: (props: Record<string, unknown>) => (
+            <MarkdownResponseField
+                {...(props as Parameters<typeof MarkdownResponseField>[0])}
+            />
+        ),
+        paramfield: (props: Record<string, unknown>) => (
+            <MarkdownParamField
+                {...(props as Parameters<typeof MarkdownParamField>[0])}
+            />
         ),
         dl: ({ node, ...props }) => {
             void node;
@@ -209,6 +226,7 @@ export default function MarkdownContent({
                 remarkTabsDirective,
                 remarkCardDirective,
                 remarkStepsDirective,
+                remarkApiFieldsDirective,
                 remarkLinkifyToCard,
                 remarkSupersub,
                 remarkDefinitionList,

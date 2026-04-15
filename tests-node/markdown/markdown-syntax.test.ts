@@ -45,10 +45,7 @@ Hidden content
     assert.match(output, /:::details\[More Info\]/);
     assert.match(output, /^https:\/\/example\.com$/m);
     assert.match(output, /^https:\/\/github\.com\/owner\/repo$/m);
-    assert.match(
-        output,
-        /::::tabs\{sync="false" borderBottom="true"\}/,
-    );
+    assert.match(output, /::::tabs\{sync="false" borderBottom="true"\}/);
     assert.match(output, /:::tab\{title="npm" icon="package"\}/);
 });
 
@@ -61,16 +58,26 @@ test('preprocessMarkdownSyntax converts Mintlify CardGroup and Card to directive
 </CardGroup>`);
 
     assert.match(output, /::::cardgroup\{cols="2"\}/);
-    assert.match(output, /:::card\{title="Tabs" icon="folder" href="\/components\/tabs"\}/);
-    assert.match(output, /:::card\{title="Steps" icon="list-ordered" href="\/components\/steps"\}/);
+    assert.match(
+        output,
+        /:::card\{title="Tabs" icon="folder" href="\/components\/tabs"\}/,
+    );
+    assert.match(
+        output,
+        /:::card\{title="Steps" icon="list-ordered" href="\/components\/steps"\}/,
+    );
 });
 
 test('preprocessMarkdownSyntax converts standalone Mintlify Card to directive syntax', () => {
-    const output = preprocessMarkdownSyntax(`<Card title="Callouts" icon="message-square-warning" href="/components/callouts">
+    const output =
+        preprocessMarkdownSyntax(`<Card title="Callouts" icon="message-square-warning" href="/components/callouts">
   Highlight important information with styled alerts.
 </Card>`);
 
-    assert.match(output, /:::card\{title="Callouts" icon="message-square-warning" href="\/components\/callouts"\}/);
+    assert.match(
+        output,
+        /:::card\{title="Callouts" icon="message-square-warning" href="\/components\/callouts"\}/,
+    );
 });
 
 test('preprocessMarkdownSyntax converts Mintlify callout tags to message directives', () => {
@@ -136,15 +143,13 @@ test('preprocessMarkdownSyntax leaves inline code literals untouched', () => {
     assert.match(output, /`:::message alert`/);
     assert.match(output, /`:::details More Info`/);
     assert.match(output, /`@\[card\]\(https:\/\/example\.com\)`/);
-    assert.match(
-        output,
-        /`@\[github\]\(https:\/\/github\.com\/owner\/repo\)`/,
-    );
+    assert.match(output, /`@\[github\]\(https:\/\/github\.com\/owner\/repo\)`/);
     assert.doesNotMatch(output, /:::message\{\.alert\}/);
 });
 
 test('preprocessMarkdownSyntax converts Mintlify Accordion to details directive', () => {
-    const output = preprocessMarkdownSyntax(`<Accordion title="What is Mintlify?">
+    const output =
+        preprocessMarkdownSyntax(`<Accordion title="What is Mintlify?">
   Mintlify is a documentation platform.
 </Accordion>
 
@@ -200,8 +205,59 @@ test('preprocessMarkdownSyntax leaves Accordion tags untouched inside fenced cod
     assert.match(output, /<Accordion title="What is Mintlify\?">/);
 });
 
+test('preprocessMarkdownSyntax converts ResponseField to directive syntax', () => {
+    const output =
+        preprocessMarkdownSyntax(`<ResponseField name="id" type="string" required>
+  Unique identifier for the resource.
+</ResponseField>
+
+<ResponseField name="slug" type="string" required deprecated>
+  URL slug.
+</ResponseField>`);
+
+    assert.match(
+        output,
+        /:::responsefield\{name="id" type="string" required="true"\}/,
+    );
+    assert.match(
+        output,
+        /:::responsefield\{name="slug" type="string" required="true" deprecated="true"\}/,
+    );
+    assert.match(output, /Unique identifier for the resource\./);
+});
+
+test('preprocessMarkdownSyntax converts self-closing ResponseField correctly', () => {
+    const output = preprocessMarkdownSyntax(
+        `<ResponseField name="count" type="number" />`,
+    );
+
+    assert.match(output, /:::responsefield\{name="count" type="number"\}/);
+});
+
+test('preprocessMarkdownSyntax converts ParamField to directive syntax', () => {
+    const output =
+        preprocessMarkdownSyntax(`<ParamField path="slug" type="string" required>
+  Slug used to resolve the page.
+</ParamField>
+
+<ParamField query="include" type="string" default="author" deprecated>
+  Relations to include.
+</ParamField>`);
+
+    assert.match(
+        output,
+        /:::paramfield\{path="slug" type="string" required="true"\}/,
+    );
+    assert.match(
+        output,
+        /:::paramfield\{query="include" type="string" default="author" deprecated="true"\}/,
+    );
+    assert.match(output, /Slug used to resolve the page\./);
+});
+
 test('preprocessMarkdownContent encodes image metadata outside fences only', () => {
-    const output = preprocessMarkdownContent(`![Guide cover](/storage/guide.png =250x)
+    const output =
+        preprocessMarkdownContent(`![Guide cover](/storage/guide.png =250x)
 *Guide cover image*
 
 \`\`\`md

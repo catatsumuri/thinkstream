@@ -73,5 +73,6 @@ test('post seeder creates the mintlify syntax page', function () {
     expect($post->content)->toContain('<Warning>');
     expect($post->content)->toContain('<Check>');
     expect($post->content)->toContain('<ResponseField name="id" type="string" required>');
+    expect($post->content)->toContain('<ParamField path="slug" type="string" required>');
     expect($post->published_at)->not->toBeNull();
 });

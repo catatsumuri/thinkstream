@@ -917,7 +917,10 @@ MD),
                 'content' => trim(<<<'MD'
 # Mintlify Syntax
 
-> Reference: https://starter.mintlify.com/essentials/markdown / https://mintlify.wiki/motleyai/docs/essentials/markdown
+> References:
+> - https://starter.mintlify.com/essentials/markdown
+> - https://mintlify.wiki/motleyai/docs/essentials/markdown
+> - https://www.mintlify.com/docs/components/index
 
 Mintlify ships with MDX-flavored components for docs sites. This page covers the components supported by the ThinkStream Markdown pipeline.
 
@@ -1193,33 +1196,79 @@ Source:
 
 ---
 
-# API Blocks
+# API Fields
 
-Mintlify also provides API-oriented components.
+## ResponseField
+
+Use `<ResponseField>` to describe the fields of an API response. Supports `name`, `type`, `required`, `default`, and `deprecated`.
+
+Live example:
+
+<ResponseField name="id" type="string" required>
+  Unique identifier for the resource.
+</ResponseField>
+
+<ResponseField name="title" type="string" required>
+  The post title.
+</ResponseField>
+
+<ResponseField name="published_at" type="string | null">
+  ISO 8601 timestamp, or `null` if the post is unpublished.
+</ResponseField>
+
+<ResponseField name="slug" type="string" required deprecated>
+  URL slug. Use `handle` instead.
+</ResponseField>
+
+Source:
 
 ```mdx
 <ResponseField name="id" type="string" required>
   Unique identifier for the resource.
 </ResponseField>
+
+<ResponseField name="published_at" type="string | null">
+  ISO 8601 timestamp, or `null` if the post is unpublished.
+</ResponseField>
+
+<ResponseField name="slug" type="string" required deprecated>
+  URL slug. Use `handle` instead.
+</ResponseField>
 ```
+
+## ParamField
+
+Use `<ParamField>` to describe request parameters. The attribute key (`path`, `query`, or `body`) indicates where the parameter appears, and its value is the parameter name.
+
+Live example:
+
+<ParamField path="slug" type="string" required>
+  Slug used to resolve the page.
+</ParamField>
+
+<ParamField query="include" type="string">
+  Comma-separated list of relations to include in the response.
+</ParamField>
+
+<ParamField body="title" type="string" required>
+  The post title.
+</ParamField>
+
+Source:
 
 ```mdx
 <ParamField path="slug" type="string" required>
   Slug used to resolve the page.
 </ParamField>
+
+<ParamField query="include" type="string">
+  Comma-separated list of relations to include in the response.
+</ParamField>
+
+<ParamField body="title" type="string" required>
+  The post title.
+</ParamField>
 ```
-
-These are good candidates for a later conversion layer if we want richer API docs inside ThinkStream.
-
----
-
-# Temporary Notes
-
-- Keep importing example syntax from Mintlify docs.
-- Decide which components should render natively versus stay as literal code samples.
-- Add transformation rules only after we have a clear supported subset.
-
-> **WIP:** Next pass can include Banner, Badge, CodeGroup, Frame, and Mermaid examples.
 MD),
                 'published_at' => now(),
             ]);
