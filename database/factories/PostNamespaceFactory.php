@@ -18,11 +18,11 @@ class PostNamespaceFactory extends Factory
      */
     public function definition(): array
     {
-        $name = fake()->word();
+        $name = fake()->words(2, true);
 
         return [
-            'slug' => Str::slug($name),
-            'name' => ucfirst($name),
+            'slug' => fake()->unique()->slug(),
+            'name' => Str::title($name),
             'description' => fake()->sentence(),
             'is_published' => true,
         ];
