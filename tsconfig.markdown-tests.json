@@ -1,0 +1,18 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+        "noEmit": false,
+        "outDir": ".tmp/markdown-tests",
+        "rootDir": ".",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "types": ["node"],
+        "allowImportingTsExtensions": true,
+        "rewriteRelativeImportExtensions": true
+    },
+    "include": [
+        "resources/js/lib/markdown-syntax.ts",
+        "resources/js/lib/remark-tabs-directive.ts",
+        "tests-node/**/*.ts"
+    ]
+}

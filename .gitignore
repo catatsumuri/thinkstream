@@ -31,3 +31,4 @@ yarn-error.log
 testing
 /tests/Browser/Screenshots
 /.playwright-cli
+/.tmp

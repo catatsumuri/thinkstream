@@ -10,6 +10,8 @@
         "format:check": "prettier --check resources/",
         "lint": "eslint . --fix",
         "lint:check": "eslint .",
+        "markdown:test": "npm run markdown:test:build && node --test $(find .tmp/markdown-tests/tests-node -name '*.test.js' | sort)",
+        "markdown:test:build": "rm -rf .tmp/markdown-tests && tsc --project tsconfig.markdown-tests.json",
         "types:check": "tsc --noEmit"
     },
     "devDependencies": {
