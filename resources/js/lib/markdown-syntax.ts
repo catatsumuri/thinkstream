@@ -180,6 +180,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
     const lines = markdown.split('\n');
     const processedLines: string[] = [];
     let activeFence: string | null = null;
+    let activeFenceIndent = 0;
     let mintlifyTabsDepth = 0;
     const mintlifyTagStack: Array<
         | 'Tabs'
@@ -191,6 +192,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         | 'Step'
         | 'ResponseField'
         | 'ParamField'
+        | 'CodeGroup'
         | MintlifyCalloutTag
     > = [];
 
@@ -206,10 +208,15 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
     for (const line of lines) {
         const trimmedLine = line.trim();
+        const leadingSpaces = line.match(/^ */)?.[0].length ?? 0;
         const indentWidth = mintlifyTagStack.length * 2;
         const effectiveLine =
             mintlifyTagStack.length > 0
                 ? line.replace(new RegExp(`^ {0,${indentWidth}}`), '')
+                : line;
+        const fenceContentLine =
+            activeFence !== null && activeFenceIndent > 0
+                ? line.replace(new RegExp(`^ {0,${activeFenceIndent}}`), '')
                 : line;
         const fenceMatch = /^(`{3,}|~{3,})/.exec(trimmedLine);
 
@@ -219,21 +226,25 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
             if (activeFence === null) {
                 activeFence = fence;
+                activeFenceIndent = leadingSpaces;
             } else if (
                 fence[0] === activeFence[0] &&
                 fence.length >= activeFence.length &&
                 remainder.trim() === ''
             ) {
                 activeFence = null;
+                activeFenceIndent = 0;
             }
 
-            processedLines.push(effectiveLine);
+            processedLines.push(
+                activeFence === null ? fenceContentLine : effectiveLine,
+            );
 
             continue;
         }
 
         if (activeFence !== null) {
-            processedLines.push(effectiveLine);
+            processedLines.push(fenceContentLine);
 
             continue;
         }
@@ -528,6 +539,26 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
         if (trimmedLine === '</ParamField>') {
             if (mintlifyTagStack.at(-1) === 'ParamField') {
+                mintlifyTagStack.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine(':::');
+
+            continue;
+        }
+
+        if (trimmedLine === '<CodeGroup>') {
+            pushBlankLineIfNeeded();
+            pushLine(':::codegroup');
+            pushLine('');
+            mintlifyTagStack.push('CodeGroup');
+
+            continue;
+        }
+
+        if (trimmedLine === '</CodeGroup>') {
+            if (mintlifyTagStack.at(-1) === 'CodeGroup') {
                 mintlifyTagStack.pop();
             }
 

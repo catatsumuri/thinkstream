@@ -255,6 +255,54 @@ test('preprocessMarkdownSyntax converts ParamField to directive syntax', () => {
     assert.match(output, /Slug used to resolve the page\./);
 });
 
+test('preprocessMarkdownSyntax converts CodeGroup to directive syntax', () => {
+    const output = preprocessMarkdownSyntax(`<CodeGroup>
+
+\`\`\`javascript JavaScript
+const x = 1;
+\`\`\`
+
+\`\`\`python Python
+x = 1
+\`\`\`
+
+</CodeGroup>`);
+
+    assert.match(output, /:::codegroup/);
+    assert.match(output, /^:::\s*$/m);
+    assert.match(output, /```javascript JavaScript/);
+    assert.match(output, /```python Python/);
+});
+
+test('preprocessMarkdownSyntax preserves code indentation inside CodeGroup fences', () => {
+    const output = preprocessMarkdownSyntax(`<CodeGroup>
+
+\`\`\`javascript JavaScript
+const response = await fetch('https://api.example.com/users', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+});
+\`\`\`
+
+</CodeGroup>`);
+
+    assert.match(output, /\n  method: 'POST',/);
+    assert.match(output, /\n  headers: \{ 'Content-Type': 'application\/json' \},/);
+});
+
+test('preprocessMarkdownSyntax leaves CodeGroup tags untouched inside fenced code blocks', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`mdx
+<CodeGroup>
+\`\`\`javascript JavaScript
+const x = 1;
+\`\`\`
+</CodeGroup>
+\`\`\``);
+
+    assert.doesNotMatch(output, /:::codegroup/);
+    assert.match(output, /<CodeGroup>/);
+});
+
 test('preprocessMarkdownContent encodes image metadata outside fences only', () => {
     const output =
         preprocessMarkdownContent(`![Guide cover](/storage/guide.png =250x)

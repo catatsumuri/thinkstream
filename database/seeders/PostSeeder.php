@@ -1269,6 +1269,88 @@ Source:
   The post title.
 </ParamField>
 ```
+
+---
+
+# CodeGroup
+
+`<CodeGroup>` displays multiple code blocks as a tabbed interface. The tab title comes from the meta string after the language identifier. Selecting a tab persists the choice across all CodeGroup instances on the page.
+
+Live example:
+
+<CodeGroup>
+
+```javascript JavaScript
+const response = await fetch('https://api.example.com/users', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: 'Alice', email: 'alice@example.com' }),
+});
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.example.com/users',
+    json={'name': 'Alice', 'email': 'alice@example.com'},
+)
+data = response.json()
+```
+
+```php PHP
+$response = Http::post('https://api.example.com/users', [
+    'name' => 'Alice',
+    'email' => 'alice@example.com',
+]);
+$data = $response->json();
+```
+
+</CodeGroup>
+
+A second CodeGroup syncs with the first — selecting Python above will also activate Python here:
+
+<CodeGroup>
+
+```javascript JavaScript
+console.log('Hello from JavaScript');
+```
+
+```python Python
+print('Hello from Python')
+```
+
+```php PHP
+echo 'Hello from PHP';
+```
+
+</CodeGroup>
+
+Source:
+
+````mdx
+<CodeGroup>
+
+```javascript JavaScript
+const response = await fetch('https://api.example.com/users', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: 'Alice', email: 'alice@example.com' }),
+});
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'https://api.example.com/users',
+    json={'name': 'Alice', 'email': 'alice@example.com'},
+)
+```
+
+</CodeGroup>
+````
 MD),
                 'published_at' => now(),
             ]);

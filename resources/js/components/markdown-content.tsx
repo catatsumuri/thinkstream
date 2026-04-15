@@ -26,6 +26,8 @@ import {
 } from '@/lib/markdown-syntax';
 import { remarkCardDirective } from '@/lib/remark-card-directive';
 import { remarkApiFieldsDirective } from '@/lib/remark-api-fields-directive';
+import { remarkCodeGroupDirective } from '@/lib/remark-code-group-directive';
+import { MarkdownCodeGroup } from '@/components/markdown-code-group';
 import { remarkStepsDirective } from '@/lib/remark-steps-directive';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
@@ -151,6 +153,7 @@ export default function MarkdownContent({
         step?: (props: Record<string, unknown>) => React.ReactElement;
         responsefield?: (props: Record<string, unknown>) => React.ReactElement;
         paramfield?: (props: Record<string, unknown>) => React.ReactElement;
+        codegroup?: (props: Record<string, unknown>) => React.ReactElement;
     } = {
         pre: ({ children }) => <>{children}</>,
         aside: MessageBox,
@@ -182,6 +185,11 @@ export default function MarkdownContent({
         paramfield: (props: Record<string, unknown>) => (
             <MarkdownParamField
                 {...(props as Parameters<typeof MarkdownParamField>[0])}
+            />
+        ),
+        codegroup: (props: Record<string, unknown>) => (
+            <MarkdownCodeGroup
+                {...(props as Parameters<typeof MarkdownCodeGroup>[0])}
             />
         ),
         dl: ({ node, ...props }) => {
@@ -227,6 +235,7 @@ export default function MarkdownContent({
                 remarkCardDirective,
                 remarkStepsDirective,
                 remarkApiFieldsDirective,
+                remarkCodeGroupDirective,
                 remarkLinkifyToCard,
                 remarkSupersub,
                 remarkDefinitionList,
