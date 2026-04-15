@@ -37,6 +37,27 @@ Hidden content
     assert.match(output, /:::tab\{title="npm" icon="package"\}/);
 });
 
+test('preprocessMarkdownSyntax converts Mintlify CardGroup and Card to directive syntax', () => {
+    const output = preprocessMarkdownSyntax(`<CardGroup cols={2}>
+  <Card title="Tabs" icon="folder" href="/components/tabs">
+    Organize related content.
+  </Card>
+  <Card title="Steps" icon="list-ordered" href="/components/steps" />
+</CardGroup>`);
+
+    assert.match(output, /::::cardgroup\{cols="2"\}/);
+    assert.match(output, /:::card\{title="Tabs" icon="folder" href="\/components\/tabs"\}/);
+    assert.match(output, /:::card\{title="Steps" icon="list-ordered" href="\/components\/steps"\}/);
+});
+
+test('preprocessMarkdownSyntax converts standalone Mintlify Card to directive syntax', () => {
+    const output = preprocessMarkdownSyntax(`<Card title="Callouts" icon="message-square-warning" href="/components/callouts">
+  Highlight important information with styled alerts.
+</Card>`);
+
+    assert.match(output, /:::card\{title="Callouts" icon="message-square-warning" href="\/components\/callouts"\}/);
+});
+
 test('preprocessMarkdownSyntax leaves Mintlify tags untouched inside fenced code blocks', () => {
     const output = preprocessMarkdownSyntax(`\`\`\`\`mdx
 <Tabs>

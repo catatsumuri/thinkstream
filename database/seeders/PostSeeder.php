@@ -887,9 +887,7 @@ MD),
                 'content' => trim(<<<'MD'
 # Mintlify Syntax
 
-Mintlify ships with MDX-flavored components for docs sites. This page is a working draft that collects syntax examples we may support or document later.
-
-> **WIP:** Some examples below are shown as reference syntax only. They may not render with the current ThinkStream Markdown pipeline yet.
+Mintlify ships with MDX-flavored components for docs sites. This page covers the components supported by the ThinkStream Markdown pipeline.
 
 ---
 
@@ -897,17 +895,21 @@ Mintlify ships with MDX-flavored components for docs sites. This page is a worki
 
 Mintlify uses `<Card>` blocks to create linked navigation tiles.
 
-```mdx
-<Card title="Tabs" icon="folder" href="/components/tabs">
+Live example:
+
+<Card title="Tabs" icon="folder" href="/guides/index">
   Organize related content into a switchable tab UI.
 </Card>
-```
 
-Reference example:
+<Card title="Callouts" icon="message-square-warning" href="/guides/zenn-syntax">
+  Highlight important information with styled alerts.
+</Card>
+
+Source:
 
 ```mdx
-<Card title="Callouts" icon="message-square-warning" href="/components/callouts">
-  Highlight important information with styled alerts.
+<Card title="Tabs" icon="folder" href="/guides/index">
+  Organize related content into a switchable tab UI.
 </Card>
 ```
 
@@ -917,14 +919,43 @@ Reference example:
 
 Cards are often grouped to create documentation indexes.
 
+Live example:
+
+<CardGroup cols={2}>
+  <Card title="Tabs" icon="folder" href="/guides/index">
+    Organize related content into a switchable tab UI.
+  </Card>
+  <Card title="Steps" icon="list-ordered" href="/guides/zenn-syntax">
+    Sequential steps guide the reader through a process.
+  </Card>
+  <Card title="Callouts" icon="message-square-warning" href="/guides/extended-syntax">
+    Highlight important information with styled alerts.
+  </Card>
+  <Card title="Code Blocks" icon="code" href="/guides/index">
+    Display syntax-highlighted code with optional filenames.
+  </Card>
+</CardGroup>
+
+Self-closing cards (no body text):
+
+<CardGroup cols={3}>
+  <Card title="npm" icon="download" href="/guides/index" />
+  <Card title="yarn" icon="zap" href="/guides/index" />
+  <Card title="pnpm" icon="rocket" href="/guides/index" />
+</CardGroup>
+
+Source:
+
 ```mdx
 <CardGroup cols={2}>
-  <Card title="Tabs" icon="folder" href="/components/tabs" />
-  <Card title="Steps" icon="list-ordered" href="/components/steps" />
+  <Card title="Tabs" icon="folder" href="/guides/index">
+    Organize related content into a switchable tab UI.
+  </Card>
+  <Card title="Steps" icon="list-ordered" href="/guides/zenn-syntax">
+    Sequential steps guide the reader through a process.
+  </Card>
 </CardGroup>
 ```
-
-For now, treat this as syntax documentation rather than a guaranteed rendered component.
 
 ---
 
