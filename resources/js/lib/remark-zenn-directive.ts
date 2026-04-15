@@ -26,14 +26,16 @@ export function remarkZennDirective() {
                 const attributes = directiveNode.attributes ?? {};
                 const className =
                     attributes.className ?? attributes.class ?? '';
-                const isAlert =
-                    className.includes('alert') ||
-                    attributes.alert !== undefined;
+                const classes = className.split(/\s+/).filter(Boolean);
+                const typeClass =
+                    (['alert', 'note', 'tip', 'check'] as const).find((c) =>
+                        classes.includes(c),
+                    ) ?? (attributes.alert !== undefined ? 'alert' : 'info');
 
                 const data = directiveNode.data ?? (directiveNode.data = {});
                 data.hName = 'aside';
                 data.hProperties = {
-                    className: `msg ${isAlert ? 'alert' : 'message'}`,
+                    className: `msg ${typeClass}`,
                 };
             }
 

@@ -11,6 +11,18 @@ test('preprocessMarkdownSyntax normalizes Zenn shorthand and Mintlify tabs', () 
 Watch out
 :::
 
+:::message note
+Take note
+:::
+
+:::message tip
+Pro tip
+:::
+
+:::message check
+All done
+:::
+
 :::details More Info
 Hidden content
 :::
@@ -27,6 +39,9 @@ Hidden content
 </Tabs>`);
 
     assert.match(output, /:::message\{\.alert\}/);
+    assert.match(output, /:::message\{\.note\}/);
+    assert.match(output, /:::message\{\.tip\}/);
+    assert.match(output, /:::message\{\.check\}/);
     assert.match(output, /:::details\[More Info\]/);
     assert.match(output, /^https:\/\/example\.com$/m);
     assert.match(output, /^https:\/\/github\.com\/owner\/repo$/m);
@@ -58,7 +73,46 @@ test('preprocessMarkdownSyntax converts standalone Mintlify Card to directive sy
     assert.match(output, /:::card\{title="Callouts" icon="message-square-warning" href="\/components\/callouts"\}/);
 });
 
-test('preprocessMarkdownSyntax leaves Mintlify tags untouched inside fenced code blocks', () => {
+test('preprocessMarkdownSyntax converts Mintlify callout tags to message directives', () => {
+    const output = preprocessMarkdownSyntax(`<Note>
+  This is a note.
+</Note>
+
+<Tip>
+  This is a tip.
+</Tip>
+
+<Info>
+  This is info.
+</Info>
+
+<Warning>
+  This is a warning.
+</Warning>
+
+<Check>
+  This is a check.
+</Check>`);
+
+    assert.match(output, /:::message\{\.note\}/);
+    assert.match(output, /:::message\{\.tip\}/);
+    assert.match(output, /:::message\n/);
+    assert.match(output, /:::message\{\.alert\}/);
+    assert.match(output, /:::message\{\.check\}/);
+});
+
+test('preprocessMarkdownSyntax leaves Mintlify callout tags untouched inside fenced code blocks', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`mdx
+<Note>This is a note.</Note>
+<Warning>This is a warning.</Warning>
+\`\`\``);
+
+    assert.doesNotMatch(output, /:::message/);
+    assert.match(output, /<Note>/);
+    assert.match(output, /<Warning>/);
+});
+
+test('preprocessMarkdownSyntax leaves Mintlify Tabs tags untouched inside fenced code blocks', () => {
     const output = preprocessMarkdownSyntax(`\`\`\`\`mdx
 <Tabs>
   <Tab title="npm">
@@ -72,6 +126,21 @@ test('preprocessMarkdownSyntax leaves Mintlify tags untouched inside fenced code
     assert.doesNotMatch(output, /::::tabs/);
     assert.match(output, /<Tabs>/);
     assert.match(output, /<Tab title="npm">/);
+});
+
+test('preprocessMarkdownSyntax leaves inline code literals untouched', () => {
+    const output = preprocessMarkdownSyntax(
+        'Use `:::message alert`, `:::details More Info`, `@[card](https://example.com)`, and `@[github](https://github.com/owner/repo)` literally.',
+    );
+
+    assert.match(output, /`:::message alert`/);
+    assert.match(output, /`:::details More Info`/);
+    assert.match(output, /`@\[card\]\(https:\/\/example\.com\)`/);
+    assert.match(
+        output,
+        /`@\[github\]\(https:\/\/github\.com\/owner\/repo\)`/,
+    );
+    assert.doesNotMatch(output, /:::message\{\.alert\}/);
 });
 
 test('preprocessMarkdownContent encodes image metadata outside fences only', () => {

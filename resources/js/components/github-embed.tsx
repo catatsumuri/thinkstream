@@ -46,7 +46,9 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
     const [lines, setLines] = React.useState<string[] | null>(null);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(false);
-    const [prismReady, setPrismReady] = React.useState(() => Boolean(Prism.languages.php));
+    const [prismReady, setPrismReady] = React.useState(() =>
+        Boolean(Prism.languages.php),
+    );
 
     React.useEffect(() => {
         if (prismReady) {

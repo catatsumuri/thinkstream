@@ -67,7 +67,9 @@ function parseCodeMeta(
 export function CodeBlock({ className, children, node }: CodeBlockProps) {
     const [wrap, setWrap] = useState(isMobileViewport);
     const [copied, setCopied] = useState(false);
-    const [prismReady, setPrismReady] = useState(() => Boolean(Prism.languages.php));
+    const [prismReady, setPrismReady] = useState(() =>
+        Boolean(Prism.languages.php),
+    );
     const [, copy] = useClipboard();
 
     useEffect(() => {
@@ -271,13 +273,13 @@ export function CodeBlock({ className, children, node }: CodeBlockProps) {
                         }
                         style={{ background: 'transparent' }}
                         dangerouslySetInnerHTML={{
-                             __html:
-                                 prismReady &&
-                                 highlightLang &&
-                                 Prism.languages[highlightLang]
-                                     ? Prism.highlight(
-                                           content,
-                                           Prism.languages[highlightLang],
+                            __html:
+                                prismReady &&
+                                highlightLang &&
+                                Prism.languages[highlightLang]
+                                    ? Prism.highlight(
+                                          content,
+                                          Prism.languages[highlightLang],
                                           highlightLang,
                                       )
                                     : escapeHtml(content),
@@ -339,13 +341,13 @@ export function CodeBlock({ className, children, node }: CodeBlockProps) {
                             : {}),
                     }}
                     dangerouslySetInnerHTML={{
-                         __html:
-                             prismReady &&
-                             highlightLang &&
-                             Prism.languages[highlightLang]
-                                 ? Prism.highlight(
-                                       content,
-                                       Prism.languages[highlightLang],
+                        __html:
+                            prismReady &&
+                            highlightLang &&
+                            Prism.languages[highlightLang]
+                                ? Prism.highlight(
+                                      content,
+                                      Prism.languages[highlightLang],
                                       highlightLang,
                                   )
                                 : escapeHtml(content),

@@ -117,6 +117,7 @@ function parseJsxAttributes(
                 // Numeric value — store as string
                 attributes[key] = jsxValue;
             }
+
             continue;
         }
 
@@ -150,12 +151,24 @@ function buildDirectiveAttributes(
     return `{${serialized}}`;
 }
 
+const MINTLIFY_CALLOUT_TAGS = {
+    Note: ':::message{.note}',
+    Tip: ':::message{.tip}',
+    Info: ':::message',
+    Warning: ':::message{.alert}',
+    Check: ':::message{.check}',
+} as const;
+
+type MintlifyCalloutTag = keyof typeof MINTLIFY_CALLOUT_TAGS;
+
 export function preprocessMintlifySyntax(markdown: string): string {
     const lines = markdown.split('\n');
     const processedLines: string[] = [];
     let activeFence: string | null = null;
     let mintlifyTabsDepth = 0;
-    const mintlifyTagStack: Array<'Tabs' | 'Tab' | 'Card' | 'CardGroup'> = [];
+    const mintlifyTagStack: Array<
+        'Tabs' | 'Tab' | 'Card' | 'CardGroup' | MintlifyCalloutTag
+    > = [];
 
     const pushLine = (value: string): void => {
         processedLines.push(value);
@@ -197,6 +210,38 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
         if (activeFence !== null) {
             processedLines.push(effectiveLine);
+
+            continue;
+        }
+
+        // Mintlify callout open tag: <Note>, <Tip>, <Info>, <Warning>, <Check>
+        const calloutOpenMatch = /^<(?<tag>Note|Tip|Info|Warning|Check)>$/.exec(
+            trimmedLine,
+        );
+
+        if (calloutOpenMatch) {
+            const tag = calloutOpenMatch.groups!.tag as MintlifyCalloutTag;
+
+            pushBlankLineIfNeeded();
+            pushLine(MINTLIFY_CALLOUT_TAGS[tag]);
+            pushLine('');
+            mintlifyTagStack.push(tag);
+
+            continue;
+        }
+
+        const calloutCloseMatch =
+            /^<\/(?<tag>Note|Tip|Info|Warning|Check)>$/.exec(trimmedLine);
+
+        if (calloutCloseMatch) {
+            const tag = calloutCloseMatch.groups!.tag as MintlifyCalloutTag;
+
+            if (mintlifyTagStack.at(-1) === tag) {
+                mintlifyTagStack.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine(':::');
 
             continue;
         }
@@ -329,17 +374,76 @@ export function preprocessMintlifySyntax(markdown: string): string {
     return processedLines.join('\n');
 }
 
+function transformOutsideInlineCode(
+    line: string,
+    transform: (segment: string) => string,
+): string {
+    let result = '';
+    let lastIndex = 0;
+
+    for (const match of line.matchAll(/`+[^`]*`+/g)) {
+        result += transform(line.slice(lastIndex, match.index));
+        result += match[0];
+        lastIndex = match.index! + match[0].length;
+    }
+
+    result += transform(line.slice(lastIndex));
+
+    return result;
+}
+
+function transformOutsideFences(
+    markdown: string,
+    transform: (line: string) => string,
+): string {
+    const lines = markdown.split('\n');
+    let activeFence: string | null = null;
+
+    return lines
+        .map((line) => {
+            const trimmed = line.trim();
+            const fenceMatch = /^(`{3,}|~{3,})/.exec(trimmed);
+
+            if (fenceMatch) {
+                const fence = fenceMatch[1];
+                const remainder = trimmed.slice(fence.length);
+
+                if (activeFence === null) {
+                    activeFence = fence;
+                } else if (
+                    fence[0] === activeFence[0] &&
+                    fence.length >= activeFence.length &&
+                    remainder.trim() === ''
+                ) {
+                    activeFence = null;
+                }
+
+                return line;
+            }
+
+            if (activeFence !== null) {
+                return line;
+            }
+
+            return transformOutsideInlineCode(line, transform);
+        })
+        .join('\n');
+}
+
 export function preprocessMarkdownSyntax(markdown: string): string {
-    return (
-        preprocessMintlifySyntax(markdown)
-            // Normalize :::message alert to the attribute form remark-directive expects.
-            .replace(/:::message\s+alert\b/g, ':::message{.alert}')
+    return transformOutsideFences(preprocessMintlifySyntax(markdown), (line) =>
+        line
+            // Normalize :::message <type> to the attribute form remark-directive expects.
+            .replace(
+                /:::message\s+(alert|note|tip|info|check)\b/,
+                ':::message{.$1}',
+            )
             // Convert :::details title to the label form remark-directive expects.
-            .replace(/:::details\s+(.+?)(\r?\n)/g, ':::details[$1]$2')
+            .replace(/:::details\s+(.+?)$/, ':::details[$1]')
             // Convert @[card](URL) to a bare URL line so remark-linkify-to-card picks it up.
-            .replace(/^@\[card\]\((https?:\/\/[^\s)]+)\)$/gm, '$1')
+            .replace(/^@\[card\]\((https?:\/\/[^\s)]+)\)$/, '$1')
             // Convert @[github](URL) to a bare URL line so remark-linkify-to-card picks it up.
-            .replace(/^@\[github\]\((https?:\/\/[^\s)]+)\)$/gm, '$1')
+            .replace(/^@\[github\]\((https?:\/\/[^\s)]+)\)$/, '$1'),
     );
 }
 

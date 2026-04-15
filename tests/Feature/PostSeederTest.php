@@ -68,7 +68,9 @@ test('post seeder creates the mintlify syntax page', function () {
     expect($post->content)->toContain('<Tab title="yarn">');
     expect($post->content)->toContain('yarn install');
     expect($post->content)->toContain('<Accordion title="Supported formats">');
-    expect($post->content)->toContain('<Callout type="warning">');
+    expect($post->content)->toContain('<Note>');
+    expect($post->content)->toContain('<Warning>');
+    expect($post->content)->toContain('<Check>');
     expect($post->content)->toContain('<ResponseField name="id" type="string" required>');
     expect($post->published_at)->not->toBeNull();
 });

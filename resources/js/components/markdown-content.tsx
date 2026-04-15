@@ -1,4 +1,4 @@
-import { AlertCircle, Info } from 'lucide-react';
+import { AlertTriangle, CircleCheck, Info, Lightbulb } from 'lucide-react';
 import type { Components } from 'react-markdown';
 import ReactMarkdown from 'react-markdown';
 import {
@@ -56,13 +56,46 @@ function SummaryEl({
     );
 }
 
+const CALLOUT_CONFIG = {
+    note: {
+        Icon: Info,
+        bg: 'bg-gray-50 dark:bg-gray-900/40',
+        text: 'text-gray-800 dark:text-gray-200',
+        iconColor: 'text-gray-500',
+    },
+    tip: {
+        Icon: Lightbulb,
+        bg: 'bg-green-50 dark:bg-green-950/40',
+        text: 'text-green-900 dark:text-green-100',
+        iconColor: 'text-green-500',
+    },
+    info: {
+        Icon: Info,
+        bg: 'bg-blue-50 dark:bg-blue-950/40',
+        text: 'text-blue-900 dark:text-blue-100',
+        iconColor: 'text-blue-500',
+    },
+    alert: {
+        Icon: AlertTriangle,
+        bg: 'bg-amber-50 dark:bg-amber-950/40',
+        text: 'text-amber-900 dark:text-amber-100',
+        iconColor: 'text-amber-500',
+    },
+    check: {
+        Icon: CircleCheck,
+        bg: 'bg-green-50 dark:bg-green-950/40',
+        text: 'text-green-900 dark:text-green-100',
+        iconColor: 'text-green-500',
+    },
+} as const;
+
+type CalloutType = keyof typeof CALLOUT_CONFIG;
+
 function MessageBox({
     children,
     className,
     ...props
 }: React.ComponentPropsWithoutRef<'aside'>) {
-    const isAlert = className?.includes('alert');
-
     if (!className?.includes('msg')) {
         return (
             <aside className={className} {...props}>
@@ -71,25 +104,23 @@ function MessageBox({
         );
     }
 
-    const Icon = isAlert ? AlertCircle : Info;
+    const classes = className.split(/\s+/);
+    const typeKey =
+        (classes.find((c) => c in CALLOUT_CONFIG) as CalloutType | undefined) ??
+        'info';
+    const { Icon, bg, text, iconColor } = CALLOUT_CONFIG[typeKey];
 
     return (
         <aside
             className={cn(
                 'not-prose my-6 flex items-start gap-3 rounded-md px-4 py-4 text-sm leading-relaxed',
-                isAlert
-                    ? 'bg-amber-50 text-amber-900 dark:bg-amber-950/40 dark:text-amber-100'
-                    : 'bg-blue-50 text-blue-900 dark:bg-blue-950/40 dark:text-blue-100',
+                bg,
+                text,
+                className,
             )}
             {...props}
         >
-            <Icon
-                className={cn(
-                    'mt-0.5 shrink-0',
-                    isAlert ? 'text-amber-500' : 'text-blue-500',
-                )}
-                size={18}
-            />
+            <Icon className={cn('mt-0.5 shrink-0', iconColor)} size={18} />
             <div className="min-w-0 flex-1">{children}</div>
         </aside>
     );
@@ -110,6 +141,7 @@ export default function MarkdownContent({
         card?: (props: Record<string, unknown>) => React.ReactElement;
         cardgroup?: (props: Record<string, unknown>) => React.ReactElement;
     } = {
+        pre: ({ children }) => <>{children}</>,
         aside: MessageBox,
         details: DetailsBox,
         summary: SummaryEl,

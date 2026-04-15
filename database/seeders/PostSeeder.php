@@ -643,6 +643,8 @@ MD),
                 'content' => trim(<<<'MD'
 # Zenn Syntax
 
+> Reference: https://zenn.dev/zenn/articles/markdown-guide
+
 Zenn supports a few convenient image patterns on top of regular Markdown.
 
 ## Basic Image
@@ -715,6 +717,34 @@ Your warning here
 
 :::message alert
 Your warning here
+:::
+
+This system also supports extended variants as a non-standard extension. These are not part of the Zenn spec but work here.
+
+```md
+:::message note
+Neutral note.
+:::
+
+:::message tip
+Helpful tip.
+:::
+
+:::message check
+Success or confirmation.
+:::
+```
+
+:::message note
+Neutral note.
+:::
+
+:::message tip
+Helpful tip.
+:::
+
+:::message check
+Success or confirmation.
 :::
 
 ## Details (Collapsible)
@@ -887,7 +917,83 @@ MD),
                 'content' => trim(<<<'MD'
 # Mintlify Syntax
 
+> Reference: https://starter.mintlify.com/essentials/markdown / https://mintlify.wiki/motleyai/docs/essentials/markdown
+
 Mintlify ships with MDX-flavored components for docs sites. This page covers the components supported by the ThinkStream Markdown pipeline.
+
+---
+
+# Callouts
+
+Mintlify provides five callout types. Each maps to a Zenn-style `:::message` directive internally.
+
+<Note>
+  This is a note callout. Use it for neutral information.
+</Note>
+
+<Tip>
+  This is a tip callout. Use it for helpful advice.
+</Tip>
+
+<Info>
+  This is an info callout. Use it for additional context.
+</Info>
+
+<Warning>
+  This is a warning callout. Use it for cautionary information.
+</Warning>
+
+<Check>
+  This is a check callout. Use it for success states or confirmations.
+</Check>
+
+Source:
+
+```mdx
+<Note>
+  This is a note callout. Use it for neutral information.
+</Note>
+
+<Tip>
+  This is a tip callout. Use it for helpful advice.
+</Tip>
+
+<Info>
+  This is an info callout. Use it for additional context.
+</Info>
+
+<Warning>
+  This is a warning callout. Use it for cautionary information.
+</Warning>
+
+<Check>
+  This is a check callout. Use it for success states or confirmations.
+</Check>
+```
+
+You can also use the underlying Zenn-style directive syntax directly:
+
+```md
+:::message note
+Note content here.
+:::
+
+:::message tip
+Tip content here.
+:::
+
+:::message
+Info content here.
+:::
+
+:::message alert
+Warning content here.
+:::
+
+:::message check
+Check content here.
+:::
+```
 
 ---
 
@@ -1022,24 +1128,6 @@ Expandable sections are typically written like this:
 ```
 
 This page keeps the original Mintlify syntax visible so we can decide later how to transform it.
-
----
-
-# Callouts
-
-Callouts are useful for note, warning, and info states.
-
-```mdx
-<Callout type="info">
-  This syntax is still under review.
-</Callout>
-```
-
-```mdx
-<Callout type="warning">
-  Rendering support may require custom component mapping.
-</Callout>
-```
 
 ---
 
