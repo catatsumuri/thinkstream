@@ -28,7 +28,10 @@ function parseCodeMeta(
     className: string | undefined,
     metastring: string | undefined,
 ): { language: string; filename: string | null; isDiff: boolean } {
-    const rawLang = /language-(\w+)/.exec(className ?? '')?.[1] ?? '';
+    const normalizeLanguage = (value: string): string => value.toLowerCase();
+    const rawLang = normalizeLanguage(
+        /language-([\w-]+)/.exec(className ?? '')?.[1] ?? '',
+    );
     let language = rawLang;
     let filename: string | null = null;
     let isDiff = false;
@@ -39,32 +42,49 @@ function parseCodeMeta(
         const langPart = metastring?.split(/\s+/)[0] ?? '';
 
         if (langPart.includes(':')) {
-            [language, filename] = langPart.split(':') as [string, string];
+            const [metaLanguage, metaFilename] = langPart.split(':') as [
+                string,
+                string,
+            ];
+
+            language = normalizeLanguage(metaLanguage);
+            filename = metaFilename;
         } else {
-            language = langPart;
+            language = normalizeLanguage(langPart);
         }
     } else if (className?.includes(':')) {
         // className is "language-php:index.php" — colon separates lang from filename
         const afterPrefix = (className ?? '').replace(/^.*language-/, '');
         const colonIdx = afterPrefix.indexOf(':');
 
-        language = afterPrefix.slice(0, colonIdx);
+        language = normalizeLanguage(afterPrefix.slice(0, colonIdx));
         filename = afterPrefix.slice(colonIdx + 1);
     } else if (metastring) {
         // Fallback: meta carries "lang[:filename]"
         const langPart = metastring.split(/\s+/)[0] ?? '';
 
         if (langPart.includes(':')) {
-            [language, filename] = langPart.split(':') as [string, string];
+            const [metaLanguage, metaFilename] = langPart.split(':') as [
+                string,
+                string,
+            ];
+
+            language = normalizeLanguage(metaLanguage);
+            filename = metaFilename;
         } else if (langPart) {
-            language = langPart;
+            language = normalizeLanguage(langPart);
         }
     }
 
     return { language, filename, isDiff };
 }
 
-export function CodeBlock({ className, children, node }: CodeBlockProps) {
+export function CodeBlock({
+    className,
+    children,
+    node,
+    metastring,
+}: CodeBlockProps & { metastring?: string }) {
     const [wrap, setWrap] = useState(isMobileViewport);
     const [copied, setCopied] = useState(false);
     const [prismReady, setPrismReady] = useState(() =>
@@ -104,8 +124,9 @@ export function CodeBlock({ className, children, node }: CodeBlockProps) {
         );
     }
 
-    const metastring = node?.properties?.metastring as string | undefined;
-    const { language, filename, isDiff } = parseCodeMeta(className, metastring);
+    const codeMeta =
+        metastring ?? (node?.properties?.metastring as string | undefined);
+    const { language, filename, isDiff } = parseCodeMeta(className, codeMeta);
     const highlightLang = language === 'blade' ? 'html' : language;
 
     if (highlightLang === 'mermaid') {
