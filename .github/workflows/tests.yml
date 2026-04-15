@@ -21,23 +21,41 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v6
 
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          tools: composer:v2
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
           node-version: '22'
           cache: 'npm'
 
+      - name: Install Composer Dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
       - name: Install Node Dependencies
         run: npm ci
+
+      - name: Copy Environment File
+        run: cp .env.example .env
+
+      - name: Generate Application Key
+        run: php artisan key:generate
+
+      - name: Generate Wayfinder Types
+        run: php artisan wayfinder:generate --no-interaction
+
+      - name: Build Assets
+        run: npm run build
 
       - name: Type Check
         run: npm run types:check
 
       - name: Markdown Syntax Tests
         run: npm run markdown:test
-
-      - name: Build Assets
-        run: npm run build
 
   php-tests:
     runs-on: ubuntu-latest
@@ -56,8 +74,17 @@ jobs:
           tools: composer:v2
           coverage: xdebug
 
+      - name: Setup Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+
       - name: Install Dependencies
         run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Install Node Dependencies
+        run: npm ci
 
       - name: Copy Environment File
         run: cp .env.example .env
@@ -67,6 +94,9 @@ jobs:
 
       - name: Create SQLite Database
         run: touch testing
+
+      - name: Build Assets
+        run: npm run build
 
       - name: Feature and Unit Tests
         run: ./vendor/bin/pest --ci tests/Feature tests/Unit
