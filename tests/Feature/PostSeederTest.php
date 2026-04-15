@@ -43,7 +43,7 @@ test('post seeder creates the zenn syntax guide with code block examples', funct
     expect($post->published_at)->not->toBeNull();
 });
 
-test('post seeder creates the mintlify syntax draft page', function () {
+test('post seeder creates the mintlify syntax page', function () {
     $this->seed(PostSeeder::class);
 
     $namespace = PostNamespace::query()
@@ -61,7 +61,8 @@ test('post seeder creates the mintlify syntax draft page', function () {
     expect($post)->not->toBeNull();
     expect($post->title)->toBe('Mintlify Syntax (WIP)');
     expect($post->content)->toContain('# Mintlify Syntax');
-    expect($post->content)->toContain('<Card title="Tabs" icon="folder" href="/components/tabs">');
+    expect($post->content)->toContain('<Card title="Tabs" icon="folder" href="/guides/index">');
+    expect($post->content)->toContain('<CardGroup cols={2}>');
     expect($post->content)->toContain('Live example:');
     expect($post->content)->toContain('<Tabs>');
     expect($post->content)->toContain('<Tab title="yarn">');

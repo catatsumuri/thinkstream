@@ -1,4 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
     AlertCircle,
     ArrowRight,
@@ -44,10 +43,12 @@ import {
     Users,
     XCircle,
     Zap,
-    type LucideIcon,
 } from 'lucide-react';
-import { useMemo } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Icon } from '@/components/ui/icon';
 import { sanitizeMarkdownCardHref } from '@/lib/markdown-card-href';
+import { cn } from '@/lib/utils';
 
 const ICON_MAP: Record<string, LucideIcon> = {
     clock: Clock,
@@ -157,23 +158,24 @@ export function MarkdownCard({
     'data-card-href': href,
     children,
 }: MarkdownCardProps) {
-    const IconComponent = useMemo(() => getLucideIcon(icon), [icon]);
+    const iconNode = getLucideIcon(icon);
     const safeHref = sanitizeMarkdownCardHref(href);
 
     const cardContent = (
         <Card
-            className={[
+            className={cn(
                 'group h-full border transition-all hover:border-primary/50 hover:shadow-md',
-                safeHref ? 'cursor-pointer' : null,
-            ]
-                .filter(Boolean)
-                .join(' ')}
+                safeHref && 'cursor-pointer',
+            )}
         >
             <CardHeader>
                 <div className="flex items-start gap-3">
-                    {icon && IconComponent ? (
+                    {iconNode ? (
                         <div className="flex-shrink-0 rounded-lg bg-primary/10 p-2 transition-colors group-hover:bg-primary/20">
-                            <IconComponent className="h-5 w-5 text-primary" />
+                            <Icon
+                                iconNode={iconNode}
+                                className="h-5 w-5 text-primary"
+                            />
                         </div>
                     ) : null}
                     <CardTitle className="text-base leading-tight">
