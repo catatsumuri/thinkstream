@@ -63,3 +63,46 @@ MARKDOWN,
         ->assertSee('<Tabs>')
         ->assertSee('<Tab title="npm">');
 });
+
+test('mintlify-style callouts render as typed message boxes', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => <<<'MARKDOWN'
+# Callouts
+
+<Note>
+  Neutral note.
+</Note>
+
+<Tip>
+  Helpful tip.
+</Tip>
+
+<Info>
+  Additional context.
+</Info>
+
+<Warning>
+  Warning details.
+</Warning>
+
+<Check>
+  Success state.
+</Check>
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.show', [$namespace, $post]));
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('svg.lucide-info')
+        ->assertPresent('svg.lucide-lightbulb')
+        ->assertPresent('svg.lucide-triangle-alert')
+        ->assertPresent('svg.lucide-circle-check')
+        ->assertSee('Neutral note.')
+        ->assertSee('Helpful tip.')
+        ->assertSee('Additional context.')
+        ->assertSee('Warning details.')
+        ->assertSee('Success state.');
+});
