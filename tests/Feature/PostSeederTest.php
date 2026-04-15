@@ -42,3 +42,32 @@ test('post seeder creates the zenn syntax guide with code block examples', funct
     expect($post->content)->toContain('[![](/storage/namespaces/guide.png =250x)](https://zenn.dev)');
     expect($post->published_at)->not->toBeNull();
 });
+
+test('post seeder creates the mintlify syntax draft page', function () {
+    $this->seed(PostSeeder::class);
+
+    $namespace = PostNamespace::query()
+        ->where('slug', 'guides')
+        ->first();
+
+    expect($namespace)->not->toBeNull();
+    expect($namespace->post_order)->toContain('mintlify-syntax');
+
+    $post = Post::query()
+        ->where('namespace_id', $namespace->id)
+        ->where('slug', 'mintlify-syntax')
+        ->first();
+
+    expect($post)->not->toBeNull();
+    expect($post->title)->toBe('Mintlify Syntax (WIP)');
+    expect($post->content)->toContain('# Mintlify Syntax');
+    expect($post->content)->toContain('<Card title="Tabs" icon="folder" href="/components/tabs">');
+    expect($post->content)->toContain('Live example:');
+    expect($post->content)->toContain('<Tabs>');
+    expect($post->content)->toContain('<Tab title="yarn">');
+    expect($post->content)->toContain('yarn install');
+    expect($post->content)->toContain('<Accordion title="Supported formats">');
+    expect($post->content)->toContain('<Callout type="warning">');
+    expect($post->content)->toContain('<ResponseField name="id" type="string" required>');
+    expect($post->published_at)->not->toBeNull();
+});

@@ -10,15 +10,17 @@ import remarkEmoji from 'remark-emoji';
 import remarkGfm from 'remark-gfm';
 import remarkSupersub from 'remark-supersub';
 import { EmbedCard } from '@/components/embed-card';
+import { MarkdownTab, MarkdownTabs } from '@/components/markdown-tabs';
+import {
+    preprocessMarkdownContent,
+    preprocessMarkdownSyntax,
+} from '@/lib/markdown-syntax';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
 import { remarkMark } from '@/lib/remark-mark';
+import { remarkTabsDirective } from '@/lib/remark-tabs-directive';
 import { remarkZennDirective } from '@/lib/remark-zenn-directive';
 import { cn } from '@/lib/utils';
-import {
-    preprocessZennMarkdown,
-    preprocessZennSyntax,
-} from '@/lib/zenn-markdown';
 
 function DetailsBox({
     children,
@@ -97,6 +99,47 @@ export default function MarkdownContent({
     content,
     components,
 }: MarkdownContentProps) {
+    const markdownComponents: Components & {
+        tabs?: (props: Record<string, unknown>) => React.ReactElement;
+        tab?: (props: Record<string, unknown>) => React.ReactElement;
+    } = {
+        aside: MessageBox,
+        details: DetailsBox,
+        summary: SummaryEl,
+        tabs: (props: Record<string, unknown>) => <MarkdownTabs {...props} />,
+        tab: (props: Record<string, unknown>) => <MarkdownTab {...props} />,
+        dl: ({ node, ...props }) => {
+            void node;
+
+            return <dl className="my-4 space-y-1" {...props} />;
+        },
+        dt: ({ node, ...props }) => {
+            void node;
+
+            return <dt className="font-semibold" {...props} />;
+        },
+        dd: ({ node, ...props }) => {
+            void node;
+
+            return <dd className="ml-4 text-muted-foreground" {...props} />;
+        },
+        div: (props: React.ComponentPropsWithoutRef<'div'>) => {
+            const embedType = (props as Record<string, unknown>)[
+                'data-embed-type'
+            ] as 'youtube' | 'card' | 'github' | undefined;
+            const embedUrl = (props as Record<string, unknown>)[
+                'data-embed-url'
+            ] as string | undefined;
+
+            if (embedType && embedUrl) {
+                return <EmbedCard type={embedType} url={embedUrl} />;
+            }
+
+            return <div {...props} />;
+        },
+        ...components,
+    };
+
     return (
         <ReactMarkdown
             remarkPlugins={[
@@ -104,6 +147,7 @@ export default function MarkdownContent({
                 remarkCodeMeta,
                 remarkDirective,
                 remarkZennDirective,
+                remarkTabsDirective,
                 remarkLinkifyToCard,
                 remarkSupersub,
                 remarkDefinitionList,
@@ -121,45 +165,9 @@ export default function MarkdownContent({
                     }),
                 } as any,
             }}
-            components={{
-                aside: MessageBox,
-                details: DetailsBox,
-                summary: SummaryEl,
-                dl: ({ node, ...props }) => {
-                    void node;
-
-                    return <dl className="my-4 space-y-1" {...props} />;
-                },
-                dt: ({ node, ...props }) => {
-                    void node;
-
-                    return <dt className="font-semibold" {...props} />;
-                },
-                dd: ({ node, ...props }) => {
-                    void node;
-
-                    return (
-                        <dd className="ml-4 text-muted-foreground" {...props} />
-                    );
-                },
-                div: (props: React.ComponentPropsWithoutRef<'div'>) => {
-                    const embedType = (props as Record<string, unknown>)[
-                        'data-embed-type'
-                    ] as 'youtube' | 'card' | 'github' | undefined;
-                    const embedUrl = (props as Record<string, unknown>)[
-                        'data-embed-url'
-                    ] as string | undefined;
-
-                    if (embedType && embedUrl) {
-                        return <EmbedCard type={embedType} url={embedUrl} />;
-                    }
-
-                    return <div {...props} />;
-                },
-                ...components,
-            }}
+            components={markdownComponents}
         >
-            {preprocessZennMarkdown(preprocessZennSyntax(content))}
+            {preprocessMarkdownContent(preprocessMarkdownSyntax(content))}
         </ReactMarkdown>
     );
 }
