@@ -106,3 +106,29 @@ MARKDOWN,
         ->assertSee('Warning details.')
         ->assertSee('Success state.');
 });
+
+test('mintlify-style Columns renders as a card group grid', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => <<<'MARKDOWN'
+# Columns
+
+<Columns cols={2}>
+    <Card title="Vite Plugin" href="/v3/installation" icon="bolt">
+        Automatic page resolution and SSR setup.
+    </Card>
+    <Card title="HTTP Requests" href="/v3/the-basics" icon="globe">
+        Make standalone HTTP requests.
+    </Card>
+</Columns>
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.show', [$namespace, $post]));
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="markdown-card-group"]')
+        ->assertSee('Vite Plugin')
+        ->assertSee('HTTP Requests');
+});

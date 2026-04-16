@@ -139,7 +139,10 @@ export function MarkdownCardGroup({
     const gridColsClass = GRID_COLS_CLASS[cols] ?? 'md:grid-cols-2';
 
     return (
-        <div className={`not-prose my-6 grid gap-4 ${gridColsClass}`}>
+        <div
+            className={`not-prose my-6 grid gap-4 ${gridColsClass}`}
+            data-test="markdown-card-group"
+        >
             {children}
         </div>
     );
