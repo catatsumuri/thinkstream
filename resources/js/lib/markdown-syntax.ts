@@ -186,6 +186,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         | 'Tab'
         | 'Card'
         | 'CardGroup'
+        | 'Columns'
         | 'Accordion'
         | 'Steps'
         | 'Step'
@@ -289,6 +290,34 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
         if (trimmedLine === '</CardGroup>') {
             if (mintlifyTagStack.at(-1) === 'CardGroup') {
+                mintlifyTagStack.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine('::::');
+
+            continue;
+        }
+
+        const columnsOpenMatch = /^<Columns(?<attributes>[^>]*)>$/.exec(
+            trimmedLine,
+        );
+
+        if (columnsOpenMatch) {
+            const attributes = parseJsxAttributes(
+                columnsOpenMatch.groups?.attributes ?? '',
+            );
+
+            pushBlankLineIfNeeded();
+            pushLine(`::::cardgroup${buildDirectiveAttributes(attributes)}`);
+            pushLine('');
+            mintlifyTagStack.push('Columns');
+
+            continue;
+        }
+
+        if (trimmedLine === '</Columns>') {
+            if (mintlifyTagStack.at(-1) === 'Columns') {
                 mintlifyTagStack.pop();
             }
 

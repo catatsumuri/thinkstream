@@ -8,6 +8,12 @@ use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * Seeds the example markdown guide posts used in local development.
+ *
+ * Usage:
+ * `vendor/bin/sail artisan db:seed --class=Database\\Seeders\\PostSeeder --no-interaction`
+ */
 class PostSeeder extends Seeder
 {
     public function run(): void
