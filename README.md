@@ -1,88 +1,200 @@
 # thinkstream
 
-## Markdown rendering
+ThinkStream is a Laravel + Inertia application for publishing structured knowledge from markdown content.
 
-The app renders markdown through `resources/js/components/markdown-content.tsx`, which wraps `react-markdown` with `remark-gfm`, `remark-directive`, and a custom Zenn directive plugin.
+The current product axis is:
 
-Custom markdown behavior is split into three layers:
+1. organize content in hierarchical namespaces
+2. resolve public URLs from stable `full_path` values
+3. publish or hide branches of content safely
+4. support docs-style navigation, authoring, and import workflows
 
-1. `resources/js/lib/markdown-syntax.ts`
-   - Preprocesses source text before `react-markdown` parses it.
-   - `preprocessMarkdownSyntax()` normalizes shorthand Zenn directive syntax such as `:::message alert` into directive attributes that `remark-directive` can understand.
-   - The same preprocessing layer also normalizes selected Mintlify-style JSX snippets such as `<Tabs>` / `<Tab>` into directive syntax before parsing.
-   - `preprocessMarkdownContent()` rewrites image syntax like `![](/path/to/image.png =250x)` and carries width, height, and caption metadata through the URL while skipping fenced code blocks.
-2. `resources/js/lib/remark-zenn-directive.ts`
-   - Converts parsed Zenn container directives into HTML nodes that React can render.
-   - Current support maps `:::message` and `:::message alert` into `<aside>` nodes with message or alert styling.
-   - `resources/js/lib/remark-tabs-directive.ts` maps `:::tabs` / `:::tab` directives into custom `<tabs>` / `<tab>` nodes for the React renderer.
-3. `resources/js/lib/markdown-components.tsx`
-   - Overrides markdown element rendering for headings, code blocks, images, and caption-like paragraphs.
-   - `resources/js/components/code-block.tsx` also treats fenced `mermaid` blocks specially and renders them through `resources/js/components/mermaid-block.tsx`.
-   - `resources/js/components/markdown-tabs.tsx` renders tab groups produced from Mintlify-style `<Tabs>` syntax.
+Markdown rendering matters here, but it is supporting infrastructure for the content and publishing model, not the product's main story.
 
-### Supported extensions in this repository
+## Core content model
 
-Current seeded examples cover:
+ThinkStream currently revolves around two models:
 
-1. Zenn-style image width syntax such as `=250x`
-2. Image captions written as italic text on the following line
-3. Linked images with the same width metadata handling
-4. `:::message` and `:::message alert` callout blocks
-5. Fenced `mermaid` code blocks rendered as diagrams
-6. Link cards from standalone URLs and `@[card](URL)` directives, with OGP metadata fetched server-side and YouTube URLs rendered as iframe embeds
-7. Mintlify-style `<Tabs>` / `<Tab>` blocks, normalized into directives before parsing and rendered as interactive tabs
+| Model | Purpose | Important fields |
+| --- | --- | --- |
+| `PostNamespace` | Hierarchical container for content sections | `parent_id`, `slug`, `full_path`, `name`, `description`, `is_published`, `post_order` |
+| `Post` | Individual published page inside a namespace | `namespace_id`, `slug`, `full_path`, `title`, `content`, `is_draft`, `published_at` |
 
-Planned components tracked in the `mintlify-syntax` seeded post (WIP):
+### Namespace hierarchy
 
-- `<Accordion>` — maps directly to `:::details`; no new component needed
-- `<Callout type="info|warning">` — maps directly to `:::message` / `:::message{.alert}`; no new component needed
-- `<Steps>` / `<Step>` — requires a new directive handler and React component
-- `<Card>` / `<CardGroup>` — includes self-closing `<Card ... />` syntax; requires a new code path
-- `<CodeGroup>` — variant of `<Tabs>` restricted to code blocks
-- `<Banner>`, `<Badge>`, `<Frame>`, Mermaid, `<ResponseField>`, `<ParamField>` — lower priority; decide per component whether to render natively or leave as literal code
+Namespaces are nested. Each namespace stores a `full_path`, and posts also store a `full_path`, so public content resolves by path instead of by flat slug pairs.
 
-### Adding more Zenn syntax
+Example:
 
-When adding a new Zenn-style snippet or block syntax:
-
-1. Normalize shorthand source syntax in `preprocessMarkdownSyntax()` when the parser needs a more explicit form.
-2. Extend `preprocessMarkdownContent()` when the feature is best represented as rewritten markdown or encoded metadata.
-3. Add or update `remarkZennDirective()` when the feature should become a custom markdown node after parsing.
-4. Add or update a renderer in `createMarkdownComponents()` when the final HTML needs custom React output.
-5. Add seeded example content in `database/seeders/PostSeeder.php`.
-6. Add regression coverage in a browser test and, when appropriate, a feature test for seeded content.
-
-This keeps the markdown pipeline composable without introducing a separate renderer registry.
-
-### Adding Mintlify syntax
-
-Mintlify uses JSX-like tags (`<Tabs>`, `<Tab>`, `<Accordion>`, …) that `react-markdown` cannot parse directly. These are converted to `remark-directive` container directive syntax in `preprocessMintlifySyntax()` before the parser runs.
-
-The two-pass approach for any new component is:
-
-1. **Preprocessor** (`preprocessMintlifySyntax` in `markdown-syntax.ts`) — strip JSX tags and emit directive syntax.
-2. **Remark plugin** (`remark-tabs-directive.ts` or a new file) — set `hName` and `hProperties` on the AST node.
-3. **React component** (`markdown-content.tsx` component map) — render the final HTML.
-
-Some planned components skip steps 2 and 3 because they reuse existing Zenn rendering:
-
-| Mintlify tag | Directive output | Rendered by |
-|---|---|---|
-| `<Tabs>` / `<Tab>` | `::::tabs` / `:::tab` | `MarkdownTabs` / `MarkdownTab` via `remark-tabs-directive` |
-| `<Accordion title="X">` | `:::details[X]` | `DetailsBox` via `remarkZennDirective` — no new code |
-| `<Callout type="info">` | `:::message` | `MessageBox` via `remarkZennDirective` — no new code |
-| `<Callout type="warning">` | `:::message{.alert}` | `MessageBox` via `remarkZennDirective` — no new code |
-
-#### Things to be aware of when extending
-
-**`buildDirectiveAttributes` allowlist** — only attributes listed here are forwarded from the JSX tag into the directive attribute string. Add any new attribute names before relying on them downstream.
-
-```ts
-['title', 'icon', 'sync', 'borderBottom'].includes(key)
+```text
+guides
+guides/laravel
+guides/laravel/routing
+guides/laravel/routing/wildcards
 ```
 
-**Self-closing tags** — the open-tag regex (`/^<Foo(?<attributes>[^>]*)>$/`) does not match `<Card ... />`. Self-closing components need a separate regex branch in the preprocessor.
+This path model is the center of the app's public information architecture.
 
-**Container depth** — `<Tabs>` uses four colons (`::::`) at the outer level so the inner `:::tab` directives are unambiguously nested. Any new outer container that wraps a three-colon inner directive must use four colons for the same reason. Track depth with a counter similar to `mintlifyTabsDepth`.
+### Publishing model
 
-**Fenced code blocks inside tags** — the preprocessor tracks `activeFence` and strips tag-level indentation from fence lines. This is required because CommonMark treats a four-space-indented line starting with backticks as an indented code block rather than a fenced code block. Keep the `effectiveLine` stripping in place for any new tag-aware branch.
+Public content is resolved through a wildcard route and rejected when it lives under an unpublished ancestor.
+
+That means:
+
+- unpublished namespaces are not just hidden from listings
+- descendants under an unpublished branch are also blocked from direct URL access
+- reserved root segments such as `admin`, `login`, `register`, and `api` are excluded from content routing
+
+Relevant files:
+
+- `routes/web.php`
+- `app/Http/Controllers/PostController.php`
+- `app/Support/ReservedContentPath.php`
+- `app/Models/PostNamespace.php`
+- `app/Models/Post.php`
+
+## Public and admin flows
+
+### Public side
+
+The public UI is built with Inertia + React and currently provides:
+
+- a root namespace index on `/`
+- namespace pages resolved by `full_path`
+- post pages resolved by `full_path`
+- breadcrumb navigation
+- a root-based content navigation tree for the active branch
+
+The public controller assembles these views in `app/Http/Controllers/PostController.php`.
+
+### Admin side
+
+Authenticated users manage namespaces and posts under `/admin`.
+
+Important details:
+
+- admin namespace routing now binds namespaces by ID, not by slug
+- namespace slugs are unique per parent, not globally unique
+- posts remain scoped to their namespace for admin editing
+
+Admin routes live in `routes/admin.php`.
+
+### Import flow
+
+ThinkStream can import local Inertia.js MDX docs into namespaces and posts:
+
+```bash
+php artisan posts:import-inertia-docs
+```
+
+The command is defined in `routes/console.php`, and the importer lives in `app/Services/InertiaJsDocsImporter.php`.
+
+## Markdown support
+
+Markdown support exists to make authored content publishable inside this content model.
+
+### Current pipeline
+
+The markdown subsystem has three layers:
+
+1. **Preprocessing** in `resources/js/lib/markdown-syntax.ts`
+2. **Directive / AST transforms** in `resources/js/lib/remark-*.ts`
+3. **React rendering** in `resources/js/components/markdown-*.tsx` and `resources/js/components/markdown-content.tsx`
+
+### Frozen syntax surface
+
+The supported extension surface is intentionally frozen in:
+
+- `resources/js/lib/markdown-syntax-manifest.ts`
+
+That manifest is the source of truth for:
+
+- supported forwarded directive attributes
+- supported Mintlify-style tags
+- supported Zenn shorthand conversions
+- supported custom markdown renderer components
+
+If you expand the syntax surface, update the manifest and its regression tests explicitly instead of growing the pipeline implicitly.
+
+### Supported syntax families
+
+The current system supports a curated subset of Zenn-style and Mintlify-style authoring features, including:
+
+- Zenn-style message and details shorthand
+- image metadata rewriting and captions
+- Tabs, cards, steps, API fields, code groups, badges, tooltips, updates, and tree blocks
+- link-card and embed normalization
+
+The regression entry point for this layer is:
+
+- `tests-node/markdown/markdown-syntax.test.ts`
+
+## Seeded content
+
+Local development includes seeded example content under the `guides` namespace.
+
+`database/seeders/PostSeeder.php` currently provides:
+
+- baseline markdown examples
+- syntax examples used during local verification
+- sample content for the public publishing flow
+
+This is convenient for development, but the seed data should be treated as demo content, not as the application's architectural center.
+
+## Key files
+
+| Path | Role |
+| --- | --- |
+| `app/Http/Controllers/PostController.php` | Public content resolution, breadcrumbs, and nav tree assembly |
+| `app/Models/PostNamespace.php` | Hierarchical namespace model and ordering helpers |
+| `app/Models/Post.php` | Post model for markdown pages |
+| `routes/web.php` | Public routes, reserved path protection, wildcard resolver |
+| `routes/admin.php` | Admin namespace and post management routes |
+| `routes/console.php` | Import command definition |
+| `resources/js/pages/posts/*.tsx` | Public Inertia pages |
+| `resources/js/pages/admin/**/*.tsx` | Admin Inertia pages |
+| `resources/js/lib/markdown-syntax-manifest.ts` | Markdown syntax freeze manifest |
+| `resources/js/lib/markdown-syntax.ts` | Markdown preprocessing |
+
+## Local development
+
+This project runs in Laravel Sail.
+
+### Initial setup
+
+```bash
+vendor/bin/sail up -d
+vendor/bin/sail composer install
+vendor/bin/sail npm install
+cp .env.example .env
+vendor/bin/sail artisan key:generate
+vendor/bin/sail artisan migrate
+vendor/bin/sail artisan db:seed --class=Database\\Seeders\\PostSeeder --no-interaction
+vendor/bin/sail artisan wayfinder:generate --with-form --no-interaction
+```
+
+### Run the app
+
+```bash
+vendor/bin/sail npm run dev
+```
+
+### Useful commands
+
+```bash
+vendor/bin/sail artisan test --compact
+vendor/bin/sail npm run markdown:test
+vendor/bin/sail npm run types:check
+vendor/bin/sail npm run build
+vendor/bin/sail artisan posts:import-inertia-docs
+```
+
+## Direction
+
+The current direction is to keep these concerns separated:
+
+1. **content information architecture** - namespaces, paths, publication, navigation
+2. **content ingestion** - importers and external docs intake
+3. **markdown syntax platform** - rendering extensions that support authored content
+
+When these move independently, review stays bounded and the product center stays clear.
