@@ -197,3 +197,25 @@ MARKDOWN,
         ->assertSee('Premium')
         ->assertSee('subscription.');
 });
+
+test('mintlify-style tooltips render inline triggers', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => <<<'MARKDOWN'
+# Tooltip
+
+Hover over <Tooltip tip="Application Programming Interface" headline="API" cta="Read more" href="/guides/index">API</Tooltip> for a definition.
+
+Simple tooltip: hover over <Tooltip tip="Hypertext Markup Language">HTML</Tooltip>.
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.show', [$namespace, $post]));
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="markdown-tooltip"]')
+        ->assertSee('Hover over')
+        ->assertSee('API')
+        ->assertSee('HTML');
+});

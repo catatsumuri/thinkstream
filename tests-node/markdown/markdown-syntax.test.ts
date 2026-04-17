@@ -328,6 +328,29 @@ test('preprocessMarkdownSyntax leaves Badge tags untouched inside fenced code bl
     assert.match(output, /<Badge color="green" icon="circle-check">Stable<\/Badge>/);
 });
 
+test('preprocessMarkdownSyntax converts Mintlify Tooltip tags to text directives', () => {
+    const output = preprocessMarkdownSyntax(
+        'Hover over <Tooltip tip="Application Programming Interface" headline="API" cta="Read more" href="/guides/index">API</Tooltip> for a definition.',
+    );
+
+    assert.match(
+        output,
+        /Hover over :tooltip\[API\]\{tip="Application Programming Interface" headline="API" cta="Read more" href="\/guides\/index"\} for a definition\./,
+    );
+});
+
+test('preprocessMarkdownSyntax leaves Tooltip tags untouched inside fenced code blocks', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`mdx
+<Tooltip tip="Application Programming Interface">API</Tooltip>
+\`\`\``);
+
+    assert.doesNotMatch(output, /:tooltip\[/);
+    assert.match(
+        output,
+        /<Tooltip tip="Application Programming Interface">API<\/Tooltip>/,
+    );
+});
+
 test('preprocessMarkdownSyntax preserves code indentation inside CodeGroup fences', () => {
     const output = preprocessMarkdownSyntax(`<CodeGroup>
 

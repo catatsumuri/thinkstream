@@ -76,6 +76,9 @@ test('post seeder creates the mintlify syntax page', function () {
     expect($post->content)->toContain('# Badge');
     expect($post->content)->toContain('<Badge color="green" icon="circle-check">Stable</Badge>');
     expect($post->content)->toContain('This feature requires a <Badge color="orange" size="sm">Premium</Badge> subscription.');
+    expect($post->content)->toContain('# Tooltip');
+    expect($post->content)->toContain('<Tooltip tip="Application Programming Interface: a set of protocols that lets software components communicate." headline="API" cta="Read more" href="/guides/index">API</Tooltip>');
+    expect($post->content)->toContain('Simple tooltip: hover over <Tooltip tip="Hypertext Markup Language — the standard language for web pages.">HTML</Tooltip>.');
     expect($post->content)->toContain('<ResponseField name="id" type="string" required>');
     expect($post->content)->toContain('<ParamField path="slug" type="string" required>');
     expect($post->content)->toContain('```javascript JavaScript icon="javascript"');

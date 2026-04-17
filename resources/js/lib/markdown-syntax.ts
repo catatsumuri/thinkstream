@@ -151,6 +151,9 @@ function buildDirectiveAttributes(
             'shape',
             'stroke',
             'disabled',
+            'tip',
+            'headline',
+            'cta',
         ].includes(key),
     );
 
@@ -194,6 +197,7 @@ const MULTILINE_JOINABLE_TAGS = [
     'ParamField',
     'CodeGroup',
     'Badge',
+    'Tooltip',
     'Note',
     'Tip',
     'Info',
@@ -814,21 +818,35 @@ function replaceMintlifyBadges(line: string): string {
     );
 }
 
+function replaceMintlifyTooltips(line: string): string {
+    return line.replace(
+        /<Tooltip(?<attributes>[^>]*)>(?<content>.*?)<\/Tooltip>/g,
+        (_, attributesSource: string, content: string) => {
+            const attributes = parseJsxAttributes(attributesSource ?? '');
+            const label = escapeDirectiveLabel(content.trim());
+
+            return `:tooltip[${label}]${buildDirectiveAttributes(attributes)}`;
+        },
+    );
+}
+
 export function preprocessMarkdownSyntax(markdown: string): string {
     return transformOutsideFences(preprocessMintlifySyntax(markdown), (line) =>
-        replaceMintlifyBadges(
-            line
-                // Normalize :::message <type> to the attribute form remark-directive expects.
-                .replace(
-                    /:::message\s+(alert|note|tip|info|check)\b/,
-                    ':::message{.$1}',
-                )
-                // Convert :::details title to the label form remark-directive expects.
-                .replace(/:::details\s+(.+?)$/, ':::details[$1]')
-                // Convert @[card](URL) to a bare URL line so remark-linkify-to-card picks it up.
-                .replace(/^@\[card\]\((https?:\/\/[^\s)]+)\)$/, '$1')
-                // Convert @[github](URL) to a bare URL line so remark-linkify-to-card picks it up.
-                .replace(/^@\[github\]\((https?:\/\/[^\s)]+)\)$/, '$1'),
+        replaceMintlifyTooltips(
+            replaceMintlifyBadges(
+                line
+                    // Normalize :::message <type> to the attribute form remark-directive expects.
+                    .replace(
+                        /:::message\s+(alert|note|tip|info|check)\b/,
+                        ':::message{.$1}',
+                    )
+                    // Convert :::details title to the label form remark-directive expects.
+                    .replace(/:::details\s+(.+?)$/, ':::details[$1]')
+                    // Convert @[card](URL) to a bare URL line so remark-linkify-to-card picks it up.
+                    .replace(/^@\[card\]\((https?:\/\/[^\s)]+)\)$/, '$1')
+                    // Convert @[github](URL) to a bare URL line so remark-linkify-to-card picks it up.
+                    .replace(/^@\[github\]\((https?:\/\/[^\s)]+)\)$/, '$1'),
+            ),
         ),
     );
 }
