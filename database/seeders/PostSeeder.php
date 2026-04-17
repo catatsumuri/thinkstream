@@ -1408,6 +1408,26 @@ $data = $response->json();
 
 </CodeGroup>
 ````
+
+---
+
+# Tooltip
+
+`<Tooltip>` wraps inline text and shows a popover on hover. Use `tip` for the tooltip body, `headline` for a bold title, and `cta` + `href` for an optional call-to-action link.
+
+Live example:
+
+Hover over <Tooltip tip="Application Programming Interface: a set of protocols that lets software components communicate." headline="API" cta="Read more" href="/guides/index">API</Tooltip> for a definition.
+
+Simple tooltip: hover over <Tooltip tip="Hypertext Markup Language — the standard language for web pages.">HTML</Tooltip>.
+
+Source:
+
+```mdx
+Hover over <Tooltip tip="Application Programming Interface: a set of protocols that lets software components communicate." headline="API" cta="Read more" href="/guides/index">API</Tooltip> for a definition.
+
+Simple tooltip: hover over <Tooltip tip="Hypertext Markup Language — the standard language for web pages.">HTML</Tooltip>.
+```
 MD),
                 'published_at' => now(),
             ]);

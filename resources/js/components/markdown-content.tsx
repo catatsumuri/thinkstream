@@ -28,8 +28,10 @@ import { remarkCardDirective } from '@/lib/remark-card-directive';
 import { remarkApiFieldsDirective } from '@/lib/remark-api-fields-directive';
 import { remarkBadgeDirective } from '@/lib/remark-badge-directive';
 import { remarkCodeGroupDirective } from '@/lib/remark-code-group-directive';
+import { remarkTooltipDirective } from '@/lib/remark-tooltip-directive';
 import { MarkdownBadge } from '@/components/markdown-badge';
 import { MarkdownCodeGroup } from '@/components/markdown-code-group';
+import { MarkdownTooltip } from '@/components/markdown-tooltip';
 import { remarkStepsDirective } from '@/lib/remark-steps-directive';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
@@ -157,6 +159,7 @@ export default function MarkdownContent({
         paramfield?: (props: Record<string, unknown>) => React.ReactElement;
         codegroup?: (props: Record<string, unknown>) => React.ReactElement;
         badge?: (props: Record<string, unknown>) => React.ReactElement;
+        tooltip?: (props: Record<string, unknown>) => React.ReactElement;
     } = {
         pre: ({ children }) => <>{children}</>,
         aside: MessageBox,
@@ -198,6 +201,11 @@ export default function MarkdownContent({
         badge: (props: Record<string, unknown>) => (
             <MarkdownBadge
                 {...(props as Parameters<typeof MarkdownBadge>[0])}
+            />
+        ),
+        tooltip: (props: Record<string, unknown>) => (
+            <MarkdownTooltip
+                {...(props as Parameters<typeof MarkdownTooltip>[0])}
             />
         ),
         dl: ({ node, ...props }) => {
@@ -244,6 +252,7 @@ export default function MarkdownContent({
                 remarkStepsDirective,
                 remarkApiFieldsDirective,
                 remarkBadgeDirective,
+                remarkTooltipDirective,
                 remarkCodeGroupDirective,
                 remarkLinkifyToCard,
                 remarkSupersub,
