@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react';
 import { useEffect, useState } from 'react';
 import { CodeBlock } from '@/components/code-block';
+import { SimpleIconSvg } from '@/components/markdown-card-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { getSimpleIcon } from '@/lib/simple-icon-lookup';
 import { cn } from '@/lib/utils';
 
 interface TabInfo {
     lang: string;
     title: string;
+    icon?: string;
     index: number;
     meta?: string | null;
     value?: string;
@@ -130,7 +133,21 @@ export function MarkdownCodeGroup({
                                 'data-[state=active]:bg-[#282c34] data-[state=active]:text-gray-200 data-[state=active]:shadow-none',
                             )}
                         >
-                            {tab.title}
+                            {(() => {
+                                const simpleIcon = getSimpleIcon(tab.icon);
+
+                                return simpleIcon ? (
+                                    <span className="flex items-center gap-1.5">
+                                        <SimpleIconSvg
+                                            icon={simpleIcon}
+                                            className="size-3.5"
+                                        />
+                                        {tab.title}
+                                    </span>
+                                ) : (
+                                    tab.title
+                                );
+                            })()}
                         </TabsTrigger>
                     ))}
                 </TabsList>
