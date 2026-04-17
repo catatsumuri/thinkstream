@@ -1,3 +1,12 @@
+import {
+    MARKDOWN_DIRECTIVE_ATTRIBUTE_NAMES,
+    MINTLIFY_CALLOUT_TAG_NAMES,
+    MINTLIFY_CALLOUT_TAGS,
+    MINTLIFY_MULTILINE_JOINABLE_TAG_NAMES,
+    ZENN_EMBED_DIRECTIVES,
+    ZENN_MESSAGE_VARIANTS,
+} from './markdown-syntax-manifest.js';
+
 const IMAGE_WIDTH_PARAM = '__markdown_width';
 const IMAGE_HEIGHT_PARAM = '__markdown_height';
 const IMAGE_CAPTION_PARAM = '__markdown_caption';
@@ -143,33 +152,9 @@ function buildDirectiveAttributes(
     attributes: Record<string, string | boolean>,
 ): string {
     const supportedEntries = Object.entries(attributes).filter(([key]) =>
-        [
-            'title',
-            'icon',
-            'sync',
-            'borderBottom',
-            'href',
-            'cols',
-            'name',
-            'type',
-            'required',
-            'default',
-            'deprecated',
-            'path',
-            'query',
-            'body',
-            'color',
-            'size',
-            'shape',
-            'stroke',
-            'disabled',
-            'tip',
-            'headline',
-            'cta',
-            'label',
-            'description',
-            'tags',
-        ].includes(key),
+        MARKDOWN_DIRECTIVE_ATTRIBUTE_NAMES.includes(
+            key as (typeof MARKDOWN_DIRECTIVE_ATTRIBUTE_NAMES)[number],
+        ),
     );
 
     if (supportedEntries.length === 0) {
@@ -189,41 +174,15 @@ function buildDirectiveAttributes(
     return `{${serialized}}`;
 }
 
-const MINTLIFY_CALLOUT_TAGS = {
-    Note: ':::message{.note}',
-    Tip: ':::message{.tip}',
-    Info: ':::message',
-    Warning: ':::message{.alert}',
-    Check: ':::message{.check}',
-} as const;
-
 type MintlifyCalloutTag = keyof typeof MINTLIFY_CALLOUT_TAGS;
 
-const MULTILINE_JOINABLE_TAGS = [
-    'Card',
-    'CardGroup',
-    'Columns',
-    'Tabs',
-    'Tab',
-    'Accordion',
-    'Steps',
-    'Step',
-    'ResponseField',
-    'ParamField',
-    'CodeGroup',
-    'Update',
-    'Badge',
-    'Tooltip',
-    'Note',
-    'Tip',
-    'Info',
-    'Warning',
-    'Check',
-];
-
 const MULTILINE_TAG_OPEN_RE = new RegExp(
-    `^<(${MULTILINE_JOINABLE_TAGS.join('|')})(?:\\s|$)`,
+    `^<(${MINTLIFY_MULTILINE_JOINABLE_TAG_NAMES.join('|')})(?:\\s|$)`,
 );
+
+const MINTLIFY_CALLOUT_TAG_PATTERN = MINTLIFY_CALLOUT_TAG_NAMES.join('|');
+const ZENN_MESSAGE_VARIANT_PATTERN = ZENN_MESSAGE_VARIANTS.join('|');
+const ZENN_EMBED_DIRECTIVE_PATTERN = ZENN_EMBED_DIRECTIVES.join('|');
 
 function joinMultilineJsxTags(markdown: string): string {
     const lines = markdown.split('\n');
@@ -408,9 +367,9 @@ export function preprocessMintlifySyntax(markdown: string): string {
         }
 
         // Mintlify callout open tag: <Note>, <Tip>, <Info>, <Warning>, <Check>
-        const calloutOpenMatch = /^<(?<tag>Note|Tip|Info|Warning|Check)>$/.exec(
-            trimmedLine,
-        );
+        const calloutOpenMatch = new RegExp(
+            `^<(?<tag>${MINTLIFY_CALLOUT_TAG_PATTERN})>$`,
+        ).exec(trimmedLine);
 
         if (calloutOpenMatch) {
             const tag = calloutOpenMatch.groups!.tag as MintlifyCalloutTag;
@@ -424,8 +383,9 @@ export function preprocessMintlifySyntax(markdown: string): string {
             continue;
         }
 
-        const calloutCloseMatch =
-            /^<\/(?<tag>Note|Tip|Info|Warning|Check)>$/.exec(trimmedLine);
+        const calloutCloseMatch = new RegExp(
+            `^<\\/(?<tag>${MINTLIFY_CALLOUT_TAG_PATTERN})>$`,
+        ).exec(trimmedLine);
 
         if (calloutCloseMatch) {
             const tag = calloutCloseMatch.groups!.tag as MintlifyCalloutTag;
@@ -1034,15 +994,20 @@ export function preprocessMarkdownSyntax(markdown: string): string {
                 line
                     // Normalize :::message <type> to the attribute form remark-directive expects.
                     .replace(
-                        /:::message\s+(alert|note|tip|info|check)\b/,
+                        new RegExp(
+                            `:::message\\s+(${ZENN_MESSAGE_VARIANT_PATTERN})\\b`,
+                        ),
                         ':::message{.$1}',
                     )
                     // Convert :::details title to the label form remark-directive expects.
                     .replace(/:::details\s+(.+?)$/, ':::details[$1]')
-                    // Convert @[card](URL) to a bare URL line so remark-linkify-to-card picks it up.
-                    .replace(/^@\[card\]\((https?:\/\/[^\s)]+)\)$/, '$1')
-                    // Convert @[github](URL) to a bare URL line so remark-linkify-to-card picks it up.
-                    .replace(/^@\[github\]\((https?:\/\/[^\s)]+)\)$/, '$1'),
+                    // Convert Zenn embeds to bare URL lines so remark-linkify-to-card picks them up.
+                    .replace(
+                        new RegExp(
+                            `^@\\[(?:${ZENN_EMBED_DIRECTIVE_PATTERN})\\]\\((https?:\\/\\/[^\\s)]+)\\)$`,
+                        ),
+                        '$1',
+                    ),
             ),
         ),
     );

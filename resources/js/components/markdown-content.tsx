@@ -26,6 +26,10 @@ import { MarkdownTooltip } from '@/components/markdown-tooltip';
 import { MarkdownTree } from '@/components/markdown-tree';
 import { MarkdownUpdate } from '@/components/markdown-update';
 import {
+    MARKDOWN_CALLOUT_VARIANTS,
+    MARKDOWN_CUSTOM_COMPONENT_NAMES,
+} from '@/lib/markdown-syntax-manifest';
+import {
     preprocessMarkdownContent,
     preprocessMarkdownSyntax,
 } from '@/lib/markdown-syntax';
@@ -106,7 +110,9 @@ const CALLOUT_CONFIG = {
     },
 } as const;
 
-type CalloutType = keyof typeof CALLOUT_CONFIG;
+type CalloutType = (typeof MARKDOWN_CALLOUT_VARIANTS)[number];
+type CustomMarkdownComponentName =
+    (typeof MARKDOWN_CUSTOM_COMPONENT_NAMES)[number];
 
 function MessageBox({
     children,
@@ -152,25 +158,10 @@ export default function MarkdownContent({
     content,
     components,
 }: MarkdownContentProps) {
-    const markdownComponents: Components & {
-        tabs?: (props: Record<string, unknown>) => React.ReactElement;
-        tab?: (props: Record<string, unknown>) => React.ReactElement;
-        card?: (props: Record<string, unknown>) => React.ReactElement;
-        cardgroup?: (props: Record<string, unknown>) => React.ReactElement;
-        steps?: (props: Record<string, unknown>) => React.ReactElement;
-        step?: (props: Record<string, unknown>) => React.ReactElement;
-        responsefield?: (props: Record<string, unknown>) => React.ReactElement;
-        paramfield?: (props: Record<string, unknown>) => React.ReactElement;
-        codegroup?: (props: Record<string, unknown>) => React.ReactElement;
-        badge?: (props: Record<string, unknown>) => React.ReactElement;
-        tooltip?: (props: Record<string, unknown>) => React.ReactElement;
-        update?: (props: Record<string, unknown>) => React.ReactElement;
-        tree?: (props: Record<string, unknown>) => React.ReactElement;
-    } = {
-        pre: ({ children }) => <>{children}</>,
-        aside: MessageBox,
-        details: DetailsBox,
-        summary: SummaryEl,
+    const customMarkdownComponents: Record<
+        CustomMarkdownComponentName,
+        (props: Record<string, unknown>) => React.ReactElement
+    > = {
         tabs: (props: Record<string, unknown>) => <MarkdownTabs {...props} />,
         tab: (props: Record<string, unknown>) => <MarkdownTab {...props} />,
         card: (props: Record<string, unknown>) => (
@@ -222,6 +213,14 @@ export default function MarkdownContent({
         tree: (props: Record<string, unknown>) => (
             <MarkdownTree {...(props as Parameters<typeof MarkdownTree>[0])} />
         ),
+    };
+
+    const markdownComponents: Components &
+        Partial<typeof customMarkdownComponents> = {
+        pre: ({ children }) => <>{children}</>,
+        aside: MessageBox,
+        details: DetailsBox,
+        summary: SummaryEl,
         dl: ({ node, ...props }) => {
             void node;
 
@@ -251,6 +250,7 @@ export default function MarkdownContent({
 
             return <div {...props} />;
         },
+        ...customMarkdownComponents,
         ...components,
     };
 
