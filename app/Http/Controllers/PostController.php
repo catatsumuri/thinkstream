@@ -59,6 +59,7 @@ class PostController extends Controller
      */
     private function renderNamespace(PostNamespace $namespace, Collection $ancestors): Response
     {
+        $rootNamespace = $this->rootNamespace($namespace, $ancestors);
         $children = $namespace->children()
             ->where('is_published', true)
             ->withCount(['posts' => fn ($query) => $query->where('is_draft', false)])
@@ -73,6 +74,7 @@ class PostController extends Controller
         return Inertia::render('posts/namespace', [
             'breadcrumbs' => $this->breadcrumbs($ancestors),
             'children' => $namespace->sortNamespaces($children),
+            'navRoot' => $this->buildNavigationNode($rootNamespace),
             'namespace' => $namespace->only(['id', 'slug', 'full_path', 'name', 'description', 'cover_image_url']),
             'posts' => $namespace->sortPosts($posts),
         ]);
@@ -84,6 +86,7 @@ class PostController extends Controller
     private function renderPost(Post $post, Collection $ancestors): Response
     {
         $namespace = $post->namespace;
+        $rootNamespace = $this->rootNamespace($namespace, $ancestors);
         $posts = $namespace->posts()
             ->where('is_draft', false)
             ->orderBy('published_at')
@@ -92,10 +95,58 @@ class PostController extends Controller
 
         return Inertia::render('posts/show', [
             'breadcrumbs' => $this->breadcrumbs($ancestors),
+            'navRoot' => $this->buildNavigationNode($rootNamespace),
             'namespace' => $namespace->only(['id', 'slug', 'full_path', 'name', 'cover_image_url']),
             'post' => $post->only(['id', 'slug', 'full_path', 'title', 'content', 'published_at']),
             'posts' => $namespace->sortPosts($posts),
         ]);
+    }
+
+    /**
+     * @param  Collection<int, PostNamespace>  $ancestors
+     */
+    private function rootNamespace(PostNamespace $namespace, Collection $ancestors): PostNamespace
+    {
+        return $ancestors->first() ?? $namespace;
+    }
+
+    /**
+     * @return array{
+     *     name: string,
+     *     full_path: string,
+     *     children: array<int, array{name: string, full_path: string, children: array, posts: array<int, array{title: string, full_path: string}>}>,
+     *     posts: array<int, array{title: string, full_path: string}>
+     * }
+     */
+    private function buildNavigationNode(PostNamespace $namespace): array
+    {
+        $children = $namespace->children()
+            ->where('is_published', true)
+            ->get(['id', 'slug', 'full_path', 'name', 'post_order']);
+
+        $posts = $namespace->sortPosts(
+            $namespace->posts()
+                ->where('is_draft', false)
+                ->orderBy('published_at')
+                ->orderBy('id')
+                ->get(['title', 'full_path', 'slug'])
+        );
+
+        return [
+            'name' => $namespace->name,
+            'full_path' => $namespace->full_path,
+            'children' => $namespace->sortNamespaces($children)
+                ->map(fn (PostNamespace $child) => $this->buildNavigationNode($child))
+                ->values()
+                ->all(),
+            'posts' => $posts
+                ->map(fn (Post $post) => [
+                    'title' => $post->title,
+                    'full_path' => $post->full_path,
+                ])
+                ->values()
+                ->all(),
+        ];
     }
 
     /**
