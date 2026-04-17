@@ -48,6 +48,8 @@ import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { sanitizeMarkdownCardHref } from '@/lib/markdown-card-href';
+import type { SimpleIcon } from '@/lib/simple-icon-lookup';
+import { getSimpleIcon } from '@/lib/simple-icon-lookup';
 import { cn } from '@/lib/utils';
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -111,6 +113,25 @@ const ICON_MAP: Record<string, LucideIcon> = {
     palette: Palette,
 };
 
+export function SimpleIconSvg({
+    icon,
+    className,
+}: {
+    icon: SimpleIcon;
+    className?: string;
+}) {
+    return (
+        <svg
+            role="img"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-label={icon.title}
+            className={className}
+            dangerouslySetInnerHTML={{ __html: `<path d="${icon.path}"/>` }}
+        />
+    );
+}
+
 function getLucideIcon(iconName: string | undefined): LucideIcon | undefined {
     if (!iconName) {
         return undefined;
@@ -118,6 +139,7 @@ function getLucideIcon(iconName: string | undefined): LucideIcon | undefined {
 
     return ICON_MAP[iconName.toLowerCase().trim()];
 }
+
 
 const GRID_COLS_CLASS: Record<number, string> = {
     1: 'md:grid-cols-1',
@@ -161,7 +183,8 @@ export function MarkdownCard({
     'data-card-href': href,
     children,
 }: MarkdownCardProps) {
-    const iconNode = getLucideIcon(icon);
+    const lucideIcon = getLucideIcon(icon);
+    const simpleIcon = !lucideIcon ? getSimpleIcon(icon) : undefined;
     const safeHref = sanitizeMarkdownCardHref(href);
 
     const cardContent = (
@@ -173,12 +196,19 @@ export function MarkdownCard({
         >
             <CardHeader>
                 <div className="flex items-start gap-3">
-                    {iconNode ? (
+                    {lucideIcon || simpleIcon ? (
                         <div className="flex-shrink-0 rounded-lg bg-primary/10 p-2 transition-colors group-hover:bg-primary/20">
-                            <Icon
-                                iconNode={iconNode}
-                                className="h-5 w-5 text-primary"
-                            />
+                            {lucideIcon ? (
+                                <Icon
+                                    iconNode={lucideIcon}
+                                    className="h-5 w-5 text-primary"
+                                />
+                            ) : (
+                                <SimpleIconSvg
+                                    icon={simpleIcon!}
+                                    className="h-5 w-5 text-primary"
+                                />
+                            )}
                         </div>
                     ) : null}
                     <CardTitle className="text-base leading-tight">

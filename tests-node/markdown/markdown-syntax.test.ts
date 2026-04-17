@@ -68,6 +68,36 @@ test('preprocessMarkdownSyntax converts Mintlify CardGroup and Card to directive
     );
 });
 
+test('preprocessMarkdownSyntax joins multiline Mintlify JSX tags before conversion', () => {
+    const output = preprocessMarkdownSyntax(`<CardGroup
+  cols={2}
+>
+  <Card
+    title="Tabs"
+    icon="react"
+    href="/components/tabs"
+  >
+    Organize related content.
+  </Card>
+  <Card
+    title="Links"
+    icon="github"
+    href="/components/links"
+  />
+</CardGroup>`);
+
+    assert.match(output, /::::cardgroup\{cols="2"\}/);
+    assert.match(
+        output,
+        /:::card\{title="Tabs" icon="react" href="\/components\/tabs"\}/,
+    );
+    assert.match(
+        output,
+        /:::card\{title="Links" icon="github" href="\/components\/links"\}/,
+    );
+    assert.match(output, /Organize related content\./);
+});
+
 test('preprocessMarkdownSyntax converts standalone Mintlify Card to directive syntax', () => {
     const output =
         preprocessMarkdownSyntax(`<Card title="Callouts" icon="message-square-warning" href="/components/callouts">
@@ -286,8 +316,8 @@ const response = await fetch('https://api.example.com/users', {
 
 </CodeGroup>`);
 
-    assert.match(output, /\n  method: 'POST',/);
-    assert.match(output, /\n  headers: \{ 'Content-Type': 'application\/json' \},/);
+    assert.match(output, /\n {2}method: 'POST',/);
+    assert.match(output, /\n {2}headers: \{ 'Content-Type': 'application\/json' \},/);
 });
 
 test('preprocessMarkdownSyntax leaves CodeGroup tags untouched inside fenced code blocks', () => {

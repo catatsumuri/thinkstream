@@ -50,14 +50,14 @@ test('remarkCodeGroupDirective maps codegroup directive to renderable node', () 
         lang: 'javascript',
         title: 'JavaScript',
         index: 0,
-        meta: 'JavaScript',
+        meta: null,
         value: 'const x = 1;',
     });
     assert.deepEqual(tabs[1], {
         lang: 'python',
         title: 'Python',
         index: 1,
-        meta: 'Python',
+        meta: null,
         value: 'x = 1',
     });
 });
@@ -94,6 +94,66 @@ test('remarkCodeGroupDirective falls back to capitalized lang when meta is absen
     assert.equal(tabs[0]?.title, 'Bash');
     assert.equal(tabs[0]?.meta, null);
     assert.equal(tabs[0]?.value, 'npm install');
+});
+
+test('remarkCodeGroupDirective extracts icon metadata without truncating multi-word titles', () => {
+    const tree = {
+        type: 'root',
+        children: [
+            {
+                type: 'containerDirective',
+                name: 'codegroup',
+                children: [
+                    {
+                        type: 'code',
+                        lang: 'js',
+                        meta: 'Link Testing icon="js" lines twoslash',
+                        value: 'console.log("test");',
+                    },
+                    {
+                        type: 'code',
+                        lang: 'js',
+                        meta: 'something_with_external_packages.tsx icon="js" lines',
+                        value: 'export const demo = true;',
+                    },
+                ],
+            },
+        ],
+    };
+
+    remarkCodeGroupDirective()(tree as never);
+
+    const node = tree.children[0] as {
+        data?: { hProperties?: Record<string, unknown> };
+    };
+
+    const tabs = JSON.parse(
+        node.data?.hProperties?.['data-codegroup-tabs'] as string,
+    ) as Array<{
+        lang: string;
+        title: string;
+        icon?: string;
+        index: number;
+        meta?: string | null;
+        value: string;
+    }>;
+
+    assert.deepEqual(tabs[0], {
+        lang: 'js',
+        title: 'Link Testing',
+        icon: 'js',
+        index: 0,
+        meta: 'lines twoslash',
+        value: 'console.log("test");',
+    });
+    assert.deepEqual(tabs[1], {
+        lang: 'js',
+        title: 'something_with_external_packages.tsx',
+        icon: 'js',
+        index: 1,
+        meta: 'lines',
+        value: 'export const demo = true;',
+    });
 });
 
 test('remarkCodeGroupDirective ignores non-code children', () => {
