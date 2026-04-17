@@ -148,11 +148,7 @@ export default function Edit({
                                     Save Changes
                                 </Button>
                                 <Button type="button" variant="outline" asChild>
-                                    <a
-                                        href={namespaceRoute.url(
-                                            namespace.id,
-                                        )}
-                                    >
+                                    <a href={namespaceRoute.url(namespace.id)}>
                                         Cancel
                                     </a>
                                 </Button>

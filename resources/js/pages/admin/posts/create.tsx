@@ -141,11 +141,7 @@ export default function Create({ namespace }: { namespace: Namespace }) {
                                     {isDraft ? 'Save Draft' : 'Create Post'}
                                 </Button>
                                 <Button type="button" variant="outline" asChild>
-                                    <a
-                                        href={namespaceRoute.url(
-                                            namespace.id,
-                                        )}
-                                    >
+                                    <a href={namespaceRoute.url(namespace.id)}>
                                         Cancel
                                     </a>
                                 </Button>

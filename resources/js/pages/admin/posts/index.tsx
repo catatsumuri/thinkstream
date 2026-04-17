@@ -76,9 +76,7 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                                     >
                                         <td className="px-4 py-3 font-medium">
                                             <Link
-                                                href={namespaceRoute.url(
-                                                    ns.id,
-                                                )}
+                                                href={namespaceRoute.url(ns.id)}
                                                 className="text-primary hover:underline"
                                             >
                                                 {ns.name}

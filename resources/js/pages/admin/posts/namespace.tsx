@@ -145,8 +145,7 @@ export default function Namespace({
                                                 </Button>
                                                 <Form
                                                     {...destroy.form({
-                                                        namespace:
-                                                            namespace.id,
+                                                        namespace: namespace.id,
                                                         post: post.slug,
                                                     })}
                                                 >
