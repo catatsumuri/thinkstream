@@ -132,3 +132,68 @@ MARKDOWN,
         ->assertSee('Vite Plugin')
         ->assertSee('HTTP Requests');
 });
+
+test('mintlify-style codegroup renders icons declared in code meta', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => <<<'MARKDOWN'
+# CodeGroup Icons
+
+<CodeGroup>
+
+```javascript JavaScript icon="javascript"
+console.log('Hello from JavaScript');
+```
+
+```python Python icon="python"
+print('Hello from Python')
+```
+
+```php PHP icon="php"
+echo 'Hello from PHP';
+```
+
+</CodeGroup>
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.show', [$namespace, $post]));
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent(
+            '[data-test="code-group-tab-JavaScript"] svg[aria-label="JavaScript"]',
+        )
+        ->assertPresent(
+            '[data-test="code-group-tab-Python"] svg[aria-label="Python"]',
+        )
+        ->assertPresent('[data-test="code-group-tab-PHP"] svg[aria-label="PHP"]');
+});
+
+test('mintlify-style badges render inline and with supported variants', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => <<<'MARKDOWN'
+# Badge
+
+<Badge>Badge</Badge>
+<Badge color="green" icon="circle-check">Stable</Badge>
+<Badge stroke color="orange">Beta</Badge>
+<Badge disabled icon="lock" color="gray">Locked</Badge>
+
+This feature requires a <Badge color="orange" size="sm">Premium</Badge> subscription.
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.show', [$namespace, $post]));
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="markdown-badge"]')
+        ->assertPresent('[data-test="markdown-badge"] svg')
+        ->assertSee('Stable')
+        ->assertSee('Beta')
+        ->assertSee('Locked')
+        ->assertSee('Premium')
+        ->assertSee('subscription.');
+});

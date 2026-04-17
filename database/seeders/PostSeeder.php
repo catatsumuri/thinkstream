@@ -1072,6 +1072,17 @@ Source:
 </CardGroup>
 ```
 
+Rendered result for the same source:
+
+<CardGroup cols={2}>
+  <Card title="Tabs" icon="folder" href="/guides/index">
+    Organize related content into a switchable tab UI.
+  </Card>
+  <Card title="Steps" icon="list-ordered" href="/guides/zenn-syntax">
+    Sequential steps guide the reader through a process.
+  </Card>
+</CardGroup>
+
 ---
 
 # Tabs
@@ -1202,6 +1213,36 @@ Source:
 
 ---
 
+# Badge
+
+Use `<Badge>` to display status indicators, labels, and metadata inline within prose or as standalone elements.
+
+Live examples:
+
+<Badge>Badge</Badge>
+<Badge color="blue">New</Badge>
+<Badge color="green" icon="circle-check">Stable</Badge>
+<Badge stroke color="orange">Beta</Badge>
+<Badge disabled icon="lock" color="gray">Locked</Badge>
+
+Inline usage:
+
+This feature requires a <Badge color="orange" size="sm">Premium</Badge> subscription, and this endpoint returns <Badge color="blue" shape="pill">JSON</Badge> format.
+
+Source:
+
+```mdx
+<Badge>Badge</Badge>
+<Badge color="blue">New</Badge>
+<Badge color="green" icon="circle-check">Stable</Badge>
+<Badge stroke color="orange">Beta</Badge>
+<Badge disabled icon="lock" color="gray">Locked</Badge>
+
+This feature requires a <Badge color="orange" size="sm">Premium</Badge> subscription.
+```
+
+---
+
 # API Fields
 
 ## ResponseField
@@ -1280,13 +1321,13 @@ Source:
 
 # CodeGroup
 
-`<CodeGroup>` displays multiple code blocks as a tabbed interface. The tab title comes from the meta string after the language identifier. Selecting a tab persists the choice across all CodeGroup instances on the page.
+`<CodeGroup>` displays multiple code blocks as a tabbed interface. The tab title comes from the meta string after the language identifier. Add `icon="..."` to the meta string when you want an icon in the tab label. Selecting a tab persists the choice across all CodeGroup instances on the page.
 
 Live example:
 
 <CodeGroup>
 
-```javascript JavaScript
+```javascript JavaScript icon="javascript"
 const response = await fetch('https://api.example.com/users', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
@@ -1295,7 +1336,7 @@ const response = await fetch('https://api.example.com/users', {
 const data = await response.json();
 ```
 
-```python Python
+```python Python icon="python"
 import requests
 
 response = requests.post(
@@ -1305,7 +1346,7 @@ response = requests.post(
 data = response.json()
 ```
 
-```php PHP
+```php PHP icon="php"
 $response = Http::post('https://api.example.com/users', [
     'name' => 'Alice',
     'email' => 'alice@example.com',
@@ -1319,15 +1360,15 @@ A second CodeGroup syncs with the first — selecting Python above will also act
 
 <CodeGroup>
 
-```javascript JavaScript
+```javascript JavaScript icon="javascript"
 console.log('Hello from JavaScript');
 ```
 
-```python Python
+```python Python icon="python"
 print('Hello from Python')
 ```
 
-```php PHP
+```php PHP icon="php"
 echo 'Hello from PHP';
 ```
 
@@ -1338,21 +1379,31 @@ Source:
 ````mdx
 <CodeGroup>
 
-```javascript JavaScript
+```javascript JavaScript icon="javascript"
 const response = await fetch('https://api.example.com/users', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ name: 'Alice', email: 'alice@example.com' }),
 });
+const data = await response.json();
 ```
 
-```python Python
+```python Python icon="python"
 import requests
 
 response = requests.post(
     'https://api.example.com/users',
     json={'name': 'Alice', 'email': 'alice@example.com'},
 )
+data = response.json()
+```
+
+```php PHP icon="php"
+$response = Http::post('https://api.example.com/users', [
+    'name' => 'Alice',
+    'email' => 'alice@example.com',
+]);
+$data = $response->json();
 ```
 
 </CodeGroup>

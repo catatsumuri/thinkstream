@@ -63,6 +63,7 @@ test('post seeder creates the mintlify syntax page', function () {
     expect($post->content)->toContain('# Mintlify Syntax');
     expect($post->content)->toContain('<Card title="Tabs" icon="folder" href="/guides/index">');
     expect($post->content)->toContain('<CardGroup cols={2}>');
+    expect($post->content)->toContain('Rendered result for the same source:');
     expect($post->content)->toContain('Live example:');
     expect($post->content)->toContain('<Tabs>');
     expect($post->content)->toContain('<Tab title="yarn">');
@@ -72,7 +73,13 @@ test('post seeder creates the mintlify syntax page', function () {
     expect($post->content)->toContain('<Note>');
     expect($post->content)->toContain('<Warning>');
     expect($post->content)->toContain('<Check>');
+    expect($post->content)->toContain('# Badge');
+    expect($post->content)->toContain('<Badge color="green" icon="circle-check">Stable</Badge>');
+    expect($post->content)->toContain('This feature requires a <Badge color="orange" size="sm">Premium</Badge> subscription.');
     expect($post->content)->toContain('<ResponseField name="id" type="string" required>');
     expect($post->content)->toContain('<ParamField path="slug" type="string" required>');
+    expect($post->content)->toContain('```javascript JavaScript icon="javascript"');
+    expect($post->content)->toContain('```python Python icon="python"');
+    expect($post->content)->toContain('```php PHP icon="php"');
     expect($post->published_at)->not->toBeNull();
 });
