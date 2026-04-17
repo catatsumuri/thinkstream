@@ -5,6 +5,7 @@ import {
     preprocessMarkdownContent,
     preprocessMarkdownSyntax,
 } from '../../resources/js/lib/markdown-syntax.ts';
+import { MARKDOWN_SYNTAX_MANIFEST } from '../../resources/js/lib/markdown-syntax-manifest.ts';
 
 test('preprocessMarkdownSyntax normalizes Zenn shorthand and Mintlify tabs', () => {
     const output = preprocessMarkdownSyntax(`:::message alert
@@ -136,6 +137,109 @@ test('preprocessMarkdownSyntax converts Mintlify callout tags to message directi
     assert.match(output, /:::message\n/);
     assert.match(output, /:::message\{\.alert\}/);
     assert.match(output, /:::message\{\.check\}/);
+});
+
+test('markdown syntax manifest freezes the supported extension surface', () => {
+    assert.deepEqual(MARKDOWN_SYNTAX_MANIFEST, {
+        directiveAttributes: [
+            'title',
+            'icon',
+            'sync',
+            'borderBottom',
+            'href',
+            'cols',
+            'name',
+            'type',
+            'required',
+            'default',
+            'deprecated',
+            'path',
+            'query',
+            'body',
+            'color',
+            'size',
+            'shape',
+            'stroke',
+            'disabled',
+            'tip',
+            'headline',
+            'cta',
+            'label',
+            'description',
+            'tags',
+        ],
+        mintlify: {
+            blockTags: [
+                'Card',
+                'CardGroup',
+                'Columns',
+                'Tabs',
+                'Tab',
+                'Accordion',
+                'Steps',
+                'Step',
+                'ResponseField',
+                'ParamField',
+                'CodeGroup',
+                'Update',
+                'Note',
+                'Tip',
+                'Info',
+                'Warning',
+                'Check',
+            ],
+            inlineTags: ['Badge', 'Tooltip'],
+            treeTags: ['Tree', 'Tree.Folder', 'Tree.File'],
+            multilineJoinableTags: [
+                'Card',
+                'CardGroup',
+                'Columns',
+                'Tabs',
+                'Tab',
+                'Accordion',
+                'Steps',
+                'Step',
+                'ResponseField',
+                'ParamField',
+                'CodeGroup',
+                'Update',
+                'Note',
+                'Tip',
+                'Info',
+                'Warning',
+                'Check',
+                'Badge',
+                'Tooltip',
+            ],
+            calloutTags: {
+                Note: ':::message{.note}',
+                Tip: ':::message{.tip}',
+                Info: ':::message',
+                Warning: ':::message{.alert}',
+                Check: ':::message{.check}',
+            },
+        },
+        zenn: {
+            messageVariants: ['alert', 'note', 'tip', 'info', 'check'],
+            embedDirectives: ['card', 'github'],
+        },
+        rendererComponents: [
+            'tabs',
+            'tab',
+            'card',
+            'cardgroup',
+            'steps',
+            'step',
+            'responsefield',
+            'paramfield',
+            'codegroup',
+            'badge',
+            'tooltip',
+            'update',
+            'tree',
+        ],
+        calloutVariants: ['note', 'tip', 'info', 'alert', 'check'],
+    });
 });
 
 test('preprocessMarkdownSyntax leaves Mintlify callout tags untouched inside fenced code blocks', () => {
