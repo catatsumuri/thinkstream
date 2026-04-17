@@ -1428,6 +1428,50 @@ Hover over <Tooltip tip="Application Programming Interface: a set of protocols t
 
 Simple tooltip: hover over <Tooltip tip="Hypertext Markup Language — the standard language for web pages.">HTML</Tooltip>.
 ```
+
+---
+
+# Update
+
+`<Update>` displays a changelog entry in a timeline layout. Use `label` for the date or version (it also becomes an anchor link), `description` for a subtitle, and `tags` for filter labels.
+
+Live example:
+
+<Update label="2024-10-11" description="v0.2.0" tags={["Feature", "Improvement"]}>
+
+## Improved card icon support
+
+Cards now support brand icons from the `simple-icons` library in addition to Lucide icons. Pass any brand name as the `icon` prop on `<Card>`.
+
+</Update>
+
+<Update label="2024-09-01" description="v0.1.0" tags={["Initial release"]}>
+
+## First release
+
+Initial launch of Thinkstream with support for Markdown, GFM, Zenn syntax, and core Mintlify components including callouts, cards, tabs, steps, and code groups.
+
+</Update>
+
+Source:
+
+```mdx
+<Update label="2024-10-11" description="v0.2.0" tags={["Feature", "Improvement"]}>
+
+## Improved card icon support
+
+Cards now support brand icons from the `simple-icons` library in addition to Lucide icons. Pass any brand name as the `icon` prop on `<Card>`.
+
+</Update>
+
+<Update label="2024-09-01" description="v0.1.0" tags={["Initial release"]}>
+
+## First release
+
+Initial launch of Thinkstream with support for Markdown, GFM, Zenn syntax, and core Mintlify components including callouts, cards, tabs, steps, and code groups.
+
+</Update>
+```
 MD),
                 'published_at' => now(),
             ]);

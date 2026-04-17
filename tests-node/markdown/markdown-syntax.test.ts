@@ -351,6 +351,33 @@ test('preprocessMarkdownSyntax leaves Tooltip tags untouched inside fenced code 
     );
 });
 
+test('preprocessMarkdownSyntax converts Mintlify Update to directive syntax', () => {
+    const output = preprocessMarkdownSyntax(`<Update label="2024-10-11" description="v0.2.0" tags={["Feature", "Improvement"]}>
+
+## Improved card icon support
+
+Cards now support brand icons from the simple-icons library.
+
+</Update>`);
+
+    assert.match(
+        output,
+        /:::update\{label="2024-10-11" description="v0.2.0" tags="Feature,Improvement"\}/,
+    );
+    assert.match(output, /## Improved card icon support/);
+});
+
+test('preprocessMarkdownSyntax leaves Update tags untouched inside fenced code blocks', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`mdx
+<Update label="2024-10-11" description="v0.2.0" tags={["Feature", "Improvement"]}>
+## Improved card icon support
+</Update>
+\`\`\``);
+
+    assert.doesNotMatch(output, /:::update/);
+    assert.match(output, /<Update label="2024-10-11"/);
+});
+
 test('preprocessMarkdownSyntax preserves code indentation inside CodeGroup fences', () => {
     const output = preprocessMarkdownSyntax(`<CodeGroup>
 
