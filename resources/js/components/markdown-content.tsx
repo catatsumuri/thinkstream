@@ -11,34 +11,36 @@ import remarkGfm from 'remark-gfm';
 import remarkSupersub from 'remark-supersub';
 import { EmbedCard } from '@/components/embed-card';
 import {
-    MarkdownCard,
-    MarkdownCardGroup,
-} from '@/components/markdown-card-group';
-import {
     MarkdownParamField,
     MarkdownResponseField,
 } from '@/components/markdown-api-fields';
+import { MarkdownBadge } from '@/components/markdown-badge';
+import {
+    MarkdownCard,
+    MarkdownCardGroup,
+} from '@/components/markdown-card-group';
+import { MarkdownCodeGroup } from '@/components/markdown-code-group';
 import { MarkdownStep, MarkdownSteps } from '@/components/markdown-steps';
 import { MarkdownTab, MarkdownTabs } from '@/components/markdown-tabs';
+import { MarkdownTooltip } from '@/components/markdown-tooltip';
+import { MarkdownTree } from '@/components/markdown-tree';
+import { MarkdownUpdate } from '@/components/markdown-update';
 import {
     preprocessMarkdownContent,
     preprocessMarkdownSyntax,
 } from '@/lib/markdown-syntax';
-import { remarkCardDirective } from '@/lib/remark-card-directive';
 import { remarkApiFieldsDirective } from '@/lib/remark-api-fields-directive';
 import { remarkBadgeDirective } from '@/lib/remark-badge-directive';
+import { remarkCardDirective } from '@/lib/remark-card-directive';
 import { remarkCodeGroupDirective } from '@/lib/remark-code-group-directive';
-import { remarkTooltipDirective } from '@/lib/remark-tooltip-directive';
-import { remarkUpdateDirective } from '@/lib/remark-update-directive';
-import { MarkdownBadge } from '@/components/markdown-badge';
-import { MarkdownCodeGroup } from '@/components/markdown-code-group';
-import { MarkdownTooltip } from '@/components/markdown-tooltip';
-import { MarkdownUpdate } from '@/components/markdown-update';
-import { remarkStepsDirective } from '@/lib/remark-steps-directive';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
 import { remarkMark } from '@/lib/remark-mark';
+import { remarkStepsDirective } from '@/lib/remark-steps-directive';
 import { remarkTabsDirective } from '@/lib/remark-tabs-directive';
+import { remarkTooltipDirective } from '@/lib/remark-tooltip-directive';
+import { remarkTreeDirective } from '@/lib/remark-tree-directive';
+import { remarkUpdateDirective } from '@/lib/remark-update-directive';
 import { remarkZennDirective } from '@/lib/remark-zenn-directive';
 import { cn } from '@/lib/utils';
 
@@ -163,6 +165,7 @@ export default function MarkdownContent({
         badge?: (props: Record<string, unknown>) => React.ReactElement;
         tooltip?: (props: Record<string, unknown>) => React.ReactElement;
         update?: (props: Record<string, unknown>) => React.ReactElement;
+        tree?: (props: Record<string, unknown>) => React.ReactElement;
     } = {
         pre: ({ children }) => <>{children}</>,
         aside: MessageBox,
@@ -216,6 +219,9 @@ export default function MarkdownContent({
                 {...(props as Parameters<typeof MarkdownUpdate>[0])}
             />
         ),
+        tree: (props: Record<string, unknown>) => (
+            <MarkdownTree {...(props as Parameters<typeof MarkdownTree>[0])} />
+        ),
         dl: ({ node, ...props }) => {
             void node;
 
@@ -262,6 +268,7 @@ export default function MarkdownContent({
                 remarkBadgeDirective,
                 remarkTooltipDirective,
                 remarkUpdateDirective,
+                remarkTreeDirective,
                 remarkCodeGroupDirective,
                 remarkLinkifyToCard,
                 remarkSupersub,

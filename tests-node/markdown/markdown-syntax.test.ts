@@ -304,6 +304,59 @@ x = 1
     assert.match(output, /```python Python/);
 });
 
+test('preprocessMarkdownSyntax converts Mintlify Tree to a tree directive with JSON payload', () => {
+    const output = preprocessMarkdownSyntax(`<Tree>
+  <Tree.Folder name="app" defaultOpen>
+    <Tree.Folder name="components" openable={false}>
+      <Tree.File name="Button.tsx" />
+    </Tree.Folder>
+    <Tree.File name="layout.tsx" />
+  </Tree.Folder>
+  <Tree.File name="package.json" />
+</Tree>`);
+
+    assert.match(output, /:::tree/);
+    assert.match(output, /```json/);
+    assert.match(output, /"type":"folder"/);
+    assert.match(output, /"name":"app"/);
+    assert.match(output, /"defaultOpen":true/);
+    assert.match(output, /"openable":false/);
+    assert.match(output, /"name":"Button\.tsx"/);
+    assert.match(output, /"name":"package\.json"/);
+    assert.match(output, /^:::\s*$/m);
+});
+
+test('preprocessMarkdownSyntax joins multiline Tree child tags before encoding JSON', () => {
+    const output = preprocessMarkdownSyntax(`<Tree>
+  <Tree.Folder
+    name="app"
+    defaultOpen
+  >
+    <Tree.File
+      name="index.tsx"
+    />
+  </Tree.Folder>
+</Tree>`);
+
+    assert.match(output, /"name":"app"/);
+    assert.match(output, /"defaultOpen":true/);
+    assert.match(output, /"name":"index\.tsx"/);
+});
+
+test('preprocessMarkdownSyntax leaves Tree tags untouched inside fenced code blocks', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`mdx
+<Tree>
+  <Tree.Folder name="app" defaultOpen>
+    <Tree.File name="index.tsx" />
+  </Tree.Folder>
+</Tree>
+\`\`\``);
+
+    assert.doesNotMatch(output, /:::tree/);
+    assert.match(output, /<Tree>/);
+    assert.match(output, /<Tree\.Folder name="app" defaultOpen>/);
+});
+
 test('preprocessMarkdownSyntax converts Mintlify Badge tags to text directives', () => {
     const output = preprocessMarkdownSyntax(
         'This feature requires a <Badge color="orange" size="sm">Premium</Badge> subscription.\n\n<Badge color="green" icon="circle-check">Stable</Badge>',

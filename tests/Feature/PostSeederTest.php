@@ -59,7 +59,7 @@ test('post seeder creates the mintlify syntax page', function () {
         ->first();
 
     expect($post)->not->toBeNull();
-    expect($post->title)->toBe('Mintlify Syntax (WIP)');
+    expect($post->title)->toBe('Mintlify Syntax');
     expect($post->content)->toContain('# Mintlify Syntax');
     expect($post->content)->toContain('<Card title="Tabs" icon="folder" href="/guides/index">');
     expect($post->content)->toContain('<CardGroup cols={2}>');
@@ -82,6 +82,10 @@ test('post seeder creates the mintlify syntax page', function () {
     expect($post->content)->toContain('# Update');
     expect($post->content)->toContain('<Update label="2024-10-11" description="v0.2.0" tags={["Feature", "Improvement"]}>');
     expect($post->content)->toContain('## Improved card icon support');
+    expect($post->content)->toContain('# Tree');
+    expect($post->content)->toContain('<Tree>');
+    expect($post->content)->toContain('<Tree.Folder name="app" defaultOpen>');
+    expect($post->content)->toContain('<Tree.File name="package.json" />');
     expect($post->content)->toContain('<ResponseField name="id" type="string" required>');
     expect($post->content)->toContain('<ParamField path="slug" type="string" required>');
     expect($post->content)->toContain('```javascript JavaScript icon="javascript"');
