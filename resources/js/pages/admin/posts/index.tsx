@@ -76,9 +76,7 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                                     >
                                         <td className="px-4 py-3 font-medium">
                                             <Link
-                                                href={namespaceRoute.url(
-                                                    ns.slug,
-                                                )}
+                                                href={namespaceRoute.url(ns.id)}
                                                 className="text-primary hover:underline"
                                             >
                                                 {ns.name}
@@ -112,7 +110,7 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                                                 >
                                                     <Link
                                                         href={NamespaceController.edit.url(
-                                                            ns.slug,
+                                                            ns.id,
                                                         )}
                                                     >
                                                         Edit
@@ -120,7 +118,7 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                                                 </Button>
                                                 <Form
                                                     {...NamespaceController.destroy.form(
-                                                        ns.slug,
+                                                        ns.id,
                                                     )}
                                                 >
                                                     {({ processing }) => (

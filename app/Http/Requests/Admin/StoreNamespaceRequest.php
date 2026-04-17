@@ -9,6 +9,17 @@ use Illuminate\Validation\Rule;
 
 class StoreNamespaceRequest extends FormRequest
 {
+    private function parentId(): ?int
+    {
+        $parentId = $this->input('parent_id');
+
+        if ($parentId === null || $parentId === '') {
+            return null;
+        }
+
+        return (int) $parentId;
+    }
+
     public function authorize(): bool
     {
         return true;
@@ -36,7 +47,18 @@ class StoreNamespaceRequest extends FormRequest
     {
         return [
             'parent_id' => ['nullable', 'integer', Rule::exists('namespaces', 'id')],
-            'slug' => ['required', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/', Rule::notIn(ReservedContentPath::rootSegments()), Rule::unique('namespaces', 'slug')],
+            'slug' => [
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
+                Rule::notIn(ReservedContentPath::rootSegments()),
+                Rule::unique('namespaces', 'slug')->where(function ($query) {
+                    return $this->parentId() === null
+                        ? $query->whereNull('parent_id')
+                        : $query->where('parent_id', $this->parentId());
+                }),
+            ],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
             'cover_image' => ['nullable', 'image', 'max:2048'],

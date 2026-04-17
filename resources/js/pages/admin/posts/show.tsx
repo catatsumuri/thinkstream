@@ -36,10 +36,10 @@ export default function Show({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
             { title: 'Posts', href: index.url() },
-            { title: namespace.name, href: namespaceRoute.url(namespace.slug) },
+            { title: namespace.name, href: namespaceRoute.url(namespace.id) },
             {
                 title: post.title,
-                href: edit.url({ namespace: namespace.slug, post: post.slug }),
+                href: edit.url({ namespace: namespace.id, post: post.slug }),
             },
         ],
     });
@@ -73,7 +73,7 @@ export default function Show({
                         <Button variant="outline" asChild>
                             <Link
                                 href={edit.url({
-                                    namespace: namespace.slug,
+                                    namespace: namespace.id,
                                     post: post.slug,
                                 })}
                             >
@@ -82,7 +82,7 @@ export default function Show({
                         </Button>
                         <Form
                             {...destroy.form({
-                                namespace: namespace.slug,
+                                namespace: namespace.id,
                                 post: post.slug,
                             })}
                         >

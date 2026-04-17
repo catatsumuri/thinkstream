@@ -34,8 +34,8 @@ export default function Create({ namespace }: { namespace: Namespace }) {
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
             { title: 'Posts', href: index.url() },
-            { title: namespace.name, href: namespaceRoute.url(namespace.slug) },
-            { title: 'New Post', href: create.url(namespace.slug) },
+            { title: namespace.name, href: namespaceRoute.url(namespace.id) },
+            { title: 'New Post', href: create.url(namespace.id) },
         ],
     });
 
@@ -66,7 +66,7 @@ export default function Create({ namespace }: { namespace: Namespace }) {
                     </p>
                 </div>
 
-                <Form {...store.form(namespace.slug)} className="space-y-6">
+                <Form {...store.form(namespace.id)} className="space-y-6">
                     {({ processing, errors }) => (
                         <>
                             <div className="grid gap-2">
@@ -141,11 +141,7 @@ export default function Create({ namespace }: { namespace: Namespace }) {
                                     {isDraft ? 'Save Draft' : 'Create Post'}
                                 </Button>
                                 <Button type="button" variant="outline" asChild>
-                                    <a
-                                        href={namespaceRoute.url(
-                                            namespace.slug,
-                                        )}
-                                    >
+                                    <a href={namespaceRoute.url(namespace.id)}>
                                         Cancel
                                     </a>
                                 </Button>

@@ -22,7 +22,7 @@ export default function Edit({ namespace }: { namespace: Namespace }) {
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
             { title: 'Posts', href: postsIndex.url() },
-            { title: namespace.name, href: edit.url(namespace.slug) },
+            { title: namespace.name, href: edit.url(namespace.id) },
         ],
     });
 
@@ -44,7 +44,7 @@ export default function Edit({ namespace }: { namespace: Namespace }) {
 
     function submit(e: React.FormEvent) {
         e.preventDefault();
-        post(NamespaceController.update.url(namespace.slug));
+        post(NamespaceController.update.url(namespace.id));
     }
 
     return (

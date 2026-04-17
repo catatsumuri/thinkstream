@@ -46,10 +46,10 @@ export default function Edit({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
             { title: 'Posts', href: index.url() },
-            { title: namespace.name, href: namespaceRoute.url(namespace.slug) },
+            { title: namespace.name, href: namespaceRoute.url(namespace.id) },
             {
                 title: post.title,
-                href: edit.url({ namespace: namespace.slug, post: post.slug }),
+                href: edit.url({ namespace: namespace.id, post: post.slug }),
             },
         ],
     });
@@ -68,7 +68,7 @@ export default function Edit({
 
                 <Form
                     {...update.form({
-                        namespace: namespace.slug,
+                        namespace: namespace.id,
                         post: post.slug,
                     })}
                     className="space-y-6"
@@ -148,11 +148,7 @@ export default function Edit({
                                     Save Changes
                                 </Button>
                                 <Button type="button" variant="outline" asChild>
-                                    <a
-                                        href={namespaceRoute.url(
-                                            namespace.slug,
-                                        )}
-                                    >
+                                    <a href={namespaceRoute.url(namespace.id)}>
                                         Cancel
                                     </a>
                                 </Button>
