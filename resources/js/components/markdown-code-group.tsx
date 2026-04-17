@@ -138,10 +138,15 @@ export function MarkdownCodeGroup({
 
                                 return simpleIcon ? (
                                     <span className="flex items-center gap-1.5">
-                                        <SimpleIconSvg icon={simpleIcon} className="size-3.5" />
+                                        <SimpleIconSvg
+                                            icon={simpleIcon}
+                                            className="size-3.5"
+                                        />
                                         {tab.title}
                                     </span>
-                                ) : tab.title;
+                                ) : (
+                                    tab.title
+                                );
                             })()}
                         </TabsTrigger>
                     ))}

@@ -62,7 +62,9 @@ function parseCodeMeta(meta: string | null | undefined): {
 
 function isCodeMetaToken(token: string): boolean {
     return (
-        /^(lines|twoslash|copy|wrap|showlinenumbers|lineNumbers)$/i.test(token) ||
+        /^(lines|twoslash|copy|wrap|showlinenumbers|lineNumbers)$/i.test(
+            token,
+        ) ||
         /^\{[\d,\- ]+\}$/.test(token) ||
         /^[A-Za-z_][\w-]*=(?:"[^"]*"|'[^']*'|[^\s]+)$/.test(token)
     );
@@ -91,7 +93,11 @@ export function remarkCodeGroupDirective() {
 
                 const codeNode = child as Code;
                 const lang = codeNode.lang ?? '';
-                const { title: parsedTitle, icon, cleanMeta } = parseCodeMeta(codeNode.meta);
+                const {
+                    title: parsedTitle,
+                    icon,
+                    cleanMeta,
+                } = parseCodeMeta(codeNode.meta);
                 const title = parsedTitle || capitalize(lang) || lang;
 
                 tabs.push({

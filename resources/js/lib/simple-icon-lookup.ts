@@ -86,7 +86,9 @@ const SIMPLE_ICONS_MAP: Record<string, SimpleIcon> = {
     vuejs: siVuedotjs,
 };
 
-export function getSimpleIcon(iconName: string | undefined): SimpleIcon | undefined {
+export function getSimpleIcon(
+    iconName: string | undefined,
+): SimpleIcon | undefined {
     if (!iconName) {
         return undefined;
     }

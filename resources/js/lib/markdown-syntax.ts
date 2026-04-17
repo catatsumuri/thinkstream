@@ -255,7 +255,10 @@ function joinMultilineJsxTags(markdown: string): string {
 
                 accumulated += ' ' + nextTrimmed;
 
-                if (accumulated.trimEnd().endsWith('/>') || accumulated.trimEnd().endsWith('>')) {
+                if (
+                    accumulated.trimEnd().endsWith('/>') ||
+                    accumulated.trimEnd().endsWith('>')
+                ) {
                     break;
                 }
             }
@@ -375,7 +378,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
             if (mintlifyTagStack.at(-1) === tag) {
                 mintlifyTagStack.pop();
-            mintlifyTagLeadingSpaces.pop();
+                mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
@@ -405,7 +408,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         if (trimmedLine === '</CardGroup>') {
             if (mintlifyTagStack.at(-1) === 'CardGroup') {
                 mintlifyTagStack.pop();
-            mintlifyTagLeadingSpaces.pop();
+                mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
@@ -435,7 +438,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         if (trimmedLine === '</Columns>') {
             if (mintlifyTagStack.at(-1) === 'Columns') {
                 mintlifyTagStack.pop();
-            mintlifyTagLeadingSpaces.pop();
+                mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
@@ -462,7 +465,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 pushLine(':::');
             } else {
                 mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('Card');
+                mintlifyTagStack.push('Card');
             }
 
             continue;
@@ -471,7 +474,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         if (trimmedLine === '</Card>') {
             if (mintlifyTagStack.at(-1) === 'Card') {
                 mintlifyTagStack.pop();
-            mintlifyTagLeadingSpaces.pop();
+                mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
@@ -516,7 +519,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         if (trimmedLine === '</Tab>') {
             if (mintlifyTagStack.at(-1) === 'Tab') {
                 mintlifyTagStack.pop();
-            mintlifyTagLeadingSpaces.pop();
+                mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
@@ -528,7 +531,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         if (trimmedLine === '</Tabs>') {
             if (mintlifyTagStack.at(-1) === 'Tabs') {
                 mintlifyTagStack.pop();
-            mintlifyTagLeadingSpaces.pop();
+                mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
@@ -561,7 +564,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         if (trimmedLine === '</Accordion>') {
             if (mintlifyTagStack.at(-1) === 'Accordion') {
                 mintlifyTagStack.pop();
-            mintlifyTagLeadingSpaces.pop();
+                mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
@@ -587,7 +590,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         if (trimmedLine === '</Steps>') {
             if (mintlifyTagStack.at(-1) === 'Steps') {
                 mintlifyTagStack.pop();
-            mintlifyTagLeadingSpaces.pop();
+                mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
@@ -615,7 +618,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         if (trimmedLine === '</Step>') {
             if (mintlifyTagStack.at(-1) === 'Step') {
                 mintlifyTagStack.pop();
-            mintlifyTagLeadingSpaces.pop();
+                mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
@@ -643,7 +646,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 pushLine(':::');
             } else {
                 mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('ResponseField');
+                mintlifyTagStack.push('ResponseField');
             }
 
             continue;
@@ -652,7 +655,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         if (trimmedLine === '</ResponseField>') {
             if (mintlifyTagStack.at(-1) === 'ResponseField') {
                 mintlifyTagStack.pop();
-            mintlifyTagLeadingSpaces.pop();
+                mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
@@ -681,7 +684,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 pushLine(':::');
             } else {
                 mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('ParamField');
+                mintlifyTagStack.push('ParamField');
             }
 
             continue;
@@ -690,7 +693,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         if (trimmedLine === '</ParamField>') {
             if (mintlifyTagStack.at(-1) === 'ParamField') {
                 mintlifyTagStack.pop();
-            mintlifyTagLeadingSpaces.pop();
+                mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
@@ -712,7 +715,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         if (trimmedLine === '</CodeGroup>') {
             if (mintlifyTagStack.at(-1) === 'CodeGroup') {
                 mintlifyTagStack.pop();
-            mintlifyTagLeadingSpaces.pop();
+                mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();

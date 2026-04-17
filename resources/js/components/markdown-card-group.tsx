@@ -140,7 +140,6 @@ function getLucideIcon(iconName: string | undefined): LucideIcon | undefined {
     return ICON_MAP[iconName.toLowerCase().trim()];
 }
 
-
 const GRID_COLS_CLASS: Record<number, string> = {
     1: 'md:grid-cols-1',
     2: 'md:grid-cols-2',
