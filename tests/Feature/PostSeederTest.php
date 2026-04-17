@@ -93,3 +93,30 @@ test('post seeder creates the mintlify syntax page', function () {
     expect($post->content)->toContain('```php PHP icon="php"');
     expect($post->published_at)->not->toBeNull();
 });
+
+test('post seeder creates wildcard routing lookalike namespaces', function () {
+    $this->seed(PostSeeder::class);
+
+    $apiaryNamespace = PostNamespace::query()->where('slug', 'apiary')->first();
+    $administratorNamespace = PostNamespace::query()->where('slug', 'administrator')->first();
+
+    expect($apiaryNamespace)->not->toBeNull();
+    expect($administratorNamespace)->not->toBeNull();
+
+    $apiaryPost = Post::query()
+        ->where('namespace_id', $apiaryNamespace->id)
+        ->where('slug', 'routing-check')
+        ->first();
+    $administratorPost = Post::query()
+        ->where('namespace_id', $administratorNamespace->id)
+        ->where('slug', 'routing-check')
+        ->first();
+
+    expect($apiaryPost)->not->toBeNull();
+    expect($apiaryPost->content)->toContain('/apiary');
+    expect($apiaryPost->content)->toContain('/api/*');
+
+    expect($administratorPost)->not->toBeNull();
+    expect($administratorPost->content)->toContain('/administrator');
+    expect($administratorPost->content)->toContain('/admin/*');
+});

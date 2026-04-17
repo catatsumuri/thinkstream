@@ -2,6 +2,7 @@
 
 use App\Models\PostNamespace;
 use App\Models\User;
+use App\Support\ReservedContentPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -36,22 +37,58 @@ test('authenticated users can store a namespace', function () {
     ]);
 });
 
-test('storing a namespace rejects reserved slugs', function () {
+test('storing a namespace accepts a valid parent namespace', function () {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create(['slug' => 'parent']);
+
+    $this->actingAs($user)
+        ->post(route('admin.namespaces.store'), [
+            'parent_id' => $parent->id,
+            'slug' => 'child',
+            'name' => 'Child',
+        ])
+        ->assertRedirect(route('admin.posts.index'));
+
+    $this->assertDatabaseHas('namespaces', [
+        'slug' => 'child',
+        'parent_id' => $parent->id,
+    ]);
+});
+
+test('storing a namespace rejects an unknown parent namespace', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
-        ->post(route('admin.namespaces.store'), ['slug' => 'admin', 'name' => 'Admin'])
-        ->assertSessionHasErrors('slug');
+        ->post(route('admin.namespaces.store'), [
+            'parent_id' => 999999,
+            'slug' => 'child',
+            'name' => 'Child',
+        ])
+        ->assertSessionHasErrors('parent_id');
 });
 
-test('updating a namespace rejects reserved slugs', function () {
+test('storing a namespace rejects reserved slugs', function (string $slug) {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.namespaces.store'), ['slug' => $slug, 'name' => ucfirst($slug)])
+        ->assertSessionHasErrors('slug');
+})->with(fn (): array => array_combine(
+    ReservedContentPath::ROOT_SEGMENTS,
+    ReservedContentPath::ROOT_SEGMENTS,
+));
+
+test('updating a namespace rejects reserved slugs', function (string $slug) {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create(['slug' => 'guides']);
 
     $this->actingAs($user)
-        ->put(route('admin.namespaces.update', $namespace), ['slug' => 'admin', 'name' => 'Admin'])
+        ->put(route('admin.namespaces.update', $namespace), ['slug' => $slug, 'name' => ucfirst($slug)])
         ->assertSessionHasErrors('slug');
-});
+})->with(fn (): array => array_combine(
+    ReservedContentPath::ROOT_SEGMENTS,
+    ReservedContentPath::ROOT_SEGMENTS,
+));
 
 test('storing a namespace requires a unique slug', function () {
     $user = User::factory()->create();
@@ -118,6 +155,50 @@ test('updating a namespace allows keeping the same slug', function () {
         ->assertRedirect(route('admin.posts.index'));
 
     expect($namespace->fresh()->slug)->toBe('my-ns');
+});
+
+test('updating a namespace accepts a valid parent namespace', function () {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create(['slug' => 'parent']);
+    $namespace = PostNamespace::factory()->create(['slug' => 'child']);
+
+    $this->actingAs($user)
+        ->put(route('admin.namespaces.update', $namespace), [
+            'parent_id' => $parent->id,
+            'slug' => $namespace->slug,
+            'name' => $namespace->name,
+        ])
+        ->assertRedirect(route('admin.posts.index'));
+
+    expect($namespace->fresh()->parent_id)->toBe($parent->id);
+    expect($namespace->fresh()->full_path)->toBe('parent/child');
+});
+
+test('updating a namespace rejects setting a descendant as its parent', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create(['slug' => 'root']);
+    $child = PostNamespace::factory()->create(['parent_id' => $root->id, 'slug' => 'child']);
+
+    $this->actingAs($user)
+        ->put(route('admin.namespaces.update', $root), [
+            'parent_id' => $child->id,
+            'slug' => $root->slug,
+            'name' => $root->name,
+        ])
+        ->assertSessionHasErrors('parent_id');
+});
+
+test('updating a namespace rejects using itself as a parent', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create(['slug' => 'guides']);
+
+    $this->actingAs($user)
+        ->put(route('admin.namespaces.update', $namespace), [
+            'parent_id' => $namespace->id,
+            'slug' => $namespace->slug,
+            'name' => $namespace->name,
+        ])
+        ->assertSessionHasErrors('parent_id');
 });
 
 test('authenticated users can delete a namespace', function () {

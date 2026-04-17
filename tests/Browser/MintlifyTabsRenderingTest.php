@@ -27,7 +27,7 @@ test('mintlify-style tabs render as interactive tab controls', function () {
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()
@@ -55,7 +55,7 @@ test('mintlify-style tabs inside fenced code blocks stay as literal code', funct
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()
@@ -92,7 +92,7 @@ test('mintlify-style callouts render as typed message boxes', function () {
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()
@@ -124,7 +124,7 @@ test('mintlify-style Columns renders as a card group grid', function () {
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()
@@ -157,7 +157,7 @@ echo 'Hello from PHP';
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()
@@ -185,7 +185,7 @@ This feature requires a <Badge color="orange" size="sm">Premium</Badge> subscrip
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()
@@ -210,7 +210,7 @@ Simple tooltip: hover over <Tooltip tip="Hypertext Markup Language">HTML</Toolti
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()
@@ -236,7 +236,7 @@ Cards now support brand icons from the simple-icons library.
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()
