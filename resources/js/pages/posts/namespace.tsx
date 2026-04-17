@@ -1,6 +1,11 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { useState } from 'react';
+import ContentNavTree, {
+    type ContentNavNode,
+} from '@/components/content-nav-tree';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { login } from '@/routes';
 import { index as adminPosts } from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
@@ -29,17 +34,22 @@ type Post = {
 export default function Namespace({
     breadcrumbs,
     children,
+    navRoot,
     namespace,
     posts,
 }: {
     breadcrumbs: Array<{ name: string; full_path: string }>;
     children: ChildNamespace[];
+    navRoot: ContentNavNode;
     namespace: PostNamespace;
     posts: Post[];
 }) {
     const { auth } = usePage<{
         auth: { user: { id: number; name: string } | null };
     }>().props;
+    const isMobile = useIsMobile();
+    const [navOverride, setNavOverride] = useState<boolean | null>(null);
+    const navVisible = navOverride ?? !isMobile;
 
     return (
         <>
@@ -90,6 +100,21 @@ export default function Namespace({
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
+                            <button
+                                onClick={() =>
+                                    setNavOverride(
+                                        (prev) => !(prev ?? !isMobile),
+                                    )
+                                }
+                                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                                {navVisible ? (
+                                    <PanelLeftClose size={16} />
+                                ) : (
+                                    <PanelLeftOpen size={16} />
+                                )}
+                                Toggle Nav
+                            </button>
                             {auth.user ? (
                                 <Link
                                     href={adminPosts.url()}
@@ -109,7 +134,23 @@ export default function Namespace({
                     </div>
                 </header>
 
-                <div className="mx-auto max-w-7xl px-4 py-10">
+                <div className="mx-auto max-w-7xl px-4 py-10 lg:grid lg:grid-cols-[240px_1fr] lg:gap-12">
+                    {navVisible && (
+                        <aside className="mb-8 lg:mb-0 lg:block">
+                            <div className="lg:sticky lg:top-24">
+                                <p className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                    {navRoot.name}
+                                </p>
+                                <div className="max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
+                                    <ContentNavTree
+                                        currentPath={namespace.full_path}
+                                        root={navRoot}
+                                    />
+                                </div>
+                            </div>
+                        </aside>
+                    )}
+
                     <main className="space-y-12">
                         <section className="space-y-3">
                             <p className="text-sm text-muted-foreground">

@@ -7,6 +7,9 @@ import {
     PanelRightOpen,
 } from 'lucide-react';
 import { useState } from 'react';
+import ContentNavTree, {
+    type ContentNavNode,
+} from '@/components/content-nav-tree';
 import MarkdownContent from '@/components/markdown-content';
 import TableOfContents from '@/components/table-of-contents';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
@@ -32,24 +35,16 @@ type Post = {
     published_at: string;
 };
 
-type NavPost = {
-    id: number;
-    slug: string;
-    full_path: string;
-    title: string;
-    published_at: string;
-};
-
 export default function Show({
     breadcrumbs,
+    navRoot,
     namespace,
     post,
-    posts,
 }: {
     breadcrumbs: Array<{ name: string; full_path: string }>;
+    navRoot: ContentNavNode;
     namespace: PostNamespace;
     post: Post;
-    posts: NavPost[];
 }) {
     const { auth } = usePage<{
         auth: { user: { id: number; name: string } | null };
@@ -60,9 +55,9 @@ export default function Show({
     const [tocOverride, setTocOverride] = useState<boolean | null>(null);
     const [navOverride, setNavOverride] = useState<boolean | null>(null);
     const tocVisible = tocOverride ?? !isMobile;
-    const hasNav = posts.length > 1;
+    const hasNav = navRoot.children.length > 0 || navRoot.posts.length > 0;
     const hasHeadings = (entry?.headings.length ?? 0) > 0;
-    const navVisible = navOverride ?? true;
+    const navVisible = navOverride ?? !isMobile;
 
     let gridCols = '';
 
@@ -145,6 +140,24 @@ export default function Show({
                                     Toggle TOC
                                 </button>
                             )}
+                            {hasNav && (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setNavOverride(
+                                            (prev) => !(prev ?? !isMobile),
+                                        )
+                                    }
+                                    className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                                >
+                                    {navVisible ? (
+                                        <PanelLeftClose size={16} />
+                                    ) : (
+                                        <PanelLeftOpen size={16} />
+                                    )}
+                                    Toggle Nav
+                                </button>
+                            )}
                             {auth.user ? (
                                 <Link
                                     href={adminPosts.url()}
@@ -168,30 +181,19 @@ export default function Show({
                     className={`mx-auto max-w-7xl px-4 py-10 ${gridCols ? `lg:grid lg:gap-12 ${gridCols}` : ''}`}
                 >
                     {hasNav && (
-                        <aside className="hidden self-start lg:sticky lg:top-24 lg:block">
+                        <aside className="self-start lg:sticky lg:top-24">
                             {navVisible ? (
-                                <nav className="flex max-h-[calc(100vh-7rem)] flex-col text-sm">
+                                <div className="flex max-h-[calc(100vh-7rem)] flex-col text-sm">
                                     <div className="mb-3 shrink-0">
                                         <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                            {namespace.name}
+                                            {navRoot.name}
                                         </p>
                                     </div>
-                                    <div className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
-                                        {posts.map((p) => (
-                                            <Link
-                                                key={p.id}
-                                                href={contentPath.url(
-                                                    p.full_path,
-                                                )}
-                                                className={`block rounded px-2 py-1.5 leading-snug transition-colors ${
-                                                    p.slug === post.slug
-                                                        ? 'bg-accent font-medium text-accent-foreground'
-                                                        : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-                                                }`}
-                                            >
-                                                {p.title}
-                                            </Link>
-                                        ))}
+                                    <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                                        <ContentNavTree
+                                            currentPath={post.full_path}
+                                            root={navRoot}
+                                        />
                                     </div>
                                     <div className="mt-4 shrink-0 border-t pt-3">
                                         <button
@@ -206,7 +208,7 @@ export default function Show({
                                             Close
                                         </button>
                                     </div>
-                                </nav>
+                                </div>
                             ) : (
                                 <div>
                                     <button

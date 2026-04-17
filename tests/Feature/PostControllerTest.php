@@ -75,9 +75,12 @@ test('published namespace shows child namespaces and direct posts', function () 
         ->assertInertia(fn ($page) => $page
             ->component('posts/namespace')
             ->where('namespace.full_path', $namespace->full_path)
+            ->where('navRoot.full_path', $namespace->full_path)
             ->has('children', 1)
+            ->where('navRoot.children.0.full_path', $child->full_path)
             ->where('children.0.full_path', $child->full_path)
             ->where('posts.0.full_path', $post->full_path)
+            ->where('navRoot.posts.0.full_path', $post->full_path)
         );
 });
 
@@ -143,6 +146,9 @@ test('published namespace shows post with breadcrumbs', function () {
         ->assertSuccessful()
         ->assertInertia(fn ($page) => $page
             ->component('posts/show')
+            ->where('navRoot.full_path', $root->full_path)
+            ->where('navRoot.children.0.full_path', $child->full_path)
+            ->where('navRoot.children.0.posts.0.full_path', $post->full_path)
             ->where('namespace.full_path', $child->full_path)
             ->where('post.full_path', $post->full_path)
             ->where('breadcrumbs.0.full_path', $root->full_path)
