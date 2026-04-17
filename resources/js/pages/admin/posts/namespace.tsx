@@ -36,7 +36,7 @@ export default function Namespace({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
             { title: 'Posts', href: index.url() },
-            { title: namespace.name, href: namespaceRoute.url(namespace.slug) },
+            { title: namespace.name, href: namespaceRoute.url(namespace.id) },
         ],
     });
 
@@ -55,7 +55,7 @@ export default function Namespace({
                         </p>
                     </div>
                     <Button asChild>
-                        <Link href={create.url(namespace.slug)}>New Post</Link>
+                        <Link href={create.url(namespace.id)}>New Post</Link>
                     </Button>
                 </div>
 
@@ -65,7 +65,7 @@ export default function Namespace({
                             No posts in this namespace yet.
                         </p>
                         <Button asChild className="mt-4">
-                            <Link href={create.url(namespace.slug)}>
+                            <Link href={create.url(namespace.id)}>
                                 Create your first post
                             </Link>
                         </Button>
@@ -136,7 +136,7 @@ export default function Namespace({
                                                     <Link
                                                         href={edit.url({
                                                             namespace:
-                                                                namespace.slug,
+                                                                namespace.id,
                                                             post: post.slug,
                                                         })}
                                                     >
@@ -146,7 +146,7 @@ export default function Namespace({
                                                 <Form
                                                     {...destroy.form({
                                                         namespace:
-                                                            namespace.slug,
+                                                            namespace.id,
                                                         post: post.slug,
                                                     })}
                                                 >

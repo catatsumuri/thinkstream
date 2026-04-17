@@ -90,13 +90,37 @@ test('updating a namespace rejects reserved slugs', function (string $slug) {
     ReservedContentPath::ROOT_SEGMENTS,
 ));
 
-test('storing a namespace requires a unique slug', function () {
+test('storing a root namespace requires a unique slug', function () {
     $user = User::factory()->create();
     PostNamespace::factory()->create(['slug' => 'taken']);
 
     $this->actingAs($user)
         ->post(route('admin.namespaces.store'), ['slug' => 'taken', 'name' => 'Taken'])
         ->assertSessionHasErrors('slug');
+});
+
+test('storing a namespace allows the same slug under a different parent', function () {
+    $user = User::factory()->create();
+    $parentA = PostNamespace::factory()->create(['slug' => 'parent-a']);
+    $parentB = PostNamespace::factory()->create(['slug' => 'parent-b']);
+
+    PostNamespace::factory()->create([
+        'parent_id' => $parentA->id,
+        'slug' => 'shared',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('admin.namespaces.store'), [
+            'parent_id' => $parentB->id,
+            'slug' => 'shared',
+            'name' => 'Shared',
+        ])
+        ->assertRedirect(route('admin.posts.index'));
+
+    $this->assertDatabaseHas('namespaces', [
+        'parent_id' => $parentB->id,
+        'slug' => 'shared',
+    ]);
 });
 
 test('storing a namespace requires a slug', function () {
