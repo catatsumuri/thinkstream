@@ -62,7 +62,7 @@ test('post navigation toggle stays within the viewport after page scroll', funct
         'title' => 'Advanced',
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $currentPost]))->resize(1440, 1200);
+    $page = visit(route('posts.path', ['path' => $currentPost->full_path]))->resize(1440, 1200);
 
     $page
         ->assertVisible('[data-test="posts-nav-close"]')

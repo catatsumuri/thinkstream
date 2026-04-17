@@ -2,11 +2,12 @@ import { Head, Link, usePage } from '@inertiajs/react';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { login } from '@/routes';
 import { index as adminPosts } from '@/routes/admin/posts';
-import { namespace as namespaceRoute } from '@/routes/posts';
+import { path as contentPath } from '@/routes/posts';
 
 type PostNamespace = {
     id: number;
     slug: string;
+    full_path: string;
     name: string;
     description: string | null;
     cover_image_url: string | null;
@@ -54,7 +55,7 @@ export default function Index({ namespaces }: { namespaces: PostNamespace[] }) {
                             {namespaces.map((ns) => (
                                 <Link
                                     key={ns.id}
-                                    href={namespaceRoute.url(ns.slug)}
+                                    href={contentPath.url(ns.full_path)}
                                     className="group overflow-hidden rounded-xl border transition-colors hover:bg-muted/50"
                                 >
                                     <div className="relative aspect-video overflow-hidden border-b">
@@ -78,6 +79,9 @@ export default function Index({ namespaces }: { namespaces: PostNamespace[] }) {
                                             </span>
                                         )}
                                         <span className="mt-2 text-xs text-muted-foreground">
+                                            /{ns.full_path}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
                                             {ns.posts_count}{' '}
                                             {ns.posts_count === 1
                                                 ? 'post'

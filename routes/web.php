@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\OgpController;
 use App\Http\Controllers\PostController;
+use App\Support\ReservedContentPath;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PostController::class, 'index'])->name('home');
@@ -17,6 +18,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 require __DIR__.'/settings.php';
 require __DIR__.'/admin.php';
 
-// Wildcard routes — registered last to avoid conflicting with more specific routes
-Route::get('/{namespace:slug}', [PostController::class, 'namespace'])->name('posts.namespace');
-Route::get('/{namespace:slug}/{post:slug}', [PostController::class, 'show'])->name('posts.show')->scopeBindings();
+// Wildcard routes must remain last so admin, auth, and API endpoints take precedence.
+Route::get('/{path}', [PostController::class, 'resolve'])
+    ->where('path', ReservedContentPath::wildcardConstraint())
+    ->name('posts.path');

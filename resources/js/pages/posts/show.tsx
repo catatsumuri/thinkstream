@@ -1,6 +1,6 @@
-import { Head, Link } from '@inertiajs/react';
-import { usePage } from '@inertiajs/react';
+import { Head, Link, usePage } from '@inertiajs/react';
 import {
+    ChevronRight,
     PanelLeftClose,
     PanelLeftOpen,
     PanelRightClose,
@@ -13,11 +13,12 @@ import { useMarkdownToc } from '@/hooks/use-markdown-toc';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { login } from '@/routes';
 import { index as adminPosts } from '@/routes/admin/posts';
-import { namespace as namespaceRoute, show as showRoute } from '@/routes/posts';
+import { path as contentPath } from '@/routes/posts';
 
 type PostNamespace = {
     id: number;
     slug: string;
+    full_path: string;
     name: string;
     cover_image_url: string | null;
 };
@@ -25,6 +26,7 @@ type PostNamespace = {
 type Post = {
     id: number;
     slug: string;
+    full_path: string;
     title: string;
     content: string;
     published_at: string;
@@ -33,15 +35,18 @@ type Post = {
 type NavPost = {
     id: number;
     slug: string;
+    full_path: string;
     title: string;
     published_at: string;
 };
 
 export default function Show({
+    breadcrumbs,
     namespace,
     post,
     posts,
 }: {
+    breadcrumbs: Array<{ name: string; full_path: string }>;
     namespace: PostNamespace;
     post: Post;
     posts: NavPost[];
@@ -89,22 +94,38 @@ export default function Show({
                 )}
                 <header className="sticky top-0 z-50 border-b bg-background">
                     <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6">
-                        <div className="flex items-baseline gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
                             <Link
                                 href="/"
                                 className="text-2xl font-bold hover:underline"
                             >
                                 ThinkStream
                             </Link>
-                            <span className="text-muted-foreground">/</span>
-                            <Link
-                                href={namespaceRoute.url({
-                                    namespace: namespace.slug,
-                                })}
-                                className="text-sm text-muted-foreground hover:underline"
-                            >
-                                {namespace.slug}
-                            </Link>
+                            {breadcrumbs.map((breadcrumb) => (
+                                <div
+                                    key={breadcrumb.full_path}
+                                    className="flex items-center gap-2 text-sm text-muted-foreground"
+                                >
+                                    <ChevronRight className="size-4" />
+                                    <Link
+                                        href={contentPath.url(
+                                            breadcrumb.full_path,
+                                        )}
+                                        className="hover:text-foreground hover:underline"
+                                    >
+                                        {breadcrumb.name}
+                                    </Link>
+                                </div>
+                            ))}
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                <ChevronRight className="size-4" />
+                                <Link
+                                    href={contentPath.url(namespace.full_path)}
+                                    className="hover:text-foreground hover:underline"
+                                >
+                                    {namespace.name}
+                                </Link>
+                            </div>
                         </div>
                         <div className="flex items-center gap-4">
                             {hasHeadings && (
@@ -159,10 +180,9 @@ export default function Show({
                                         {posts.map((p) => (
                                             <Link
                                                 key={p.id}
-                                                href={showRoute.url({
-                                                    namespace: namespace.slug,
-                                                    post: p.slug,
-                                                })}
+                                                href={contentPath.url(
+                                                    p.full_path,
+                                                )}
                                                 className={`block rounded px-2 py-1.5 leading-snug transition-colors ${
                                                     p.slug === post.slug
                                                         ? 'bg-accent font-medium text-accent-foreground'

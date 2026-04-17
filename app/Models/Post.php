@@ -16,6 +16,7 @@ class Post extends Model
         'namespace_id',
         'title',
         'slug',
+        'full_path',
         'content',
         'user_id',
         'is_draft',

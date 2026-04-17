@@ -45,7 +45,7 @@ test('zenn-style markdown image metadata renders width and caption', function ()
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()
@@ -66,7 +66,7 @@ MARKDOWN,
 
     fakeOgpMetadata();
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()
@@ -85,7 +85,7 @@ MARKDOWN,
 
     fakeOgpMetadata();
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()
@@ -104,7 +104,7 @@ Hidden content
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()
@@ -122,7 +122,7 @@ https://www.youtube.com/watch?v=WRVsOCh907o
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page->assertNoJavaScriptErrors()
         ->assertPresent('[data-test="embed-card-youtube"]')
@@ -139,7 +139,7 @@ https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page->assertNoJavaScriptErrors()
         ->assertPresent('[data-test="embed-github"]');
@@ -155,7 +155,7 @@ test('@[github](URL) directive renders as github embed', function () {
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page->assertNoJavaScriptErrors()
         ->assertPresent('[data-test="embed-github"]');

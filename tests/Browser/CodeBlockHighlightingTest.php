@@ -23,7 +23,7 @@ function add(int $a, int $b): int
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.show', [$namespace, $post]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertNoJavaScriptErrors()

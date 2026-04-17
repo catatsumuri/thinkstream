@@ -6,6 +6,7 @@ use Database\Factories\PostNamespaceFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
@@ -18,7 +19,9 @@ class PostNamespace extends Model
     protected $table = 'namespaces';
 
     protected $fillable = [
+        'parent_id',
         'slug',
+        'full_path',
         'name',
         'description',
         'cover_image',
@@ -67,13 +70,60 @@ class PostNamespace extends Model
         return 'slug';
     }
 
+    /**
+     * Sort child namespaces according to post_order, with unordered namespaces appended last.
+     *
+     * @param  Collection<int, PostNamespace>  $namespaces
+     * @return Collection<int, PostNamespace>
+     */
+    public function sortNamespaces(Collection $namespaces): Collection
+    {
+        $order = $this->post_order ?? [];
+
+        if (empty($order)) {
+            return $namespaces->sortBy('full_path')->values();
+        }
+
+        return $namespaces->sortBy(function (PostNamespace $namespace) use ($order): int {
+            $index = array_search($namespace->slug, $order);
+
+            return $index !== false ? $index : PHP_INT_MAX;
+        })->values();
+    }
+
     public function scopePublished(Builder $query): void
     {
         $query->where('is_published', true);
     }
 
+    public function parent(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    public function children(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_id');
+    }
+
     public function posts(): HasMany
     {
         return $this->hasMany(Post::class, 'namespace_id');
+    }
+
+    /**
+     * @return Collection<int, PostNamespace>
+     */
+    public function ancestors(): Collection
+    {
+        $ancestors = collect();
+        $currentParent = $this->parent;
+
+        while ($currentParent) {
+            $ancestors->prepend($currentParent);
+            $currentParent = $currentParent->parent;
+        }
+
+        return $ancestors;
     }
 }

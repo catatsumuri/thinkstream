@@ -2,6 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Post;
+use App\Models\PostNamespace;
+use App\Observers\PostNamespaceObserver;
+use App\Observers\PostObserver;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -24,6 +28,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+
+        Post::observe(PostObserver::class);
+        PostNamespace::observe(PostNamespaceObserver::class);
     }
 
     /**

@@ -21,7 +21,7 @@ graph TD
 MD,
     ]);
 
-    $response = $this->get(route('posts.show', [$namespace, $post]));
+    $response = $this->get(route('posts.path', ['path' => $post->full_path]));
 
     $response->assertOk();
     $response->assertInertia(fn ($page) => $page

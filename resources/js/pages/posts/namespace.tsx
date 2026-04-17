@@ -1,43 +1,45 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { PanelRightClose, PanelRightOpen } from 'lucide-react';
-import { useState } from 'react';
-import MarkdownContent from '@/components/markdown-content';
-import TableOfContents from '@/components/table-of-contents';
-import { useMarkdownToc } from '@/hooks/use-markdown-toc';
-import { useIsMobile } from '@/hooks/use-mobile';
+import { ChevronRight } from 'lucide-react';
+import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { login } from '@/routes';
 import { index as adminPosts } from '@/routes/admin/posts';
-import { show as showRoute } from '@/routes/posts';
+import { path as contentPath } from '@/routes/posts';
 
 type PostNamespace = {
     id: number;
     slug: string;
+    full_path: string;
     name: string;
+    description?: string | null;
     cover_image_url: string | null;
+};
+
+type ChildNamespace = PostNamespace & {
+    posts_count: number;
 };
 
 type Post = {
     id: number;
     slug: string;
     title: string;
-    content: string;
-    published_at: string;
+    full_path: string;
+    published_at: string | null;
 };
 
 export default function Namespace({
+    breadcrumbs,
+    children,
     namespace,
     posts,
 }: {
+    breadcrumbs: Array<{ name: string; full_path: string }>;
+    children: ChildNamespace[];
     namespace: PostNamespace;
     posts: Post[];
 }) {
     const { auth } = usePage<{
         auth: { user: { id: number; name: string } | null };
     }>().props;
-    const toc = useMarkdownToc(posts);
-    const isMobile = useIsMobile();
-    const [tocOverride, setTocOverride] = useState<boolean | null>(null);
-    const tocVisible = tocOverride ?? !isMobile;
 
     return (
         <>
@@ -54,37 +56,40 @@ export default function Namespace({
                     </div>
                 )}
                 <header className="sticky top-0 z-50 border-b bg-background">
-                    <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6">
-                        <div className="flex items-baseline gap-2">
+                    <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-6">
+                        <div className="space-y-2">
                             <Link
                                 href="/"
                                 className="text-2xl font-bold hover:underline"
                             >
                                 ThinkStream
                             </Link>
-                            <span className="text-muted-foreground">/</span>
-                            <span className="text-lg font-semibold">
-                                {namespace.name}
-                            </span>
+                            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                                {breadcrumbs.map((breadcrumb) => (
+                                    <div
+                                        key={breadcrumb.full_path}
+                                        className="flex items-center gap-2"
+                                    >
+                                        <ChevronRight className="size-4" />
+                                        <Link
+                                            href={contentPath.url(
+                                                breadcrumb.full_path,
+                                            )}
+                                            className="hover:text-foreground hover:underline"
+                                        >
+                                            {breadcrumb.name}
+                                        </Link>
+                                    </div>
+                                ))}
+                                <div className="flex items-center gap-2">
+                                    <ChevronRight className="size-4" />
+                                    <span className="font-medium text-foreground">
+                                        {namespace.name}
+                                    </span>
+                                </div>
+                            </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            {posts.length > 0 && (
-                                <button
-                                    onClick={() =>
-                                        setTocOverride(
-                                            (prev) => !(prev ?? !isMobile),
-                                        )
-                                    }
-                                    className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    {tocVisible ? (
-                                        <PanelRightClose size={16} />
-                                    ) : (
-                                        <PanelRightOpen size={16} />
-                                    )}
-                                    Toggle TOC
-                                </button>
-                            )}
                             {auth.user ? (
                                 <Link
                                     href={adminPosts.url()}
@@ -104,88 +109,121 @@ export default function Namespace({
                     </div>
                 </header>
 
-                <div
-                    className={`mx-auto max-w-7xl px-4 py-10 lg:grid lg:gap-12 ${tocVisible && posts.length > 0 ? 'lg:grid-cols-[1fr_240px]' : ''}`}
-                >
-                    {tocVisible && posts.length > 0 && (
-                        <div className="mb-8 block lg:hidden">
-                            <TableOfContents
-                                posts={posts.map((post) => ({
-                                    id: post.id,
-                                    title: post.title,
-                                    slug: post.slug,
-                                    headings: toc.get(post.slug)!.headings,
-                                }))}
-                            />
-                        </div>
-                    )}
-
-                    <main className="min-w-0">
-                        {posts.length === 0 ? (
-                            <p className="text-muted-foreground">
-                                No posts in this namespace yet.
+                <div className="mx-auto max-w-7xl px-4 py-10">
+                    <main className="space-y-12">
+                        <section className="space-y-3">
+                            <p className="text-sm text-muted-foreground">
+                                /{namespace.full_path}
                             </p>
-                        ) : (
-                            <div className="space-y-16">
-                                {posts.map((post) => (
-                                    <article
-                                        key={post.id}
-                                        id={`post-${post.slug}`}
-                                        className="scroll-mt-6 space-y-4"
-                                    >
-                                        <header className="space-y-1">
-                                            <h2 className="text-2xl font-bold">
-                                                <Link
-                                                    href={showRoute.url({
-                                                        namespace:
-                                                            namespace.slug,
-                                                        post: post.slug,
-                                                    })}
-                                                    className="hover:underline"
-                                                >
-                                                    {post.title}
-                                                </Link>
-                                            </h2>
-                                            <time
-                                                dateTime={post.published_at}
-                                                className="text-sm text-muted-foreground"
-                                            >
-                                                {new Date(
-                                                    post.published_at,
-                                                ).toLocaleDateString('en-US', {
-                                                    year: 'numeric',
-                                                    month: 'long',
-                                                    day: 'numeric',
-                                                })}
-                                            </time>
-                                        </header>
-                                        <div className="prose max-w-none prose-neutral dark:prose-invert">
-                                            <MarkdownContent
-                                                content={post.content}
-                                                components={
-                                                    toc.get(post.slug)!
-                                                        .components
-                                                }
-                                            />
-                                        </div>
-                                    </article>
-                                ))}
-                            </div>
-                        )}
-                    </main>
+                            {namespace.description && (
+                                <p className="max-w-3xl text-base leading-7 text-muted-foreground">
+                                    {namespace.description}
+                                </p>
+                            )}
+                        </section>
 
-                    {tocVisible && posts.length > 0 && (
-                        <aside className="hidden lg:block">
-                            <TableOfContents
-                                posts={posts.map((post) => ({
-                                    id: post.id,
-                                    title: post.title,
-                                    slug: post.slug,
-                                    headings: toc.get(post.slug)!.headings,
-                                }))}
-                            />
-                        </aside>
-                    )}
+                        {children.length > 0 && (
+                            <section className="space-y-4">
+                                <div>
+                                    <h2 className="text-xl font-semibold">
+                                        Child Namespaces
+                                    </h2>
+                                    <p className="text-sm text-muted-foreground">
+                                        Browse deeper sections in this branch.
+                                    </p>
+                                </div>
+                                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                                    {children.map((child) => (
+                                        <Link
+                                            key={child.id}
+                                            href={contentPath.url(
+                                                child.full_path,
+                                            )}
+                                            className="group overflow-hidden rounded-xl border transition-colors hover:bg-muted/50"
+                                        >
+                                            <div className="relative aspect-video overflow-hidden border-b">
+                                                {child.cover_image_url ? (
+                                                    <img
+                                                        src={
+                                                            child.cover_image_url
+                                                        }
+                                                        alt={child.name}
+                                                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                    />
+                                                ) : (
+                                                    <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+                                                )}
+                                            </div>
+                                            <div className="space-y-2 p-5">
+                                                <p className="font-semibold">
+                                                    {child.name}
+                                                </p>
+                                                {child.description && (
+                                                    <p className="line-clamp-2 text-sm text-muted-foreground">
+                                                        {child.description}
+                                                    </p>
+                                                )}
+                                                <p className="text-xs text-muted-foreground">
+                                                    /{child.full_path}
+                                                </p>
+                                                <p className="text-xs text-muted-foreground">
+                                                    {child.posts_count} direct{' '}
+                                                    {child.posts_count === 1
+                                                        ? 'post'
+                                                        : 'posts'}
+                                                </p>
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
+                            </section>
+                        )}
+
+                        <section className="space-y-4">
+                            <div>
+                                <h2 className="text-xl font-semibold">Posts</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Direct posts published in this namespace.
+                                </p>
+                            </div>
+
+                            {posts.length === 0 ? (
+                                <p className="text-muted-foreground">
+                                    No direct posts in this namespace yet.
+                                </p>
+                            ) : (
+                                <div className="rounded-xl border">
+                                    <div className="divide-y">
+                                        {posts.map((post) => (
+                                            <Link
+                                                key={post.id}
+                                                href={contentPath.url(
+                                                    post.full_path,
+                                                )}
+                                                className="flex items-center justify-between gap-4 px-5 py-4 transition-colors hover:bg-muted/50"
+                                            >
+                                                <div className="space-y-1">
+                                                    <p className="font-medium">
+                                                        {post.title}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        /{post.full_path}
+                                                    </p>
+                                                </div>
+                                                <div className="shrink-0 text-sm text-muted-foreground">
+                                                    {post.published_at
+                                                        ? new Date(
+                                                              post.published_at,
+                                                          ).toLocaleDateString()
+                                                        : 'Draft'}
+                                                </div>
+                                            </Link>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </section>
+                    </main>
                 </div>
             </div>
         </>
