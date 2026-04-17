@@ -39,7 +39,9 @@ export function MarkdownTooltip({
             </TooltipTrigger>
             <TooltipContent className="max-w-xs text-left">
                 <div className="space-y-1">
-                    {headline ? <p className="font-semibold">{headline}</p> : null}
+                    {headline ? (
+                        <p className="font-semibold">{headline}</p>
+                    ) : null}
                     <p>{tip}</p>
                     {cta && safeHref ? (
                         <a
