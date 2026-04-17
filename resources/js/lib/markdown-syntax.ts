@@ -323,6 +323,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         | MintlifyCalloutTag
     > = [];
     const mintlifyTagLeadingSpaces: number[] = [];
+    let treeBuffer: string[] | null = null;
 
     const pushLine = (value: string): void => {
         processedLines.push(value);
@@ -376,6 +377,32 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
         if (activeFence !== null) {
             processedLines.push(fenceContentLine);
+
+            continue;
+        }
+
+        if (treeBuffer !== null) {
+            if (trimmedLine === '</Tree>') {
+                const nodes = parseTreeContent(treeBuffer);
+                const json = JSON.stringify(nodes);
+
+                pushBlankLineIfNeeded();
+                pushLine(':::tree');
+                pushLine('```json');
+                pushLine(json);
+                pushLine('```');
+                pushLine('');
+                pushLine(':::');
+                treeBuffer = null;
+            } else {
+                treeBuffer.push(line);
+            }
+
+            continue;
+        }
+
+        if (trimmedLine === '<Tree>') {
+            treeBuffer = [];
 
             continue;
         }
@@ -847,6 +874,129 @@ function transformOutsideFences(
             return transformOutsideInlineCode(line, transform);
         })
         .join('\n');
+}
+
+interface TreeNode {
+    type: 'folder' | 'file';
+    name: string;
+    defaultOpen?: boolean;
+    openable?: boolean;
+    children?: TreeNode[];
+}
+
+function joinMultilineTreeTags(lines: string[]): string[] {
+    const result: string[] = [];
+    let index = 0;
+
+    while (index < lines.length) {
+        const line = lines[index];
+        const trimmed = line.trim();
+
+        if (
+            /^<Tree\.(Folder|File)(?:\s|$)/.test(trimmed) &&
+            !trimmed.includes('>')
+        ) {
+            let accumulated = trimmed;
+            index++;
+
+            while (index < lines.length) {
+                const nextTrimmed = lines[index].trim();
+                index++;
+                accumulated += ` ${nextTrimmed}`;
+
+                if (
+                    accumulated.trimEnd().endsWith('/>') ||
+                    accumulated.trimEnd().endsWith('>')
+                ) {
+                    break;
+                }
+            }
+
+            result.push(accumulated);
+
+            continue;
+        }
+
+        result.push(line);
+        index++;
+    }
+
+    return result;
+}
+
+function createTreeFolderNode(
+    attrs: Record<string, string | boolean>,
+): TreeNode {
+    const node: TreeNode = {
+        type: 'folder',
+        name: typeof attrs.name === 'string' ? attrs.name : '',
+        children: [],
+    };
+
+    if (attrs.defaultOpen === true) {
+        node.defaultOpen = true;
+    }
+
+    if (attrs.openable === false) {
+        node.openable = false;
+    }
+
+    return node;
+}
+
+function parseTreeContent(lines: string[]): TreeNode[] {
+    const root: TreeNode[] = [];
+    const stack: TreeNode[][] = [root];
+
+    for (const line of joinMultilineTreeTags(lines)) {
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+            continue;
+        }
+
+        const folderSelfClose = /^<Tree\.Folder(?<attrs>[^>]*)\/\s*>$/.exec(
+            trimmed,
+        );
+
+        if (folderSelfClose) {
+            const attrs = parseJsxAttributes(
+                folderSelfClose.groups?.attrs ?? '',
+            );
+            stack.at(-1)!.push(createTreeFolderNode(attrs));
+            continue;
+        }
+
+        const folderOpen = /^<Tree\.Folder(?<attrs>[^>]*)>$/.exec(trimmed);
+
+        if (folderOpen) {
+            const attrs = parseJsxAttributes(folderOpen.groups?.attrs ?? '');
+            const node = createTreeFolderNode(attrs);
+
+            stack.at(-1)!.push(node);
+            stack.push(node.children!);
+            continue;
+        }
+
+        const fileNode = /^<Tree\.File(?<attrs>[^>]*)\/?\s*>$/.exec(trimmed);
+
+        if (fileNode) {
+            const attrs = parseJsxAttributes(fileNode.groups?.attrs ?? '');
+            stack.at(-1)!.push({
+                type: 'file',
+                name: typeof attrs.name === 'string' ? attrs.name : '',
+            });
+            continue;
+        }
+
+        if (trimmed === '</Tree.Folder>') {
+            if (stack.length > 1) {
+                stack.pop();
+            }
+        }
+    }
+
+    return root;
 }
 
 function escapeDirectiveLabel(label: string): string {

@@ -634,9 +634,6 @@ GFM renderers (like GitHub) auto-generate IDs from heading text. Explicit IDs ar
 
 Without the plugin these render as literal text. You can always paste the emoji character directly instead: 🚀 ✅ ⚠️ 🎉
 
----
-
-> **WIP:** More examples coming soon.
 MD),
                 'published_at' => now(),
             ]);
@@ -919,7 +916,7 @@ MD),
             ['namespace_id' => $namespace->id, 'slug' => 'mintlify-syntax'],
             [
                 'user_id' => $user->id,
-                'title' => 'Mintlify Syntax (WIP)',
+                'title' => 'Mintlify Syntax',
                 'content' => trim(<<<'MD'
 # Mintlify Syntax
 
@@ -1427,6 +1424,56 @@ Source:
 Hover over <Tooltip tip="Application Programming Interface: a set of protocols that lets software components communicate." headline="API" cta="Read more" href="/guides/index">API</Tooltip> for a definition.
 
 Simple tooltip: hover over <Tooltip tip="Hypertext Markup Language — the standard language for web pages.">HTML</Tooltip>.
+```
+
+---
+
+# Tree
+
+`<Tree>` displays a file-system hierarchy with collapsible folders. Use `<Tree.Folder>` for directories and `<Tree.File>` for files. Add `defaultOpen` to a folder to expand it on load.
+
+Live example:
+
+<Tree>
+  <Tree.Folder name="app" defaultOpen>
+    <Tree.Folder name="components" defaultOpen>
+      <Tree.File name="Button.tsx" />
+      <Tree.File name="Card.tsx" />
+    </Tree.Folder>
+    <Tree.Folder name="pages">
+      <Tree.File name="index.tsx" />
+      <Tree.File name="about.tsx" />
+    </Tree.Folder>
+    <Tree.File name="layout.tsx" />
+  </Tree.Folder>
+  <Tree.Folder name="public">
+    <Tree.File name="favicon.ico" />
+  </Tree.Folder>
+  <Tree.File name="package.json" />
+  <Tree.File name="tsconfig.json" />
+</Tree>
+
+Source:
+
+```mdx
+<Tree>
+  <Tree.Folder name="app" defaultOpen>
+    <Tree.Folder name="components" defaultOpen>
+      <Tree.File name="Button.tsx" />
+      <Tree.File name="Card.tsx" />
+    </Tree.Folder>
+    <Tree.Folder name="pages">
+      <Tree.File name="index.tsx" />
+      <Tree.File name="about.tsx" />
+    </Tree.Folder>
+    <Tree.File name="layout.tsx" />
+  </Tree.Folder>
+  <Tree.Folder name="public">
+    <Tree.File name="favicon.ico" />
+  </Tree.Folder>
+  <Tree.File name="package.json" />
+  <Tree.File name="tsconfig.json" />
+</Tree>
 ```
 
 ---
