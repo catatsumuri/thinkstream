@@ -29,9 +29,11 @@ import { remarkApiFieldsDirective } from '@/lib/remark-api-fields-directive';
 import { remarkBadgeDirective } from '@/lib/remark-badge-directive';
 import { remarkCodeGroupDirective } from '@/lib/remark-code-group-directive';
 import { remarkTooltipDirective } from '@/lib/remark-tooltip-directive';
+import { remarkUpdateDirective } from '@/lib/remark-update-directive';
 import { MarkdownBadge } from '@/components/markdown-badge';
 import { MarkdownCodeGroup } from '@/components/markdown-code-group';
 import { MarkdownTooltip } from '@/components/markdown-tooltip';
+import { MarkdownUpdate } from '@/components/markdown-update';
 import { remarkStepsDirective } from '@/lib/remark-steps-directive';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
@@ -160,6 +162,7 @@ export default function MarkdownContent({
         codegroup?: (props: Record<string, unknown>) => React.ReactElement;
         badge?: (props: Record<string, unknown>) => React.ReactElement;
         tooltip?: (props: Record<string, unknown>) => React.ReactElement;
+        update?: (props: Record<string, unknown>) => React.ReactElement;
     } = {
         pre: ({ children }) => <>{children}</>,
         aside: MessageBox,
@@ -208,6 +211,11 @@ export default function MarkdownContent({
                 {...(props as Parameters<typeof MarkdownTooltip>[0])}
             />
         ),
+        update: (props: Record<string, unknown>) => (
+            <MarkdownUpdate
+                {...(props as Parameters<typeof MarkdownUpdate>[0])}
+            />
+        ),
         dl: ({ node, ...props }) => {
             void node;
 
@@ -253,6 +261,7 @@ export default function MarkdownContent({
                 remarkApiFieldsDirective,
                 remarkBadgeDirective,
                 remarkTooltipDirective,
+                remarkUpdateDirective,
                 remarkCodeGroupDirective,
                 remarkLinkifyToCard,
                 remarkSupersub,

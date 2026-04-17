@@ -79,6 +79,9 @@ test('post seeder creates the mintlify syntax page', function () {
     expect($post->content)->toContain('# Tooltip');
     expect($post->content)->toContain('<Tooltip tip="Application Programming Interface: a set of protocols that lets software components communicate." headline="API" cta="Read more" href="/guides/index">API</Tooltip>');
     expect($post->content)->toContain('Simple tooltip: hover over <Tooltip tip="Hypertext Markup Language — the standard language for web pages.">HTML</Tooltip>.');
+    expect($post->content)->toContain('# Update');
+    expect($post->content)->toContain('<Update label="2024-10-11" description="v0.2.0" tags={["Feature", "Improvement"]}>');
+    expect($post->content)->toContain('## Improved card icon support');
     expect($post->content)->toContain('<ResponseField name="id" type="string" required>');
     expect($post->content)->toContain('<ParamField path="slug" type="string" required>');
     expect($post->content)->toContain('```javascript JavaScript icon="javascript"');

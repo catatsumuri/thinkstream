@@ -219,3 +219,31 @@ MARKDOWN,
         ->assertSee('API')
         ->assertSee('HTML');
 });
+
+test('mintlify-style updates render as timeline entries', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => <<<'MARKDOWN'
+# Update
+
+<Update label="2024-10-11" description="v0.2.0" tags={["Feature", "Improvement"]}>
+
+## Improved card icon support
+
+Cards now support brand icons from the simple-icons library.
+
+</Update>
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.show', [$namespace, $post]));
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="markdown-update"]')
+        ->assertSee('2024-10-11')
+        ->assertSee('v0.2.0')
+        ->assertSee('Feature')
+        ->assertSee('Improvement')
+        ->assertSee('Improved card icon support');
+});

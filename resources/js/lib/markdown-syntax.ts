@@ -92,6 +92,18 @@ function rewriteImageLine(line: string, caption?: string): string | null {
 function parseJsxAttributes(
     attributeSource: string,
 ): Record<string, string | boolean> {
+    // Normalize JSX array values: tags={["A", "B"]} → tags="A,B"
+    attributeSource = attributeSource.replace(
+        /(\w+)=\{(\[[^\]]*\])\}/g,
+        (_: string, key: string, arrayJson: string) => {
+            const values = [...arrayJson.matchAll(/"([^"]*)"/g)].map(
+                (m) => m[1],
+            );
+
+            return `${key}="${values.join(',')}"`;
+        },
+    );
+
     const attributes: Record<string, string | boolean> = {};
     const attributePattern =
         /(\w+)(?:=(?:"([^"]*)"|\{(true|false|\d+(?:\.\d+)?)\}))?/g;
@@ -154,6 +166,9 @@ function buildDirectiveAttributes(
             'tip',
             'headline',
             'cta',
+            'label',
+            'description',
+            'tags',
         ].includes(key),
     );
 
@@ -196,6 +211,7 @@ const MULTILINE_JOINABLE_TAGS = [
     'ResponseField',
     'ParamField',
     'CodeGroup',
+    'Update',
     'Badge',
     'Tooltip',
     'Note',
@@ -303,6 +319,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         | 'ResponseField'
         | 'ParamField'
         | 'CodeGroup'
+        | 'Update'
         | MintlifyCalloutTag
     > = [];
     const mintlifyTagLeadingSpaces: number[] = [];
@@ -573,6 +590,36 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
         if (trimmedLine === '</Accordion>') {
             if (mintlifyTagStack.at(-1) === 'Accordion') {
+                mintlifyTagStack.pop();
+                mintlifyTagLeadingSpaces.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine(':::');
+
+            continue;
+        }
+
+        const updateOpenMatch = /^<Update(?<attributes>[^>]*)>$/.exec(
+            trimmedLine,
+        );
+
+        if (updateOpenMatch) {
+            const attributes = parseJsxAttributes(
+                updateOpenMatch.groups?.attributes ?? '',
+            );
+
+            pushBlankLineIfNeeded();
+            pushLine(`:::update${buildDirectiveAttributes(attributes)}`);
+            pushLine('');
+            mintlifyTagLeadingSpaces.push(leadingSpaces);
+            mintlifyTagStack.push('Update');
+
+            continue;
+        }
+
+        if (trimmedLine === '</Update>') {
+            if (mintlifyTagStack.at(-1) === 'Update') {
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
