@@ -304,6 +304,30 @@ x = 1
     assert.match(output, /```python Python/);
 });
 
+test('preprocessMarkdownSyntax converts Mintlify Badge tags to text directives', () => {
+    const output = preprocessMarkdownSyntax(
+        'This feature requires a <Badge color="orange" size="sm">Premium</Badge> subscription.\n\n<Badge color="green" icon="circle-check">Stable</Badge>',
+    );
+
+    assert.match(
+        output,
+        /This feature requires a :badge\[Premium\]\{color="orange" size="sm"\} subscription\./,
+    );
+    assert.match(
+        output,
+        /:badge\[Stable\]\{color="green" icon="circle-check"\}/,
+    );
+});
+
+test('preprocessMarkdownSyntax leaves Badge tags untouched inside fenced code blocks', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`mdx
+<Badge color="green" icon="circle-check">Stable</Badge>
+\`\`\``);
+
+    assert.doesNotMatch(output, /:badge\[/);
+    assert.match(output, /<Badge color="green" icon="circle-check">Stable<\/Badge>/);
+});
+
 test('preprocessMarkdownSyntax preserves code indentation inside CodeGroup fences', () => {
     const output = preprocessMarkdownSyntax(`<CodeGroup>
 

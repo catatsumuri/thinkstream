@@ -2,9 +2,12 @@ import {
     AlertCircle,
     ArrowRight,
     Award,
+    BadgeAlert,
+    Ban,
     Bell,
     Brain,
     Calendar,
+    Check,
     CheckCircle,
     ChevronDown,
     Clock,
@@ -36,6 +39,7 @@ import {
     Settings,
     Smile,
     Sparkles,
+    Star,
     TextCursorInput,
     Timer,
     Upload,
@@ -66,8 +70,14 @@ const ICON_MAP: Record<string, LucideIcon> = {
     info: Info,
     'alert-circle': AlertCircle,
     alertcircle: AlertCircle,
+    ban: Ban,
+    'badge-alert': BadgeAlert,
+    badgealert: BadgeAlert,
+    check: Check,
     'check-circle': CheckCircle,
     checkcircle: CheckCircle,
+    'circle-check': CheckCircle,
+    circlecheck: CheckCircle,
     'x-circle': XCircle,
     xcircle: XCircle,
     'help-circle': HelpCircle,
@@ -106,6 +116,7 @@ const ICON_MAP: Record<string, LucideIcon> = {
     flag: Flag,
     award: Award,
     smile: Smile,
+    star: Star,
     'git-branch': GitBranch,
     gitbranch: GitBranch,
     'text-cursor-input': TextCursorInput,
@@ -132,7 +143,9 @@ export function SimpleIconSvg({
     );
 }
 
-function getLucideIcon(iconName: string | undefined): LucideIcon | undefined {
+export function getLucideIcon(
+    iconName: string | undefined,
+): LucideIcon | undefined {
     if (!iconName) {
         return undefined;
     }
