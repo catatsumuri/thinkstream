@@ -1,4 +1,6 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { Heading } from '@/hooks/use-markdown-toc';
+import { cn } from '@/lib/utils';
 
 type TocPost = {
     id: number;
@@ -7,15 +9,148 @@ type TocPost = {
     headings: Heading[];
 };
 
-export default function TableOfContents({ posts }: { posts: TocPost[] }) {
+type TocItem = {
+    id: string;
+    label: string;
+    level: number;
+};
+
+const ACTIVE_HEADING_OFFSET = 160;
+
+export default function TableOfContents({
+    posts,
+    sticky = false,
+}: {
+    posts: TocPost[];
+    sticky?: boolean;
+}) {
+    const scrollContainerRef = useRef<HTMLElement | null>(null);
+    const itemRefs = useRef<Map<string, HTMLAnchorElement>>(new Map());
+    const items = useMemo<TocItem[]>(
+        () =>
+            posts.flatMap((post) => [
+                {
+                    id: `post-${post.slug}`,
+                    label: post.title,
+                    level: 0,
+                },
+                ...post.headings.map((heading) => ({
+                    id: heading.id,
+                    label: heading.text,
+                    level: heading.level,
+                })),
+            ]),
+        [posts],
+    );
+    const [activeId, setActiveId] = useState<string | null>(
+        items[0]?.id ?? null,
+    );
+
+    useEffect(() => {
+        if (items.length === 0) {
+            return;
+        }
+
+        const updateActiveId = () => {
+            let nextActiveId = items[0]?.id ?? null;
+
+            for (const item of items) {
+                const element = document.getElementById(item.id);
+
+                if (!element) {
+                    continue;
+                }
+
+                if (
+                    element.getBoundingClientRect().top <= ACTIVE_HEADING_OFFSET
+                ) {
+                    nextActiveId = item.id;
+                } else {
+                    break;
+                }
+            }
+
+            setActiveId((currentActiveId) =>
+                currentActiveId === nextActiveId
+                    ? currentActiveId
+                    : nextActiveId,
+            );
+        };
+
+        updateActiveId();
+
+        window.addEventListener('scroll', updateActiveId, { passive: true });
+        window.addEventListener('resize', updateActiveId);
+        window.addEventListener('hashchange', updateActiveId);
+
+        return () => {
+            window.removeEventListener('scroll', updateActiveId);
+            window.removeEventListener('resize', updateActiveId);
+            window.removeEventListener('hashchange', updateActiveId);
+        };
+    }, [items]);
+
+    useEffect(() => {
+        if (!activeId) {
+            return;
+        }
+
+        const scrollContainer = scrollContainerRef.current;
+        const activeItem = itemRefs.current.get(activeId);
+
+        if (
+            !scrollContainer ||
+            !activeItem ||
+            scrollContainer.scrollHeight <= scrollContainer.clientHeight
+        ) {
+            return;
+        }
+
+        activeItem.scrollIntoView({
+            block: 'nearest',
+            inline: 'nearest',
+        });
+    }, [activeId]);
+
+    const registerItemRef =
+        (id: string) => (element: HTMLAnchorElement | null) => {
+            if (element) {
+                itemRefs.current.set(id, element);
+            } else {
+                itemRefs.current.delete(id);
+            }
+        };
+
     return (
-        <nav className="sticky top-6 space-y-4 text-sm">
+        <nav
+            ref={scrollContainerRef}
+            data-test="table-of-contents"
+            data-sticky={sticky}
+            className={cn(
+                'space-y-4 text-sm',
+                sticky &&
+                    'sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-1',
+            )}
+        >
             <p className="font-semibold text-foreground">Contents</p>
             {posts.map((post) => (
                 <div key={post.id} className="space-y-1">
                     <a
+                        ref={registerItemRef(`post-${post.slug}`)}
                         href={`#post-${post.slug}`}
-                        className="block leading-snug font-medium text-foreground transition-colors hover:text-primary"
+                        data-test={`toc-link-post-${post.slug}`}
+                        data-active={activeId === `post-${post.slug}`}
+                        aria-current={
+                            activeId === `post-${post.slug}`
+                                ? 'location'
+                                : undefined
+                        }
+                        className={cn(
+                            'block rounded-md px-2 py-1 leading-snug font-medium transition-colors',
+                            activeId === `post-${post.slug}`
+                                ? 'bg-accent text-foreground'
+                                : 'text-foreground hover:text-primary',
+                        )}
                     >
                         {post.title}
                     </a>
@@ -29,8 +164,21 @@ export default function TableOfContents({ posts }: { posts: TocPost[] }) {
                                     }}
                                 >
                                     <a
+                                        ref={registerItemRef(h.id)}
                                         href={`#${h.id}`}
-                                        className="block py-0.5 leading-snug text-muted-foreground transition-colors hover:text-foreground"
+                                        data-test={`toc-link-${h.id}`}
+                                        data-active={activeId === h.id}
+                                        aria-current={
+                                            activeId === h.id
+                                                ? 'location'
+                                                : undefined
+                                        }
+                                        className={cn(
+                                            'block rounded-md px-2 py-1 leading-snug transition-colors',
+                                            activeId === h.id
+                                                ? 'bg-accent font-medium text-foreground'
+                                                : 'text-muted-foreground hover:text-foreground',
+                                        )}
                                     >
                                         {h.text}
                                     </a>

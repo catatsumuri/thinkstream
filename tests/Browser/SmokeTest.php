@@ -13,7 +13,7 @@ test('top page loads', function () {
 });
 
 test('published post headings expose copyable anchor links', function () {
-    Post::factory()->published()->create([
+    $post = Post::factory()->published()->create([
         'slug' => 'anchor-post',
         'title' => 'Anchor Post',
         'content' => <<<'MARKDOWN'
@@ -28,11 +28,11 @@ npm install
 MARKDOWN,
     ]);
 
-    $page = visit('/');
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page
         ->assertSee('Anchor Post')
-        ->assertSeeLink('Section Title')
+        ->assertSee('Section Title')
         ->assertNotPresent('a[href="#anchor-post-install-dependencies"]')
         ->assertPresent('[data-test="heading-anchor-anchor-post-section-title"]')
         ->assertAttribute(
@@ -99,4 +99,67 @@ test('post navigation toggle stays within the viewport after page scroll', funct
             return rect.top >= 0 && rect.bottom <= window.innerHeight;
         })()
     JS))->toBeTrue();
+});
+
+test('table of contents highlights the active heading and stays scrollable', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+        'is_published' => true,
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'index',
+        'title' => 'Index',
+        'content' => collect(range(1, 120))
+            ->map(
+                fn (int $section): string => "## Section {$section}\n\n".str_repeat(
+                    'Long body content. ',
+                    60,
+                ),
+            )
+            ->implode("\n\n"),
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $post->full_path]))->resize(1600, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="table-of-contents"][data-sticky="true"]')
+        ->assertPresent('[data-test="table-of-contents"][data-sticky="true"] [data-test="toc-link-index-section-12"]')
+        ->wait(0.5);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const toc = document.querySelector('[data-test="table-of-contents"][data-sticky="true"]');
+
+            if (! toc) {
+                return null;
+            }
+
+            const style = window.getComputedStyle(toc);
+
+            return toc.scrollHeight > toc.clientHeight && ['auto', 'scroll'].includes(style.overflowY);
+        })()
+    JS))->toBeTrue();
+
+    $page->script(<<<'JS'
+        (() => {
+            const heading = document.getElementById('index-section-12');
+
+            if (! heading) {
+                return null;
+            }
+
+            heading.scrollIntoView({ block: 'start' });
+
+            return true;
+        })()
+    JS);
+
+    $page->wait(0.5);
+
+    expect($page->script(<<<'JS'
+        (() => document.querySelector('[data-test="table-of-contents"][data-sticky="true"] [data-test="toc-link-index-section-12"]')?.getAttribute('data-active'))()
+    JS))->toBe('true');
 });
