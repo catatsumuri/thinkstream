@@ -13,6 +13,27 @@ class UpdatePostRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('is_draft')) {
+            $this->merge([
+                'is_draft' => $this->boolean('is_draft'),
+            ]);
+        }
+
+        if ($this->input('published_at') === '') {
+            $this->merge([
+                'published_at' => null,
+            ]);
+        }
+
+        if (! $this->boolean('is_draft') && $this->input('published_at') === null) {
+            $this->merge([
+                'published_at' => now()->toDateTimeString(),
+            ]);
+        }
+    }
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */

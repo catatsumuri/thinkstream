@@ -111,7 +111,7 @@ export default function Namespace({
                                                     <FilePen className="size-3" />
                                                     Draft
                                                 </span>
-                                            ) : post.published_at &&
+                                            ) : !post.published_at ||
                                               new Date(post.published_at) >
                                                   new Date() ? (
                                                 <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">

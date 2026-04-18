@@ -168,7 +168,7 @@ test('scheduled post is not counted on homepage', function () {
         );
 });
 
-test('post without publish date is counted on homepage', function () {
+test('post without publish date is not counted on homepage', function () {
     $namespace = PostNamespace::factory()->create(['is_published' => true, 'parent_id' => null]);
 
     Post::factory()->for($namespace, 'namespace')->create([
@@ -178,7 +178,7 @@ test('post without publish date is counted on homepage', function () {
 
     $this->get(route('home'))
         ->assertSuccessful()
-        ->assertInertia(fn ($page) => $page->where('namespaces.0.posts_count', 1));
+        ->assertInertia(fn ($page) => $page->where('namespaces.0.posts_count', 0));
 });
 
 test('scheduled post is not shown in namespace listing', function () {
@@ -190,19 +190,14 @@ test('scheduled post is not shown in namespace listing', function () {
         ->assertInertia(fn ($page) => $page->has('posts', 0));
 });
 
-test('post without publish date remains directly accessible', function () {
+test('post without publish date is not directly accessible', function () {
     $namespace = PostNamespace::factory()->create(['is_published' => true]);
     $post = Post::factory()->for($namespace, 'namespace')->create([
         'is_draft' => false,
         'published_at' => null,
     ]);
 
-    $this->get(route('posts.path', ['path' => $post->full_path]))
-        ->assertSuccessful()
-        ->assertInertia(fn ($page) => $page
-            ->component('posts/show')
-            ->where('post.full_path', $post->full_path)
-        );
+    $this->get(route('posts.path', ['path' => $post->full_path]))->assertNotFound();
 });
 
 test('scheduled post is not directly accessible', function () {

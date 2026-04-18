@@ -6,7 +6,6 @@ use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Support\ReservedContentPath;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -67,8 +66,8 @@ class PostController extends Controller
             ->withCount(['posts' => fn (Builder $query) => $this->applyPublishedPostScope($query)])
             ->get(['id', 'name', 'slug', 'full_path', 'description', 'cover_image']);
 
-        $posts = $this->applyPublishedPostScope($namespace->posts())
-            ->orderByRaw('published_at is null')
+        $posts = $namespace->posts()
+            ->tap(fn (Builder $query) => $this->applyPublishedPostScope($query))
             ->orderBy('published_at')
             ->orderBy('id')
             ->get(['id', 'slug', 'full_path', 'title', 'published_at']);
@@ -89,8 +88,8 @@ class PostController extends Controller
     {
         $namespace = $post->namespace;
         $rootNamespace = $this->rootNamespace($namespace, $ancestors);
-        $posts = $this->applyPublishedPostScope($namespace->posts())
-            ->orderByRaw('published_at is null')
+        $posts = $namespace->posts()
+            ->tap(fn (Builder $query) => $this->applyPublishedPostScope($query))
             ->orderBy('published_at')
             ->orderBy('id')
             ->get(['id', 'slug', 'full_path', 'title', 'published_at']);
@@ -112,14 +111,11 @@ class PostController extends Controller
         return $ancestors->first() ?? $namespace;
     }
 
-    private function applyPublishedPostScope(Builder|HasMany $query): Builder|HasMany
+    private function applyPublishedPostScope(Builder $query): Builder
     {
         return $query
             ->where('is_draft', false)
-            ->where(function (Builder $query): void {
-                $query->whereNull('published_at')
-                    ->orWhere('published_at', '<=', now());
-            });
+            ->where('published_at', '<=', now());
     }
 
     /**
@@ -136,8 +132,8 @@ class PostController extends Controller
             ->where('is_published', true)
             ->get(['id', 'slug', 'full_path', 'name', 'post_order']);
 
-        $posts = $namespace->sortPosts($this->applyPublishedPostScope($namespace->posts())
-            ->orderByRaw('published_at is null')
+        $posts = $namespace->sortPosts($namespace->posts()
+            ->tap(fn (Builder $query) => $this->applyPublishedPostScope($query))
             ->orderBy('published_at')
             ->orderBy('id')
             ->get(['title', 'full_path', 'slug']));
