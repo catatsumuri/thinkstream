@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import {
     index,
@@ -18,6 +19,7 @@ import {
 type Namespace = {
     id: number;
     slug: string;
+    full_path: string;
     name: string;
 };
 
@@ -30,7 +32,13 @@ function toSlug(value: string): string {
         .replace(/-+/g, '-');
 }
 
-export default function Create({ namespace }: { namespace: Namespace }) {
+export default function Create({
+    namespace,
+    slugPrefix,
+}: {
+    namespace: Namespace;
+    slugPrefix?: string | null;
+}) {
     setLayoutProps({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
@@ -117,18 +125,39 @@ export default function Create({ namespace }: { namespace: Namespace }) {
 
                             <div className="grid gap-2">
                                 <Label htmlFor="slug">Slug</Label>
-                                <Input
-                                    id="slug"
-                                    name="slug"
-                                    placeholder="my-post-slug"
-                                    value={slug}
-                                    onChange={handleSlugChange}
-                                    required
-                                />
+                                <div className="flex rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                                    {slugPrefix && (
+                                        <span className="inline-flex items-center border-r border-input bg-muted/30 px-3 text-sm whitespace-nowrap text-muted-foreground">
+                                            {slugPrefix}
+                                        </span>
+                                    )}
+                                    <Input
+                                        id="slug"
+                                        name="slug"
+                                        placeholder="my-post-slug"
+                                        value={slug}
+                                        onChange={handleSlugChange}
+                                        className={cn(
+                                            'border-0 shadow-none focus-visible:border-0 focus-visible:ring-0',
+                                            slugPrefix && 'rounded-l-none',
+                                        )}
+                                        required
+                                    />
+                                </div>
                                 <p className="text-xs text-muted-foreground">
                                     Lowercase letters, numbers, and hyphens
                                     only.
                                 </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Must be unique among pages and child
+                                    namespaces under /{namespace.full_path}.
+                                </p>
+                                {slugPrefix && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Path preview: /{slugPrefix}
+                                        {slug || 'your-slug'}
+                                    </p>
+                                )}
                                 <InputError message={errors.slug} />
                             </div>
 

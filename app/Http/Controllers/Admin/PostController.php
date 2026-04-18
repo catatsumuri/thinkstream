@@ -24,6 +24,8 @@ class PostController extends Controller
             $direction = in_array($request->input('dir'), $allowedDirections) ? $request->input('dir') : 'asc';
 
             $namespaces = PostNamespace::withCount('posts')
+                ->with($this->childrenRelation())
+                ->whereNull('parent_id')
                 ->orderBy($column, $direction)
                 ->get();
         } else {
@@ -31,6 +33,8 @@ class PostController extends Controller
             $direction = 'asc';
 
             $namespaces = PostNamespace::withCount('posts')
+                ->with($this->childrenRelation())
+                ->whereNull('parent_id')
                 ->orderByRaw('sort_order IS NULL, sort_order ASC, name ASC')
                 ->get();
         }
@@ -41,10 +45,23 @@ class PostController extends Controller
         ]);
     }
 
+    /** @return array<string, \Closure> */
+    private function childrenRelation(): array
+    {
+        $order = 'sort_order IS NULL, sort_order ASC, name ASC';
+
+        return [
+            'children' => fn ($q) => $q->withCount('posts')->orderByRaw($order)
+                ->with(['children' => fn ($q2) => $q2->withCount('posts')->orderByRaw($order)]),
+        ];
+    }
+
     public function namespaceIndex(PostNamespace $namespace): Response
     {
         return Inertia::render('admin/posts/namespace', [
             'namespace' => $namespace,
+            'ancestors' => $namespace->ancestors()->map(fn (PostNamespace $ns) => ['id' => $ns->id, 'name' => $ns->name]),
+            'children' => $namespace->sortNamespaces($namespace->children()->withCount('posts')->get()),
             'posts' => $namespace->sortPosts($namespace->posts()->latest()->get(['id', 'title', 'slug', 'is_draft', 'published_at', 'created_at'])),
         ]);
     }
@@ -53,6 +70,9 @@ class PostController extends Controller
     {
         return Inertia::render('admin/posts/create', [
             'namespace' => $namespace,
+            'slugPrefix' => $namespace->full_path !== $namespace->slug
+                ? trim($namespace->full_path, '/').'/'
+                : null,
         ]);
     }
 

@@ -2,9 +2,11 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Support\ContentPathConflict;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class UpdatePostRequest extends FormRequest
 {
@@ -55,6 +57,39 @@ class UpdatePostRequest extends FormRequest
             'content' => ['required', 'string'],
             'is_draft' => ['boolean'],
             'published_at' => ['nullable', 'date'],
+        ];
+    }
+
+    /**
+     * @return array<int, callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if ($validator->errors()->has('slug')) {
+                    return;
+                }
+
+                $namespace = $this->route('namespace');
+
+                if ($namespace === null) {
+                    return;
+                }
+
+                $conflictPath = ContentPathConflict::findPostConflict(
+                    $namespace->id,
+                    (string) $this->input('slug'),
+                    $this->route('post'),
+                );
+
+                if ($conflictPath !== null) {
+                    $validator->errors()->add(
+                        'slug',
+                        "This slug is already used by another page or child namespace at /{$conflictPath}.",
+                    );
+                }
+            },
         ];
     }
 }

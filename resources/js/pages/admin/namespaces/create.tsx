@@ -1,5 +1,4 @@
-import { Head } from '@inertiajs/react';
-import { Form } from '@inertiajs/react';
+import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import InputError from '@/components/input-error';
@@ -8,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes';
 import { create } from '@/routes/admin/namespaces';
+import { namespace as namespaceRoute } from '@/routes/admin/posts';
 import { index as postsIndex } from '@/routes/admin/posts';
 
 function toSlug(value: string): string {
@@ -19,10 +19,51 @@ function toSlug(value: string): string {
         .replace(/-+/g, '-');
 }
 
-export default function Create() {
+type ParentNamespace = {
+    id: number;
+    name: string;
+    full_path: string;
+};
+
+export default function Create({
+    parentNamespace,
+}: {
+    parentNamespace?: ParentNamespace | null;
+}) {
     const [slug, setSlug] = useState('');
     const [slugTouched, setSlugTouched] = useState(false);
     const composing = useRef(false);
+    const createQuery = parentNamespace
+        ? `?${new URLSearchParams({ parent: String(parentNamespace.id) }).toString()}`
+        : '';
+    const createHref = `${create.url()}${createQuery}`;
+    const previewPath = parentNamespace
+        ? `${parentNamespace.full_path}/${slug || 'your-slug'}`
+        : slug || 'your-slug';
+    const cancelHref = parentNamespace
+        ? namespaceRoute.url(parentNamespace.id)
+        : postsIndex.url();
+
+    setLayoutProps({
+        breadcrumbs: [
+            { title: 'Dashboard', href: dashboard() },
+            { title: 'Posts', href: postsIndex.url() },
+            ...(parentNamespace
+                ? [
+                      {
+                          title: parentNamespace.name,
+                          href: namespaceRoute.url(parentNamespace.id),
+                      },
+                  ]
+                : []),
+            {
+                title: parentNamespace
+                    ? 'New Child Namespace'
+                    : 'New Namespace',
+                href: createHref,
+            },
+        ],
+    });
 
     function handleNameChange(e: React.ChangeEvent<HTMLInputElement>) {
         if (!slugTouched && !composing.current) {
@@ -47,13 +88,23 @@ export default function Create() {
 
     return (
         <>
-            <Head title="New Namespace" />
+            <Head
+                title={
+                    parentNamespace ? 'New Child Namespace' : 'New Namespace'
+                }
+            />
 
             <div className="space-y-6 p-4">
                 <div>
-                    <h1 className="text-2xl font-semibold">New Namespace</h1>
+                    <h1 className="text-2xl font-semibold">
+                        {parentNamespace
+                            ? 'New Child Namespace'
+                            : 'New Namespace'}
+                    </h1>
                     <p className="text-sm text-muted-foreground">
-                        Create a namespace to group your posts
+                        {parentNamespace
+                            ? `Create a child namespace inside ${parentNamespace.name}.`
+                            : 'Create a namespace to group your posts'}
                     </p>
                 </div>
 
@@ -63,6 +114,25 @@ export default function Create() {
                 >
                     {({ processing, errors }) => (
                         <>
+                            {parentNamespace && (
+                                <>
+                                    <input
+                                        type="hidden"
+                                        name="parent_id"
+                                        value={String(parentNamespace.id)}
+                                    />
+                                    <div className="grid gap-2">
+                                        <Label>Parent</Label>
+                                        <div className="rounded-md border bg-muted/30 px-3 py-2 text-sm">
+                                            /{parentNamespace.full_path}
+                                        </div>
+                                        <InputError
+                                            message={errors.parent_id}
+                                        />
+                                    </div>
+                                </>
+                            )}
+
                             <div className="grid gap-2">
                                 <Label htmlFor="name">Name</Label>
                                 <Input
@@ -92,6 +162,16 @@ export default function Create() {
                                 <p className="text-xs text-muted-foreground">
                                     Lowercase letters, numbers, and hyphens
                                     only. Used in URLs.
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Must be unique among pages and child
+                                    namespaces under{' '}
+                                    {parentNamespace
+                                        ? `/${parentNamespace.full_path}.`
+                                        : '/ (the root).'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Path preview: /{previewPath}
                                 </p>
                                 <InputError message={errors.slug} />
                             </div>
@@ -141,10 +221,12 @@ export default function Create() {
 
                             <div className="flex gap-3">
                                 <Button type="submit" disabled={processing}>
-                                    Create Namespace
+                                    {parentNamespace
+                                        ? 'Create Child Namespace'
+                                        : 'Create Namespace'}
                                 </Button>
                                 <Button type="button" variant="outline" asChild>
-                                    <a href={postsIndex.url()}>Cancel</a>
+                                    <Link href={cancelHref}>Cancel</Link>
                                 </Button>
                             </div>
                         </>
@@ -154,11 +236,3 @@ export default function Create() {
         </>
     );
 }
-
-Create.layout = {
-    breadcrumbs: [
-        { title: 'Dashboard', href: dashboard() },
-        { title: 'Posts', href: postsIndex.url() },
-        { title: 'New Namespace', href: create.url() },
-    ],
-};

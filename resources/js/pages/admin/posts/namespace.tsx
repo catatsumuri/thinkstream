@@ -1,8 +1,15 @@
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
 import { Form } from '@inertiajs/react';
-import { CheckCircle2, Clock, ExternalLink, FilePen } from 'lucide-react';
+import {
+    CheckCircle2,
+    Clock,
+    ExternalLink,
+    FilePen,
+    FolderOpen,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
+import { create as namespaceCreate } from '@/routes/admin/namespaces';
 import {
     index,
     namespace as namespaceRoute,
@@ -19,6 +26,15 @@ type Namespace = {
     name: string;
 };
 
+type ChildNamespace = {
+    id: number;
+    slug: string;
+    full_path: string;
+    name: string;
+    is_published: boolean;
+    posts_count: number;
+};
+
 type Post = {
     id: number;
     title: string;
@@ -28,17 +44,32 @@ type Post = {
     created_at: string;
 };
 
+type Ancestor = {
+    id: number;
+    name: string;
+};
+
 export default function Namespace({
     namespace,
+    ancestors,
+    children,
     posts,
 }: {
     namespace: Namespace;
+    ancestors: Ancestor[];
+    children: ChildNamespace[];
     posts: Post[];
 }) {
+    const childNamespaceCreateUrl = `${namespaceCreate.url()}?${new URLSearchParams({ parent: String(namespace.id) }).toString()}`;
+
     setLayoutProps({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
             { title: 'Posts', href: index.url() },
+            ...ancestors.map((ancestor) => ({
+                title: ancestor.name,
+                href: namespaceRoute.url(ancestor.id),
+            })),
             { title: namespace.name, href: namespaceRoute.url(namespace.id) },
         ],
     });
@@ -57,21 +88,93 @@ export default function Namespace({
                             /{namespace.slug}
                         </p>
                     </div>
-                    <Button asChild>
-                        <Link href={create.url(namespace.id)}>New Post</Link>
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" asChild>
+                            <Link href={childNamespaceCreateUrl}>
+                                New Child Namespace
+                            </Link>
+                        </Button>
+                        <Button asChild>
+                            <Link href={create.url(namespace.id)}>
+                                New Post
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
+
+                {children.length > 0 && (
+                    <div className="space-y-2">
+                        <h2 className="text-sm font-medium text-muted-foreground">
+                            Child Namespaces
+                        </h2>
+                        <div className="rounded-xl border">
+                            <table className="w-full text-sm">
+                                <tbody>
+                                    {children.map((child) => (
+                                        <tr
+                                            key={child.id}
+                                            className="border-b last:border-0"
+                                        >
+                                            <td className="px-4 py-3">
+                                                <div className="flex items-center gap-2">
+                                                    <FolderOpen className="size-4 text-muted-foreground" />
+                                                    <Link
+                                                        href={namespaceRoute.url(
+                                                            child.id,
+                                                        )}
+                                                        className="font-medium text-primary hover:underline"
+                                                    >
+                                                        {child.name}
+                                                    </Link>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">
+                                                /{child.full_path}
+                                            </td>
+                                            <td className="px-4 py-3">
+                                                {child.is_published ? (
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                        <CheckCircle2 className="size-3" />
+                                                        Published
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                                        <FilePen className="size-3" />
+                                                        Draft
+                                                    </span>
+                                                )}
+                                            </td>
+                                            <td className="px-4 py-3 text-muted-foreground">
+                                                {child.posts_count}{' '}
+                                                {child.posts_count === 1
+                                                    ? 'post'
+                                                    : 'posts'}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                )}
 
                 {posts.length === 0 ? (
                     <div className="rounded-xl border border-dashed p-12 text-center">
                         <p className="text-muted-foreground">
                             No posts in this namespace yet.
                         </p>
-                        <Button asChild className="mt-4">
-                            <Link href={create.url(namespace.id)}>
-                                Create your first post
-                            </Link>
-                        </Button>
+                        <div className="mt-4 flex items-center justify-center gap-2">
+                            <Button variant="outline" asChild>
+                                <Link href={childNamespaceCreateUrl}>
+                                    Create a child namespace
+                                </Link>
+                            </Button>
+                            <Button asChild>
+                                <Link href={create.url(namespace.id)}>
+                                    Create your first post
+                                </Link>
+                            </Button>
+                        </div>
                     </div>
                 ) : (
                     <div className="rounded-xl border">
