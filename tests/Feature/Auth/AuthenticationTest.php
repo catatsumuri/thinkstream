@@ -3,14 +3,22 @@
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\RateLimiter;
+use Inertia\Testing\AssertableInertia as Assert;
 use Laravel\Fortify\Features;
 
 uses(RefreshDatabase::class);
 
 test('login screen can be rendered', function () {
+    config()->set('app.name', 'ThinkStream Test');
+
     $response = $this->get(route('login'));
 
     $response->assertOk();
+
+    $response->assertInertia(fn (Assert $page) => $page
+        ->component('auth/login')
+        ->where('name', 'ThinkStream Test'),
+    );
 });
 
 test('users can authenticate using the login screen', function () {
