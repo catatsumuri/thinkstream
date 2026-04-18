@@ -241,7 +241,10 @@ export default function Show({
                             </div>
                         )}
                         <article className="space-y-4">
-                            <header className="space-y-1">
+                            <header
+                                id={`post-${post.slug}`}
+                                className="scroll-mt-24 space-y-1"
+                            >
                                 <h1 className="text-3xl font-bold">
                                     {post.title}
                                 </h1>
@@ -270,6 +273,7 @@ export default function Show({
                     {tocVisible && hasHeadings && (
                         <aside className="hidden lg:block">
                             <TableOfContents
+                                sticky
                                 posts={[
                                     {
                                         id: post.id,
