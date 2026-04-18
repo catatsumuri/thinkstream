@@ -20,10 +20,12 @@ import { Head, Link, router } from '@inertiajs/react';
 import {
     CheckCircle2,
     ChevronDown,
+    ChevronRight,
     ChevronUp,
     ChevronsUpDown,
     ExternalLink,
     FilePen,
+    Folder,
     GripVertical,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -40,6 +42,7 @@ type Namespace = {
     name: string;
     is_published: boolean;
     posts_count: number;
+    children: Namespace[];
 };
 
 type Sort = {
@@ -92,9 +95,13 @@ function SortableHeader({
 function SortableRow({
     namespace,
     isDndActive,
+    isExpanded,
+    onToggle,
 }: {
     namespace: Namespace;
     isDndActive: boolean;
+    isExpanded: boolean;
+    onToggle: () => void;
 }) {
     const {
         attributes,
@@ -114,7 +121,7 @@ function SortableRow({
     return (
         <tr ref={setNodeRef} style={style} className="border-b last:border-0">
             <td className="w-8 px-2 py-3">
-                {isDndActive && (
+                {isDndActive ? (
                     <button
                         {...attributes}
                         {...listeners}
@@ -122,7 +129,19 @@ function SortableRow({
                     >
                         <GripVertical className="size-4" />
                     </button>
-                )}
+                ) : namespace.children.length > 0 ? (
+                    <button
+                        type="button"
+                        onClick={onToggle}
+                        className="text-muted-foreground hover:text-foreground"
+                    >
+                        {isExpanded ? (
+                            <ChevronDown className="size-4" />
+                        ) : (
+                            <ChevronRight className="size-4" />
+                        )}
+                    </button>
+                ) : null}
             </td>
             <td className="px-4 py-3 font-medium">
                 <Link
@@ -188,6 +207,124 @@ function SortableRow({
     );
 }
 
+function ChildRow({
+    namespace,
+    depth,
+    expandedIds,
+    onToggle,
+}: {
+    namespace: Namespace;
+    depth: number;
+    expandedIds: Set<number>;
+    onToggle: (id: number) => void;
+}) {
+    const isExpanded = expandedIds.has(namespace.id);
+
+    return (
+        <>
+            <tr className="border-b bg-muted/30 last:border-0">
+                <td className="w-8 px-2 py-3">
+                    {namespace.children.length > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => onToggle(namespace.id)}
+                            className="text-muted-foreground hover:text-foreground"
+                        >
+                            {isExpanded ? (
+                                <ChevronDown className="size-4" />
+                            ) : (
+                                <ChevronRight className="size-4" />
+                            )}
+                        </button>
+                    )}
+                </td>
+                <td
+                    className="px-4 py-3 font-medium"
+                    style={{ paddingLeft: `${(depth + 1) * 1.5}rem` }}
+                >
+                    <div className="flex items-center gap-1.5">
+                        <Folder className="size-3.5 shrink-0 text-muted-foreground" />
+                        <Link
+                            href={namespaceRoute.url(namespace.id)}
+                            className="text-primary hover:underline"
+                        >
+                            {namespace.name}
+                        </Link>
+                    </div>
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                    /{namespace.full_path}
+                </td>
+                <td className="px-4 py-3">
+                    {namespace.is_published ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                            <CheckCircle2 className="size-3" />
+                            Published
+                        </span>
+                    ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                            <FilePen className="size-3" />
+                            Draft
+                        </span>
+                    )}
+                </td>
+                <td className="px-4 py-3 text-muted-foreground">
+                    {namespace.posts_count}
+                </td>
+                <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                        {namespace.is_published && (
+                            <Button variant="outline" size="sm" asChild>
+                                <a
+                                    href={`/${namespace.full_path}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    <ExternalLink className="size-4" />
+                                    View
+                                </a>
+                            </Button>
+                        )}
+                        <Button variant="outline" size="sm" asChild>
+                            <Link
+                                href={NamespaceController.edit.url(
+                                    namespace.id,
+                                )}
+                            >
+                                Edit
+                            </Link>
+                        </Button>
+                        <Form
+                            {...NamespaceController.destroy.form(namespace.id)}
+                        >
+                            {({ processing }) => (
+                                <Button
+                                    type="submit"
+                                    variant="destructive"
+                                    size="sm"
+                                    disabled={processing}
+                                >
+                                    Delete
+                                </Button>
+                            )}
+                        </Form>
+                    </div>
+                </td>
+            </tr>
+            {isExpanded &&
+                namespace.children.map((child) => (
+                    <ChildRow
+                        key={child.id}
+                        namespace={child}
+                        depth={depth + 1}
+                        expandedIds={expandedIds}
+                        onToggle={onToggle}
+                    />
+                ))}
+        </>
+    );
+}
+
 export default function Index({
     namespaces: initialNamespaces,
     sort,
@@ -197,6 +334,21 @@ export default function Index({
 }) {
     const [namespaces, setNamespaces] = useState(initialNamespaces);
     const [reorderMode, setReorderMode] = useState(false);
+    const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
+
+    function toggleExpand(id: number) {
+        setExpandedIds((prev) => {
+            const next = new Set(prev);
+
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+
+            return next;
+        });
+    }
 
     useEffect(() => {
         setNamespaces(initialNamespaces);
@@ -352,13 +504,35 @@ export default function Index({
                                         items={namespaces.map((ns) => ns.id)}
                                         strategy={verticalListSortingStrategy}
                                     >
-                                        {namespaces.map((ns) => (
+                                        {namespaces.flatMap((ns) => [
                                             <SortableRow
                                                 key={ns.id}
                                                 namespace={ns}
                                                 isDndActive={reorderMode}
-                                            />
-                                        ))}
+                                                isExpanded={expandedIds.has(
+                                                    ns.id,
+                                                )}
+                                                onToggle={() =>
+                                                    toggleExpand(ns.id)
+                                                }
+                                            />,
+                                            ...(!reorderMode &&
+                                            expandedIds.has(ns.id)
+                                                ? ns.children.map((child) => (
+                                                      <ChildRow
+                                                          key={child.id}
+                                                          namespace={child}
+                                                          depth={1}
+                                                          expandedIds={
+                                                              expandedIds
+                                                          }
+                                                          onToggle={
+                                                              toggleExpand
+                                                          }
+                                                      />
+                                                  ))
+                                                : []),
+                                        ])}
                                     </SortableContext>
                                 </tbody>
                             </table>

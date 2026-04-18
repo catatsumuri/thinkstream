@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\User;
 use App\Support\ReservedContentPath;
@@ -13,6 +14,23 @@ test('authenticated users can view the create form', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)->get(route('admin.namespaces.create'))->assertOk();
+});
+
+test('create form accepts a parent namespace query', function () {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create([
+        'name' => 'Guides',
+        'slug' => 'guides',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.namespaces.create', ['parent' => $parent->id]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('parentNamespace.id', $parent->id)
+            ->where('parentNamespace.name', 'Guides')
+            ->where('parentNamespace.full_path', 'guides')
+        );
 });
 
 test('guests are redirected from the create form', function () {
@@ -123,6 +141,23 @@ test('storing a namespace allows the same slug under a different parent', functi
     ]);
 });
 
+test('storing a namespace rejects a slug used by a page in the same parent namespace', function () {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create(['slug' => 'guide']);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $parent->id,
+        'slug' => 'markdown',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('admin.namespaces.store'), [
+            'parent_id' => $parent->id,
+            'slug' => 'markdown',
+            'name' => 'Markdown',
+        ])
+        ->assertSessionHasErrors('slug');
+});
+
 test('storing a namespace requires a slug', function () {
     $user = User::factory()->create();
 
@@ -223,6 +258,27 @@ test('updating a namespace rejects using itself as a parent', function () {
             'name' => $namespace->name,
         ])
         ->assertSessionHasErrors('parent_id');
+});
+
+test('updating a namespace rejects a slug used by a page in the same parent namespace', function () {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create(['slug' => 'guide']);
+    $namespace = PostNamespace::factory()->create([
+        'parent_id' => $parent->id,
+        'slug' => 'drafts',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $parent->id,
+        'slug' => 'markdown',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.namespaces.update', $namespace), [
+            'parent_id' => $parent->id,
+            'slug' => 'markdown',
+            'name' => 'Markdown',
+        ])
+        ->assertSessionHasErrors('slug');
 });
 
 test('authenticated users can delete a namespace', function () {

@@ -2,10 +2,12 @@
 
 namespace App\Http\Requests\Admin;
 
+use App\Support\ContentPathConflict;
 use App\Support\ReservedContentPath;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Validator;
 
 class StoreNamespaceRequest extends FormRequest
 {
@@ -63,6 +65,32 @@ class StoreNamespaceRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'cover_image' => ['nullable', 'image', 'max:2048'],
             'is_published' => ['boolean'],
+        ];
+    }
+
+    /**
+     * @return array<int, callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [
+            function (Validator $validator): void {
+                if ($validator->errors()->hasAny(['parent_id', 'slug'])) {
+                    return;
+                }
+
+                $conflictPath = ContentPathConflict::findNamespaceConflict(
+                    $this->parentId(),
+                    (string) $this->input('slug'),
+                );
+
+                if ($conflictPath !== null) {
+                    $validator->errors()->add(
+                        'slug',
+                        "This slug is already used by another page or child namespace at /{$conflictPath}.",
+                    );
+                }
+            },
         ];
     }
 }

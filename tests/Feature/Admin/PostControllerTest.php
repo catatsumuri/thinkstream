@@ -17,6 +17,22 @@ test('authenticated users can view the posts index (namespace list)', function (
     $this->actingAs($user)->get(route('admin.posts.index'))->assertOk();
 });
 
+test('posts index only shows root namespaces with children nested', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create(['name' => 'Root', 'parent_id' => null]);
+    $child = PostNamespace::factory()->create(['name' => 'Child', 'parent_id' => $root->id]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.index'))
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/index')
+            ->has('namespaces', 1)
+            ->where('namespaces.0.id', $root->id)
+            ->has('namespaces.0.children', 1)
+            ->where('namespaces.0.children.0.id', $child->id)
+        );
+});
+
 test('posts index defaults to namespace sort order', function () {
     $user = User::factory()->create();
     $first = PostNamespace::factory()->create(['name' => 'Beta', 'sort_order' => 1]);
@@ -64,6 +80,47 @@ test('authenticated users can view the namespace post list', function () {
     $this->actingAs($user)->get(route('admin.posts.namespace', $namespace))->assertOk();
 });
 
+test('namespace post list exposes ancestors for breadcrumb', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create(['name' => 'Guides']);
+    $child = PostNamespace::factory()->create(['name' => 'Laravel', 'parent_id' => $root->id]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.namespace', $child))
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/namespace')
+            ->has('ancestors', 1)
+            ->where('ancestors.0.id', $root->id)
+            ->where('ancestors.0.name', 'Guides')
+        );
+});
+
+test('root namespace post list has empty ancestors', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.namespace', $root))
+        ->assertInertia(fn ($page) => $page
+            ->has('ancestors', 0)
+        );
+});
+
+test('namespace post list includes child namespaces', function () {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create();
+    $child = PostNamespace::factory()->create(['parent_id' => $parent->id]);
+    $other = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.namespace', $parent))
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/namespace')
+            ->has('children', 1)
+            ->where('children.0.id', $child->id)
+        );
+});
+
 test('namespace post list defaults to latest posts when no custom order exists', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create();
@@ -89,6 +146,28 @@ test('authenticated users can view the create form', function () {
     $namespace = PostNamespace::factory()->create();
 
     $this->actingAs($user)->get(route('admin.posts.create', $namespace))->assertOk();
+});
+
+test('create form exposes a slug prefix for nested namespaces', function () {
+    $user = User::factory()->create();
+    $parentNamespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+    ]);
+    $namespace = PostNamespace::factory()->create([
+        'parent_id' => $parentNamespace->id,
+        'slug' => 'laravel',
+        'full_path' => 'guides/laravel',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.create', $namespace))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/create')
+            ->where('namespace.id', $namespace->id)
+            ->where('slugPrefix', 'guides/laravel/')
+        );
 });
 
 test('authenticated users can store a post', function () {
@@ -156,6 +235,23 @@ test('the same slug is allowed in different namespaces', function () {
     $this->actingAs($user)
         ->post(route('admin.posts.store', $namespaceB), ['title' => 'My Post', 'slug' => 'shared-slug', 'content' => 'Some content'])
         ->assertRedirect(route('admin.posts.show', [$namespaceB, 'shared-slug']));
+});
+
+test('storing a post rejects a slug used by a child namespace in the same namespace', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create(['slug' => 'guide']);
+    PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'markdown',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.store', $namespace), [
+            'title' => 'Markdown',
+            'slug' => 'markdown',
+            'content' => 'Some content',
+        ])
+        ->assertSessionHasErrors('slug');
 });
 
 test('storing a post requires content', function () {
@@ -251,6 +347,27 @@ test('updating a post allows keeping the same slug', function () {
         ->assertRedirect(route('admin.posts.show', [$namespace, 'my-slug']));
 
     expect($post->fresh()->slug)->toBe('my-slug');
+});
+
+test('updating a post rejects a slug used by a child namespace in the same namespace', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create(['slug' => 'guide']);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'draft',
+    ]);
+    PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'markdown',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post]), [
+            'title' => 'Markdown',
+            'slug' => 'markdown',
+            'content' => 'Updated content.',
+        ])
+        ->assertSessionHasErrors('slug');
 });
 
 test('authenticated users can delete a post', function () {

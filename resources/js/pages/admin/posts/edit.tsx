@@ -20,6 +20,7 @@ import {
 type Namespace = {
     id: number;
     slug: string;
+    full_path: string;
     name: string;
 };
 
@@ -158,6 +159,10 @@ export default function Edit({
                                 <p className="text-xs text-muted-foreground">
                                     Lowercase letters, numbers, and hyphens
                                     only.
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Must be unique among pages and child
+                                    namespaces under /{namespace.full_path}.
                                 </p>
                                 <InputError message={errors.slug} />
                             </div>

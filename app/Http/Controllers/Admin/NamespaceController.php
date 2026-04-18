@@ -44,9 +44,19 @@ class NamespaceController extends Controller
         return back();
     }
 
-    public function create(): InertiaResponse
+    public function create(Request $request): InertiaResponse
     {
-        return Inertia::render('admin/namespaces/create');
+        $data = $request->validate([
+            'parent' => ['nullable', 'integer', Rule::exists('namespaces', 'id')],
+        ]);
+
+        $parentNamespace = isset($data['parent'])
+            ? PostNamespace::query()->find($data['parent'], ['id', 'name', 'full_path'])
+            : null;
+
+        return Inertia::render('admin/namespaces/create', [
+            'parentNamespace' => $parentNamespace,
+        ]);
     }
 
     public function store(StoreNamespaceRequest $request): RedirectResponse
