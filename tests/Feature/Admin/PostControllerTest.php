@@ -17,11 +17,71 @@ test('authenticated users can view the posts index (namespace list)', function (
     $this->actingAs($user)->get(route('admin.posts.index'))->assertOk();
 });
 
+test('posts index defaults to namespace sort order', function () {
+    $user = User::factory()->create();
+    $first = PostNamespace::factory()->create(['name' => 'Beta', 'sort_order' => 1]);
+    $second = PostNamespace::factory()->create(['name' => 'Alpha', 'sort_order' => 0]);
+    $last = PostNamespace::factory()->create(['name' => 'Gamma', 'sort_order' => null]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.index'))
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/index')
+            ->has('sort', fn ($sort) => $sort
+                ->where('column', 'sort_order')
+                ->where('direction', 'asc')
+            )
+            ->where('namespaces.0.id', $second->id)
+            ->where('namespaces.1.id', $first->id)
+            ->where('namespaces.2.id', $last->id)
+        );
+});
+
+test('posts index uses url sort params when provided', function () {
+    $user = User::factory()->create();
+    $topNamespace = PostNamespace::factory()->create();
+    $bottomNamespace = PostNamespace::factory()->create();
+    Post::factory()->for($user)->create(['namespace_id' => $topNamespace->id]);
+    Post::factory()->for($user)->create(['namespace_id' => $topNamespace->id]);
+    Post::factory()->for($user)->create(['namespace_id' => $bottomNamespace->id]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.index', ['sort' => 'posts_count', 'dir' => 'desc']))
+        ->assertInertia(fn ($page) => $page
+            ->has('sort', fn ($sort) => $sort
+                ->where('column', 'posts_count')
+                ->where('direction', 'desc')
+            )
+            ->where('namespaces.0.id', $topNamespace->id)
+            ->where('namespaces.1.id', $bottomNamespace->id)
+        );
+});
+
 test('authenticated users can view the namespace post list', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create();
 
     $this->actingAs($user)->get(route('admin.posts.namespace', $namespace))->assertOk();
+});
+
+test('namespace post list defaults to latest posts when no custom order exists', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $olderPost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'created_at' => now()->subDay(),
+    ]);
+    $newerPost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'created_at' => now(),
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.namespace', $namespace))
+        ->assertInertia(fn ($page) => $page
+            ->where('posts.0.id', $newerPost->id)
+            ->where('posts.1.id', $olderPost->id)
+        );
 });
 
 test('authenticated users can view the create form', function () {

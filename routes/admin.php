@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Route;
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     Route::redirect('/', '/admin/posts')->name('index');
 
+    Route::patch('namespaces/reorder', [NamespaceController::class, 'reorder'])->name('namespaces.reorder');
     Route::resource('namespaces', NamespaceController::class)->except(['index', 'show']);
 
     Route::prefix('posts')->name('posts.')->group(function () {
