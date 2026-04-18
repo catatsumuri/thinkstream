@@ -50,18 +50,35 @@ export default function Edit({
     const [publishedAt, setPublishedAt] = useState(
         isFutureDate ? initialPublishedAt : '',
     );
+    const [relativeTimeHint, setRelativeTimeHint] = useState<string | null>(
+        null,
+    );
 
-    function getRelativeTimeHint(value: string): string | null {
-        if (!value) return null;
-        const diff = new Date(value).getTime() - Date.now();
-        if (diff <= 0) return 'This date is in the past.';
+    function getRelativeTimeHint(value: string, now: number): string | null {
+        if (!value) {
+            return null;
+        }
+
+        const diff = new Date(value).getTime() - now;
+
+        if (diff <= 0) {
+            return 'This date is in the past.';
+        }
+
         const minutes = Math.round(diff / 60000);
-        if (minutes < 60)
+
+        if (minutes < 60) {
             return `Publishes in ${minutes} minute${minutes !== 1 ? 's' : ''}.`;
+        }
+
         const hours = Math.round(diff / 3600000);
-        if (hours < 24)
+
+        if (hours < 24) {
             return `Publishes in ${hours} hour${hours !== 1 ? 's' : ''}.`;
+        }
+
         const days = Math.round(diff / 86400000);
+
         return `Publishes in ${days} day${days !== 1 ? 's' : ''}.`;
     }
 
@@ -141,9 +158,15 @@ export default function Edit({
                                 <Checkbox
                                     id="is_draft"
                                     checked={isDraft}
-                                    onCheckedChange={(checked) =>
-                                        setIsDraft(checked === true)
-                                    }
+                                    onCheckedChange={(checked) => {
+                                        const nextIsDraft = checked === true;
+
+                                        setIsDraft(nextIsDraft);
+
+                                        if (nextIsDraft) {
+                                            setRelativeTimeHint(null);
+                                        }
+                                    }}
                                 />
                                 <Label htmlFor="is_draft">Save as draft</Label>
                             </div>
@@ -155,7 +178,11 @@ export default function Edit({
                                         checked={scheduleEnabled && !isDraft}
                                         onCheckedChange={(checked) => {
                                             setScheduleEnabled(checked);
-                                            if (!checked) setPublishedAt('');
+
+                                            if (!checked) {
+                                                setPublishedAt('');
+                                                setRelativeTimeHint(null);
+                                            }
                                         }}
                                         disabled={isDraft}
                                     />
@@ -179,15 +206,22 @@ export default function Edit({
                                             type="datetime-local"
                                             className="w-fit"
                                             value={publishedAt}
-                                            onChange={(e) =>
-                                                setPublishedAt(e.target.value)
-                                            }
+                                            onChange={(e) => {
+                                                const nextValue =
+                                                    e.target.value;
+
+                                                setPublishedAt(nextValue);
+                                                setRelativeTimeHint(
+                                                    getRelativeTimeHint(
+                                                        nextValue,
+                                                        Date.now(),
+                                                    ),
+                                                );
+                                            }}
                                         />
-                                        {getRelativeTimeHint(publishedAt) && (
+                                        {relativeTimeHint && (
                                             <p className="text-sm text-muted-foreground">
-                                                {getRelativeTimeHint(
-                                                    publishedAt,
-                                                )}
+                                                {relativeTimeHint}
                                             </p>
                                         )}
                                     </div>
