@@ -42,7 +42,12 @@ test('authenticated users can store a post', function () {
             'content' => '# Hello\n\nThis is a test post.',
             'published_at' => null,
         ])
-        ->assertRedirect(route('admin.posts.namespace', $namespace));
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('inertia.flash_data.toast', [
+            'type' => 'success',
+            'message' => 'Post created.',
+        ])
+        ->assertRedirect(route('admin.posts.show', [$namespace, 'hello-world']));
 
     $this->assertDatabaseHas('posts', [
         'namespace_id' => $namespace->id,
@@ -90,7 +95,7 @@ test('the same slug is allowed in different namespaces', function () {
 
     $this->actingAs($user)
         ->post(route('admin.posts.store', $namespaceB), ['title' => 'My Post', 'slug' => 'shared-slug', 'content' => 'Some content'])
-        ->assertRedirect(route('admin.posts.namespace', $namespaceB));
+        ->assertRedirect(route('admin.posts.show', [$namespaceB, 'shared-slug']));
 });
 
 test('storing a post requires content', function () {
@@ -112,6 +117,41 @@ test('authenticated users can view the edit form', function () {
         ->assertOk();
 });
 
+test('authenticated users can view a post details page', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'title' => 'Release Notes',
+        'slug' => 'release-notes',
+        'is_draft' => false,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.show', [$namespace, $post]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/show')
+            ->where('namespace.id', $namespace->id)
+            ->where('post.id', $post->id)
+            ->where('post.slug', 'release-notes')
+            ->where('post.title', 'Release Notes')
+        );
+});
+
+test('post details are scoped to their namespace', function () {
+    $user = User::factory()->create();
+    $correctNamespace = PostNamespace::factory()->create();
+    $wrongNamespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $correctNamespace->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.show', [$wrongNamespace, $post]))
+        ->assertNotFound();
+});
+
 test('authenticated users can update a post', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create();
@@ -124,7 +164,12 @@ test('authenticated users can update a post', function () {
             'content' => 'Updated content.',
             'published_at' => null,
         ])
-        ->assertRedirect(route('admin.posts.namespace', $namespace));
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('inertia.flash_data.toast', [
+            'type' => 'success',
+            'message' => 'Post saved.',
+        ])
+        ->assertRedirect(route('admin.posts.show', [$namespace, 'new-slug']));
 
     $post->refresh();
     expect($post->title)->toBe('New Title');
@@ -143,7 +188,7 @@ test('updating a post allows keeping the same slug', function () {
             'slug' => 'my-slug',
             'content' => 'Updated content.',
         ])
-        ->assertRedirect(route('admin.posts.namespace', $namespace));
+        ->assertRedirect(route('admin.posts.show', [$namespace, 'my-slug']));
 
     expect($post->fresh()->slug)->toBe('my-slug');
 });
@@ -155,6 +200,11 @@ test('authenticated users can delete a post', function () {
 
     $this->actingAs($user)
         ->delete(route('admin.posts.destroy', [$namespace, $post]))
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('inertia.flash_data.toast', [
+            'type' => 'success',
+            'message' => 'Post deleted.',
+        ])
         ->assertRedirect(route('admin.posts.namespace', $namespace));
 
     expect($post->fresh())->toBeNull();

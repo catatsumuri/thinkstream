@@ -37,13 +37,23 @@ class PostController extends Controller
 
     public function store(StorePostRequest $request, PostNamespace $namespace): RedirectResponse
     {
-        Post::create([
+        $post = Post::create([
             ...$request->validated(),
             'namespace_id' => $namespace->id,
             'user_id' => $request->user()->id,
         ]);
 
-        return to_route('admin.posts.namespace', $namespace);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Post created.']);
+
+        return to_route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]);
+    }
+
+    public function show(PostNamespace $namespace, Post $post): Response
+    {
+        return Inertia::render('admin/posts/show', [
+            'namespace' => $namespace,
+            'post' => $post,
+        ]);
     }
 
     public function edit(PostNamespace $namespace, Post $post): Response
@@ -58,12 +68,16 @@ class PostController extends Controller
     {
         $post->update($request->validated());
 
-        return to_route('admin.posts.namespace', $namespace);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Post saved.']);
+
+        return to_route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]);
     }
 
     public function destroy(PostNamespace $namespace, Post $post): RedirectResponse
     {
         $post->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Post deleted.']);
 
         return to_route('admin.posts.namespace', $namespace);
     }

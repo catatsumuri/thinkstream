@@ -1,6 +1,6 @@
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
 import { Form } from '@inertiajs/react';
-import { CheckCircle2, Clock, FilePen } from 'lucide-react';
+import { CheckCircle2, Clock, ExternalLink, FilePen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
 import {
@@ -9,11 +9,13 @@ import {
     create,
     edit,
     destroy,
+    show,
 } from '@/routes/admin/posts';
 
 type Namespace = {
     id: number;
     slug: string;
+    full_path: string;
     name: string;
 };
 
@@ -100,7 +102,15 @@ export default function Namespace({
                                         className="border-b last:border-0"
                                     >
                                         <td className="px-4 py-3 font-medium">
-                                            {post.title}
+                                            <Link
+                                                href={show.url({
+                                                    namespace: namespace.id,
+                                                    post: post.slug,
+                                                })}
+                                                className="hover:underline"
+                                            >
+                                                {post.title}
+                                            </Link>
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
                                             {post.slug}
@@ -132,6 +142,26 @@ export default function Namespace({
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                {!post.is_draft &&
+                                                    post.published_at &&
+                                                    new Date(
+                                                        post.published_at,
+                                                    ) <= new Date() && (
+                                                        <Button
+                                                            variant="outline"
+                                                            size="sm"
+                                                            asChild
+                                                        >
+                                                            <a
+                                                                href={`/${namespace.full_path}/${post.slug}`}
+                                                                target="_blank"
+                                                                rel="noreferrer"
+                                                            >
+                                                                <ExternalLink className="size-4" />
+                                                                View
+                                                            </a>
+                                                        </Button>
+                                                    )}
                                                 <Button
                                                     variant="outline"
                                                     size="sm"

@@ -1,6 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { Form } from '@inertiajs/react';
-import { CheckCircle2, FilePen } from 'lucide-react';
+import { CheckCircle2, ExternalLink, FilePen } from 'lucide-react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
@@ -10,6 +10,7 @@ import { index, namespace as namespaceRoute } from '@/routes/admin/posts';
 type Namespace = {
     id: number;
     slug: string;
+    full_path: string;
     name: string;
     is_published: boolean;
     posts_count: number;
@@ -104,6 +105,22 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                                         </td>
                                         <td className="px-4 py-3 text-right">
                                             <div className="flex items-center justify-end gap-2">
+                                                {ns.is_published && (
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        asChild
+                                                    >
+                                                        <a
+                                                            href={`/${ns.full_path}`}
+                                                            target="_blank"
+                                                            rel="noreferrer"
+                                                        >
+                                                            <ExternalLink className="size-4" />
+                                                            View
+                                                        </a>
+                                                    </Button>
+                                                )}
                                                 <Button
                                                     variant="outline"
                                                     size="sm"

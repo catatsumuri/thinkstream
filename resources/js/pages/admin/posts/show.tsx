@@ -1,4 +1,5 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
+import { CheckCircle2, Clock, FilePen } from 'lucide-react';
 import MarkdownContent from '@/components/markdown-content';
 import { Button } from '@/components/ui/button';
 import { createMarkdownComponents } from '@/lib/markdown-components';
@@ -8,6 +9,7 @@ import {
     edit,
     index,
     namespace as namespaceRoute,
+    show,
 } from '@/routes/admin/posts';
 
 type Namespace = {
@@ -21,6 +23,7 @@ type Post = {
     title: string;
     slug: string;
     content: string;
+    is_draft: boolean;
     published_at: string | null;
     created_at: string;
 };
@@ -39,7 +42,7 @@ export default function Show({
             { title: namespace.name, href: namespaceRoute.url(namespace.id) },
             {
                 title: post.title,
-                href: edit.url({ namespace: namespace.id, post: post.slug }),
+                href: show.url({ namespace: namespace.id, post: post.slug }),
             },
         ],
     });
@@ -57,13 +60,21 @@ export default function Show({
                                 {namespace.slug}/{post.slug}
                             </span>
                             <span>·</span>
-                            {post.published_at ? (
-                                <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                    Published
+                            {post.is_draft ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                    <FilePen className="size-3" />
+                                    Draft
+                                </span>
+                            ) : !post.published_at ||
+                              new Date(post.published_at) > new Date() ? (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                    <Clock className="size-3" />
+                                    Scheduled
                                 </span>
                             ) : (
-                                <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                    Draft
+                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                    <CheckCircle2 className="size-3" />
+                                    Published
                                 </span>
                             )}
                         </div>
