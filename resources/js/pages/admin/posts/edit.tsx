@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { dashboard } from '@/routes';
 import {
     index,
@@ -36,11 +37,50 @@ export default function Edit({
     namespace: Namespace;
     post: Post;
 }) {
-    const publishedAt = post.published_at
+    const initialPublishedAt = post.published_at
         ? new Date(post.published_at).toISOString().slice(0, 16)
         : '';
 
+    const isFutureDate = post.published_at
+        ? new Date(post.published_at) > new Date()
+        : false;
+
     const [isDraft, setIsDraft] = useState(post.is_draft);
+    const [scheduleEnabled, setScheduleEnabled] = useState(isFutureDate);
+    const [publishedAt, setPublishedAt] = useState(
+        isFutureDate ? initialPublishedAt : '',
+    );
+    const [relativeTimeHint, setRelativeTimeHint] = useState<string | null>(
+        null,
+    );
+
+    function getRelativeTimeHint(value: string, now: number): string | null {
+        if (!value) {
+            return null;
+        }
+
+        const diff = new Date(value).getTime() - now;
+
+        if (diff <= 0) {
+            return 'This date is in the past.';
+        }
+
+        const minutes = Math.round(diff / 60000);
+
+        if (minutes < 60) {
+            return `Publishes in ${minutes} minute${minutes !== 1 ? 's' : ''}.`;
+        }
+
+        const hours = Math.round(diff / 3600000);
+
+        if (hours < 24) {
+            return `Publishes in ${hours} hour${hours !== 1 ? 's' : ''}.`;
+        }
+
+        const days = Math.round(diff / 86400000);
+
+        return `Publishes in ${days} day${days !== 1 ? 's' : ''}.`;
+    }
 
     setLayoutProps({
         breadcrumbs: [
@@ -118,28 +158,74 @@ export default function Edit({
                                 <Checkbox
                                     id="is_draft"
                                     checked={isDraft}
-                                    onCheckedChange={(checked) =>
-                                        setIsDraft(checked === true)
-                                    }
+                                    onCheckedChange={(checked) => {
+                                        const nextIsDraft = checked === true;
+
+                                        setIsDraft(nextIsDraft);
+
+                                        if (nextIsDraft) {
+                                            setRelativeTimeHint(null);
+                                        }
+                                    }}
                                 />
                                 <Label htmlFor="is_draft">Save as draft</Label>
                             </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="published_at">
-                                    Publish date (optional)
-                                </Label>
-                                <Input
-                                    id="published_at"
+                            <div className="grid gap-3">
+                                <div className="flex items-center gap-3">
+                                    <Switch
+                                        id="schedule_toggle"
+                                        checked={scheduleEnabled && !isDraft}
+                                        onCheckedChange={(checked) => {
+                                            setScheduleEnabled(checked);
+
+                                            if (!checked) {
+                                                setPublishedAt('');
+                                                setRelativeTimeHint(null);
+                                            }
+                                        }}
+                                        disabled={isDraft}
+                                    />
+                                    <Label htmlFor="schedule_toggle">
+                                        Enable scheduled publishing
+                                    </Label>
+                                </div>
+                                <input
+                                    type="hidden"
                                     name="published_at"
-                                    type="datetime-local"
-                                    defaultValue={publishedAt}
-                                    className="w-fit"
-                                    disabled={isDraft}
+                                    value={
+                                        scheduleEnabled && !isDraft
+                                            ? publishedAt
+                                            : ''
+                                    }
                                 />
-                                <p className="text-xs text-muted-foreground">
-                                    Leave blank to publish immediately.
-                                </p>
+                                {scheduleEnabled && !isDraft && (
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <Input
+                                            id="published_at"
+                                            type="datetime-local"
+                                            className="w-fit"
+                                            value={publishedAt}
+                                            onChange={(e) => {
+                                                const nextValue =
+                                                    e.target.value;
+
+                                                setPublishedAt(nextValue);
+                                                setRelativeTimeHint(
+                                                    getRelativeTimeHint(
+                                                        nextValue,
+                                                        Date.now(),
+                                                    ),
+                                                );
+                                            }}
+                                        />
+                                        {relativeTimeHint && (
+                                            <p className="text-sm text-muted-foreground">
+                                                {relativeTimeHint}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
                                 <InputError message={errors.published_at} />
                             </div>
 

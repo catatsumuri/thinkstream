@@ -1,4 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { ImageOff } from 'lucide-react';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { login } from '@/routes';
 import { index as adminPosts } from '@/routes/admin/posts';
@@ -66,7 +67,15 @@ export default function Index({ namespaces }: { namespaces: PostNamespace[] }) {
                                                 className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                             />
                                         ) : (
-                                            <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+                                            <>
+                                                <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-muted-foreground/50">
+                                                    <ImageOff className="size-6" />
+                                                    <span className="text-xs font-medium tracking-wide uppercase">
+                                                        No image
+                                                    </span>
+                                                </div>
+                                            </>
                                         )}
                                     </div>
                                     <div className="flex flex-col gap-1 p-5">

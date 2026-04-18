@@ -50,6 +50,8 @@ test('authenticated users can store a post', function () {
         'slug' => 'hello-world',
         'user_id' => $user->id,
     ]);
+
+    expect(Post::query()->where('slug', 'hello-world')->value('published_at'))->not->toBeNull();
 });
 
 test('storing a post requires a title', function () {
@@ -127,6 +129,7 @@ test('authenticated users can update a post', function () {
     $post->refresh();
     expect($post->title)->toBe('New Title');
     expect($post->slug)->toBe('new-slug');
+    expect($post->published_at)->not->toBeNull();
 });
 
 test('updating a post allows keeping the same slug', function () {

@@ -156,6 +156,67 @@ test('published namespace shows post with breadcrumbs', function () {
         );
 });
 
+test('scheduled post is not counted on homepage', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true, 'parent_id' => null]);
+    Post::factory()->for($namespace, 'namespace')->published()->create();
+    Post::factory()->for($namespace, 'namespace')->scheduled()->create();
+
+    $this->get(route('home'))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->where('namespaces.0.posts_count', 1)
+        );
+});
+
+test('post without publish date is not counted on homepage', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true, 'parent_id' => null]);
+
+    Post::factory()->for($namespace, 'namespace')->create([
+        'is_draft' => false,
+        'published_at' => null,
+    ]);
+
+    $this->get(route('home'))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page->where('namespaces.0.posts_count', 0));
+});
+
+test('scheduled post is not shown in namespace listing', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    Post::factory()->for($namespace, 'namespace')->scheduled()->create();
+
+    $this->get(route('posts.path', ['path' => $namespace->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page->has('posts', 0));
+});
+
+test('post without publish date is not directly accessible', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->create([
+        'is_draft' => false,
+        'published_at' => null,
+    ]);
+
+    $this->get(route('posts.path', ['path' => $post->full_path]))->assertNotFound();
+});
+
+test('scheduled post is not directly accessible', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->scheduled()->create();
+
+    $this->get(route('posts.path', ['path' => $post->full_path]))->assertNotFound();
+});
+
+test('scheduled post does not appear in sidebar when viewing another post', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $published = Post::factory()->for($namespace, 'namespace')->published()->create();
+    Post::factory()->for($namespace, 'namespace')->scheduled()->create();
+
+    $this->get(route('posts.path', ['path' => $published->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page->has('posts', 1));
+});
+
 test('admin routes are not caught by the content path wildcard', function () {
     $this->get('/admin/namespaces/create')->assertRedirect(route('login'));
 });

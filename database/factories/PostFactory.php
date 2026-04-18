@@ -43,4 +43,12 @@ class PostFactory extends Factory
             'published_at' => now(),
         ]);
     }
+
+    public function scheduled(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'is_draft' => false,
+            'published_at' => now()->addDay(),
+        ]);
+    }
 }
