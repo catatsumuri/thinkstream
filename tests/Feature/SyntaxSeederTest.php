@@ -2,13 +2,14 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
-use Database\Seeders\PostSeeder;
+use Database\Seeders\RoutingCheckSeeder;
+use Database\Seeders\SyntaxSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
-test('post seeder creates the zenn syntax guide with code block examples', function () {
-    $this->seed(PostSeeder::class);
+test('syntax seeder creates the zenn syntax guide with code block examples', function () {
+    $this->seed(SyntaxSeeder::class);
 
     $namespace = PostNamespace::query()
         ->where('slug', 'guides')
@@ -43,8 +44,8 @@ test('post seeder creates the zenn syntax guide with code block examples', funct
     expect($post->published_at)->not->toBeNull();
 });
 
-test('post seeder creates the mintlify syntax page', function () {
-    $this->seed(PostSeeder::class);
+test('syntax seeder creates the mintlify syntax page', function () {
+    $this->seed(SyntaxSeeder::class);
 
     $namespace = PostNamespace::query()
         ->where('slug', 'guides')
@@ -94,8 +95,8 @@ test('post seeder creates the mintlify syntax page', function () {
     expect($post->published_at)->not->toBeNull();
 });
 
-test('post seeder creates wildcard routing lookalike namespaces', function () {
-    $this->seed(PostSeeder::class);
+test('routing check seeder creates wildcard routing lookalike namespaces', function () {
+    $this->seed(RoutingCheckSeeder::class);
 
     $apiaryNamespace = PostNamespace::query()->where('slug', 'apiary')->first();
     $administratorNamespace = PostNamespace::query()->where('slug', 'administrator')->first();
