@@ -352,3 +352,41 @@ test('deleting a namespace removes the cover image file', function () {
 
     Storage::disk('public')->assertMissing($path);
 });
+
+test('guests cannot reorder namespaces', function () {
+    $this->patch(route('admin.namespaces.reorder'), ['ids' => [1, 2]])
+        ->assertRedirect(route('login'));
+});
+
+test('reorder updates sort_order on namespaces', function () {
+    $user = User::factory()->create();
+    $a = PostNamespace::factory()->create();
+    $b = PostNamespace::factory()->create();
+    $c = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->patch(route('admin.namespaces.reorder'), ['ids' => [$c->id, $a->id, $b->id]])
+        ->assertRedirect();
+
+    expect($c->fresh()->sort_order)->toBe(0);
+    expect($a->fresh()->sort_order)->toBe(1);
+    expect($b->fresh()->sort_order)->toBe(2);
+});
+
+test('reorder validates ids are required', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->patchJson(route('admin.namespaces.reorder'), [])
+        ->assertUnprocessable();
+});
+
+test('reorder validates namespace ids are distinct and existing', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->patchJson(route('admin.namespaces.reorder'), ['ids' => [$namespace->id, $namespace->id, 999999]])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['ids.1', 'ids.2']);
+});

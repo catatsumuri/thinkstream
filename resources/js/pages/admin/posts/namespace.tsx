@@ -113,7 +113,7 @@ export default function Namespace({
                                             </Link>
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
-                                            {post.slug}
+                                            /{namespace.full_path}/{post.slug}
                                         </td>
                                         <td className="px-4 py-3">
                                             {post.is_draft ? (

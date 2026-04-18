@@ -8,15 +8,36 @@ use App\Http\Requests\Admin\UpdatePostRequest;
 use App\Models\Post;
 use App\Models\PostNamespace;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PostController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $allowedColumns = ['name', 'posts_count', 'is_published'];
+        $allowedDirections = ['asc', 'desc'];
+
+        if ($request->hasAny(['sort', 'dir'])) {
+            $column = in_array($request->input('sort'), $allowedColumns) ? $request->input('sort') : 'name';
+            $direction = in_array($request->input('dir'), $allowedDirections) ? $request->input('dir') : 'asc';
+
+            $namespaces = PostNamespace::withCount('posts')
+                ->orderBy($column, $direction)
+                ->get();
+        } else {
+            $column = 'sort_order';
+            $direction = 'asc';
+
+            $namespaces = PostNamespace::withCount('posts')
+                ->orderByRaw('sort_order IS NULL, sort_order ASC, name ASC')
+                ->get();
+        }
+
         return Inertia::render('admin/posts/index', [
-            'namespaces' => PostNamespace::withCount('posts')->orderBy('name')->get(),
+            'namespaces' => $namespaces,
+            'sort' => ['column' => $column, 'direction' => $direction],
         ]);
     }
 
@@ -24,7 +45,7 @@ class PostController extends Controller
     {
         return Inertia::render('admin/posts/namespace', [
             'namespace' => $namespace,
-            'posts' => $namespace->posts()->latest()->get(['id', 'title', 'slug', 'is_draft', 'published_at', 'created_at']),
+            'posts' => $namespace->sortPosts($namespace->posts()->latest()->get(['id', 'title', 'slug', 'is_draft', 'published_at', 'created_at'])),
         ]);
     }
 

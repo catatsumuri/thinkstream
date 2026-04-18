@@ -7,13 +7,44 @@ use App\Http\Requests\Admin\StoreNamespaceRequest;
 use App\Http\Requests\Admin\UpdateNamespaceRequest;
 use App\Models\PostNamespace;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
-use Inertia\Response;
+use Inertia\Response as InertiaResponse;
 
 class NamespaceController extends Controller
 {
-    public function create(): Response
+    public function reorder(Request $request): RedirectResponse
+    {
+        $ids = $request->validate([
+            'ids' => ['required', 'array'],
+            'ids.*' => ['integer', 'distinct', Rule::exists('namespaces', 'id')],
+        ])['ids'];
+
+        $caseStatement = collect($ids)
+            ->values()
+            ->map(fn (int $id, int $index): string => 'WHEN ? THEN ?')
+            ->implode(' ');
+
+        $bindings = [
+            ...collect($ids)
+                ->values()
+                ->flatMap(fn (int $id, int $index): array => [$id, $index])
+                ->all(),
+            ...$ids,
+        ];
+
+        DB::update(
+            "UPDATE namespaces SET sort_order = CASE id {$caseStatement} END WHERE id IN (".implode(', ', array_fill(0, count($ids), '?')).')',
+            $bindings,
+        );
+
+        return back();
+    }
+
+    public function create(): InertiaResponse
     {
         return Inertia::render('admin/namespaces/create');
     }
@@ -31,7 +62,7 @@ class NamespaceController extends Controller
         return to_route('admin.posts.index');
     }
 
-    public function edit(PostNamespace $namespace): Response
+    public function edit(PostNamespace $namespace): InertiaResponse
     {
         return Inertia::render('admin/namespaces/edit', [
             'namespace' => $namespace,
