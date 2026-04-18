@@ -85,7 +85,7 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                                                 >
                                                     <Link
                                                         href={NamespaceController.edit.url(
-                                                            ns.slug,
+                                                            ns.id,
                                                         )}
                                                     >
                                                         Edit
@@ -93,7 +93,7 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                                                 </Button>
                                                 <Form
                                                     {...NamespaceController.destroy.form(
-                                                        ns.slug,
+                                                        ns.id,
                                                     )}
                                                 >
                                                     {({ processing }) => (
