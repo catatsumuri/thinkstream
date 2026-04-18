@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Support\ReservedContentPath;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -16,7 +18,7 @@ class PostController extends Controller
         return Inertia::render('posts/index', [
             'namespaces' => PostNamespace::published()
                 ->whereNull('parent_id')
-                ->withCount(['posts' => fn ($q) => $q->where('is_draft', false)])
+                ->withCount(['posts' => fn (Builder $query) => $this->applyPublishedPostScope($query)])
                 ->orderBy('name')
                 ->get(['id', 'slug', 'full_path', 'name', 'description', 'cover_image']),
         ]);
@@ -31,7 +33,7 @@ class PostController extends Controller
         $post = Post::query()
             ->with('namespace:id,parent_id,slug,full_path,name,cover_image,is_published')
             ->where('full_path', $normalizedPath)
-            ->where('is_draft', false)
+            ->tap(fn (Builder $query) => $this->applyPublishedPostScope($query))
             ->first();
 
         if ($post) {
@@ -62,11 +64,11 @@ class PostController extends Controller
         $rootNamespace = $this->rootNamespace($namespace, $ancestors);
         $children = $namespace->children()
             ->where('is_published', true)
-            ->withCount(['posts' => fn ($query) => $query->where('is_draft', false)])
+            ->withCount(['posts' => fn (Builder $query) => $this->applyPublishedPostScope($query)])
             ->get(['id', 'name', 'slug', 'full_path', 'description', 'cover_image']);
 
-        $posts = $namespace->posts()
-            ->where('is_draft', false)
+        $posts = $this->applyPublishedPostScope($namespace->posts())
+            ->orderByRaw('published_at is null')
             ->orderBy('published_at')
             ->orderBy('id')
             ->get(['id', 'slug', 'full_path', 'title', 'published_at']);
@@ -87,8 +89,8 @@ class PostController extends Controller
     {
         $namespace = $post->namespace;
         $rootNamespace = $this->rootNamespace($namespace, $ancestors);
-        $posts = $namespace->posts()
-            ->where('is_draft', false)
+        $posts = $this->applyPublishedPostScope($namespace->posts())
+            ->orderByRaw('published_at is null')
             ->orderBy('published_at')
             ->orderBy('id')
             ->get(['id', 'slug', 'full_path', 'title', 'published_at']);
@@ -110,6 +112,16 @@ class PostController extends Controller
         return $ancestors->first() ?? $namespace;
     }
 
+    private function applyPublishedPostScope(Builder|HasMany $query): Builder|HasMany
+    {
+        return $query
+            ->where('is_draft', false)
+            ->where(function (Builder $query): void {
+                $query->whereNull('published_at')
+                    ->orWhere('published_at', '<=', now());
+            });
+    }
+
     /**
      * @return array{
      *     name: string,
@@ -124,13 +136,11 @@ class PostController extends Controller
             ->where('is_published', true)
             ->get(['id', 'slug', 'full_path', 'name', 'post_order']);
 
-        $posts = $namespace->sortPosts(
-            $namespace->posts()
-                ->where('is_draft', false)
-                ->orderBy('published_at')
-                ->orderBy('id')
-                ->get(['title', 'full_path', 'slug'])
-        );
+        $posts = $namespace->sortPosts($this->applyPublishedPostScope($namespace->posts())
+            ->orderByRaw('published_at is null')
+            ->orderBy('published_at')
+            ->orderBy('id')
+            ->get(['title', 'full_path', 'slug']));
 
         return [
             'name' => $namespace->name,

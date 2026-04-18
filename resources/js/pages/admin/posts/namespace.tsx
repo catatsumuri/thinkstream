@@ -1,5 +1,6 @@
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
 import { Form } from '@inertiajs/react';
+import { CheckCircle2, Clock, FilePen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
 import {
@@ -106,17 +107,20 @@ export default function Namespace({
                                         </td>
                                         <td className="px-4 py-3">
                                             {post.is_draft ? (
-                                                <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                                    <FilePen className="size-3" />
                                                     Draft
                                                 </span>
                                             ) : post.published_at &&
                                               new Date(post.published_at) >
                                                   new Date() ? (
-                                                <span className="inline-flex items-center rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                                    <Clock className="size-3" />
                                                     Scheduled
                                                 </span>
                                             ) : (
-                                                <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                                    <CheckCircle2 className="size-3" />
                                                     Published
                                                 </span>
                                             )}

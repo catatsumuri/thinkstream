@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { Form } from '@inertiajs/react';
+import { CheckCircle2, FilePen } from 'lucide-react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
@@ -86,17 +87,17 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                                             {ns.slug}
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span
-                                                className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${
-                                                    ns.is_published
-                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-                                                        : 'bg-muted text-muted-foreground'
-                                                }`}
-                                            >
-                                                {ns.is_published
-                                                    ? 'Published'
-                                                    : 'Draft'}
-                                            </span>
+                                            {ns.is_published ? (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                                                    <CheckCircle2 className="size-3" />
+                                                    Published
+                                                </span>
+                                            ) : (
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                                    <FilePen className="size-3" />
+                                                    Draft
+                                                </span>
+                                            )}
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
                                             {ns.posts_count}

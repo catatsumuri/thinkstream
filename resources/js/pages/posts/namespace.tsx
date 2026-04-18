@@ -1,5 +1,10 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import {
+    ChevronRight,
+    ImageOff,
+    PanelLeftClose,
+    PanelLeftOpen,
+} from 'lucide-react';
 import { useState } from 'react';
 import ContentNavTree, {
     type ContentNavNode,
@@ -192,7 +197,15 @@ export default function Namespace({
                                                         className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                                                     />
                                                 ) : (
-                                                    <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+                                                    <>
+                                                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+                                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-muted-foreground/50">
+                                                            <ImageOff className="size-6" />
+                                                            <span className="text-xs font-medium tracking-wide uppercase">
+                                                                No image
+                                                            </span>
+                                                        </div>
+                                                    </>
                                                 )}
                                             </div>
                                             <div className="space-y-2 p-5">

@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { dashboard } from '@/routes';
 import {
     index,
@@ -42,6 +43,22 @@ export default function Create({ namespace }: { namespace: Namespace }) {
     const [slug, setSlug] = useState('');
     const [slugTouched, setSlugTouched] = useState(false);
     const [isDraft, setIsDraft] = useState(false);
+    const [scheduleEnabled, setScheduleEnabled] = useState(false);
+    const [publishedAt, setPublishedAt] = useState('');
+
+    function getRelativeTimeHint(value: string): string | null {
+        if (!value) return null;
+        const diff = new Date(value).getTime() - Date.now();
+        if (diff <= 0) return 'This date is in the past.';
+        const minutes = Math.round(diff / 60000);
+        if (minutes < 60)
+            return `Publishes in ${minutes} minute${minutes !== 1 ? 's' : ''}.`;
+        const hours = Math.round(diff / 3600000);
+        if (hours < 24)
+            return `Publishes in ${hours} hour${hours !== 1 ? 's' : ''}.`;
+        const days = Math.round(diff / 86400000);
+        return `Publishes in ${days} day${days !== 1 ? 's' : ''}.`;
+    }
 
     function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
         if (!slugTouched) {
@@ -119,20 +136,50 @@ export default function Create({ namespace }: { namespace: Namespace }) {
                                 <Label htmlFor="is_draft">Save as draft</Label>
                             </div>
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="published_at">
-                                    Publish date (optional)
-                                </Label>
-                                <Input
-                                    id="published_at"
+                            <div className="grid gap-3">
+                                <div className="flex items-center gap-3">
+                                    <Switch
+                                        id="schedule_toggle"
+                                        checked={scheduleEnabled && !isDraft}
+                                        onCheckedChange={(checked) => {
+                                            setScheduleEnabled(checked);
+                                            if (!checked) setPublishedAt('');
+                                        }}
+                                        disabled={isDraft}
+                                    />
+                                    <Label htmlFor="schedule_toggle">
+                                        Enable scheduled publishing
+                                    </Label>
+                                </div>
+                                <input
+                                    type="hidden"
                                     name="published_at"
-                                    type="datetime-local"
-                                    className="w-fit"
-                                    disabled={isDraft}
+                                    value={
+                                        scheduleEnabled && !isDraft
+                                            ? publishedAt
+                                            : ''
+                                    }
                                 />
-                                <p className="text-xs text-muted-foreground">
-                                    Leave blank to publish immediately.
-                                </p>
+                                {scheduleEnabled && !isDraft && (
+                                    <div className="flex flex-wrap items-center gap-3">
+                                        <Input
+                                            id="published_at"
+                                            type="datetime-local"
+                                            className="w-fit"
+                                            value={publishedAt}
+                                            onChange={(e) =>
+                                                setPublishedAt(e.target.value)
+                                            }
+                                        />
+                                        {getRelativeTimeHint(publishedAt) && (
+                                            <p className="text-sm text-muted-foreground">
+                                                {getRelativeTimeHint(
+                                                    publishedAt,
+                                                )}
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
                                 <InputError message={errors.published_at} />
                             </div>
 
