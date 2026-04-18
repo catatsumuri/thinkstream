@@ -1,4 +1,5 @@
-import { Form, Head, setLayoutProps } from '@inertiajs/react';
+import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
+import { ExternalLink } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownEditor from '@/components/markdown-editor';
@@ -12,6 +13,7 @@ import {
     index,
     namespace as namespaceRoute,
     edit,
+    show,
     update,
 } from '@/routes/admin/posts';
 
@@ -24,6 +26,7 @@ type Namespace = {
 type Post = {
     id: number;
     slug: string;
+    full_path: string;
     title: string;
     content: string;
     is_draft: boolean;
@@ -99,11 +102,27 @@ export default function Edit({
             <Head title={`Edit: ${post.title}`} />
 
             <div className="space-y-6 p-4">
-                <div>
-                    <h1 className="text-2xl font-semibold">Edit Post</h1>
-                    <p className="text-sm text-muted-foreground">
-                        {namespace.slug}/{post.slug}
-                    </p>
+                <div className="flex items-start justify-between">
+                    <div>
+                        <h1 className="text-2xl font-semibold">Edit Post</h1>
+                        <p className="text-sm text-muted-foreground">
+                            {namespace.slug}/{post.slug}
+                        </p>
+                    </div>
+                    {!post.is_draft &&
+                        post.published_at &&
+                        new Date(post.published_at) <= new Date() && (
+                            <Button variant="outline" size="sm" asChild>
+                                <a
+                                    href={`/${post.full_path}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    <ExternalLink className="size-4" />
+                                    View Live
+                                </a>
+                            </Button>
+                        )}
                 </div>
 
                 <Form
@@ -234,9 +253,14 @@ export default function Edit({
                                     Save Changes
                                 </Button>
                                 <Button type="button" variant="outline" asChild>
-                                    <a href={namespaceRoute.url(namespace.id)}>
+                                    <Link
+                                        href={show.url({
+                                            namespace: namespace.id,
+                                            post: post.slug,
+                                        })}
+                                    >
                                         Cancel
-                                    </a>
+                                    </Link>
                                 </Button>
                             </div>
                         </>
