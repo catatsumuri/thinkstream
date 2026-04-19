@@ -121,6 +121,17 @@ export default function TableOfContents({
             }
         };
 
+    const handleTocClick =
+        (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
+            e.preventDefault();
+            const target = document.getElementById(id);
+            if (target) {
+                target.scrollIntoView({ block: 'start' });
+            }
+            window.history.pushState(null, '', `#${encodeURIComponent(id)}`);
+            setActiveId(id);
+        };
+
     return (
         <nav
             ref={scrollContainerRef}
@@ -137,7 +148,8 @@ export default function TableOfContents({
                 <div key={post.id} className="space-y-1">
                     <a
                         ref={registerItemRef(`post-${post.slug}`)}
-                        href={`#post-${post.slug}`}
+                        href={`#${encodeURIComponent(`post-${post.slug}`)}`}
+                        onClick={handleTocClick(`post-${post.slug}`)}
                         data-test={`toc-link-post-${post.slug}`}
                         data-active={activeId === `post-${post.slug}`}
                         aria-current={
@@ -165,7 +177,8 @@ export default function TableOfContents({
                                 >
                                     <a
                                         ref={registerItemRef(h.id)}
-                                        href={`#${h.id}`}
+                                        href={`#${encodeURIComponent(h.id)}`}
+                                        onClick={handleTocClick(h.id)}
                                         data-test={`toc-link-${h.id}`}
                                         data-active={activeId === h.id}
                                         aria-current={

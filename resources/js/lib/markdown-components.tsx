@@ -79,11 +79,11 @@ function makeHeadingComponents(
             const Tag = `h${level}` as 'h1' | 'h2' | 'h3';
 
             return (
-                <Tag id={id} className="group scroll-mt-6">
+                <Tag id={id} className="group scroll-mt-24">
                     <span className="inline-flex items-center gap-2">
                         {children}
                         <a
-                            href={`#${id}`}
+                            href={`#${encodeURIComponent(id)}`}
                             onClick={() => copyAnchorUrl(id)}
                             aria-label={`Copy link to ${text}`}
                             title="Copy link to this section"

@@ -71,6 +71,75 @@ MARKDOWN,
         );
 });
 
+test('table of contents supports encoded hashes for japanese headings', function () {
+    $post = Post::factory()->published()->create([
+        'slug' => 'upgrade-12-to-13',
+        'title' => 'Upgrade 12 to 13',
+        'content' => collect([
+            '## Installation',
+            str_repeat('Setup steps. ', 120),
+            '## キャッシュ',
+            str_repeat('Cache migration notes. ', 120),
+        ])->implode("\n\n"),
+    ]);
+
+    $headingId = 'upgrade-12-to-13-キャッシュ';
+    $encodedHeadingId = rawurlencode($headingId);
+
+    $page = visit(route('posts.path', ['path' => $post->full_path]))->resize(1600, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent("[data-test=\"heading-anchor-{$headingId}\"]")
+        ->assertPresent("[data-test=\"table-of-contents\"][data-sticky=\"true\"] [data-test=\"toc-link-{$headingId}\"]")
+        ->assertAttribute(
+            "[data-test=\"heading-anchor-{$headingId}\"]",
+            'href',
+            "#{$encodedHeadingId}",
+        )
+        ->assertAttribute(
+            "[data-test=\"table-of-contents\"][data-sticky=\"true\"] [data-test=\"toc-link-{$headingId}\"]",
+            'href',
+            "#{$encodedHeadingId}",
+        );
+
+    expect($page->script(<<<JS
+        (() => {
+            const link = document.querySelector('[data-test="table-of-contents"][data-sticky="true"] [data-test="toc-link-{$headingId}"]');
+
+            if (! link) {
+                return null;
+            }
+
+            link.click();
+
+            return window.location.hash;
+        })()
+    JS))->toBe("#{$encodedHeadingId}");
+
+    $page->wait(0.5);
+
+    expect($page->script(<<<JS
+        (() => {
+            return document.querySelector('[data-test="table-of-contents"][data-sticky="true"] [data-test="toc-link-{$headingId}"]')?.getAttribute('data-active');
+        })()
+    JS))->toBe('true');
+
+    expect($page->script(<<<JS
+        (() => {
+            const heading = document.getElementById('{$headingId}');
+
+            if (! heading) {
+                return null;
+            }
+
+            const top = heading.getBoundingClientRect().top;
+
+            return top >= 0 && top <= 160;
+        })()
+    JS))->toBeTrue();
+});
+
 test('post navigation toggle stays within the viewport after page scroll', function () {
     $namespace = PostNamespace::factory()->create([
         'slug' => 'guides',
