@@ -1,6 +1,7 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
 import { useRef, useState } from 'react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
+import CoverImageDropzone from '@/components/cover-image-dropzone';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -190,16 +191,11 @@ export default function Create({
 
                             <div className="grid gap-2">
                                 <Label htmlFor="cover_image">Cover Image</Label>
-                                <Input
+                                <CoverImageDropzone
                                     id="cover_image"
                                     name="cover_image"
-                                    type="file"
-                                    accept="image/*"
+                                    error={errors.cover_image}
                                 />
-                                <p className="text-xs text-muted-foreground">
-                                    Optional. JPEG, PNG, GIF, or WebP. Max 2MB.
-                                </p>
-                                <InputError message={errors.cover_image} />
                             </div>
 
                             <div className="flex items-center gap-2">
