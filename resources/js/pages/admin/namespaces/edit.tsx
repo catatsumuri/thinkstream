@@ -1,5 +1,6 @@
 import { Head, setLayoutProps, useForm } from '@inertiajs/react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
+import CoverImageDropzone from '@/components/cover-image-dropzone';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -108,31 +109,12 @@ export default function Edit({ namespace }: { namespace: Namespace }) {
 
                     <div className="grid gap-2">
                         <Label htmlFor="cover_image">Cover Image</Label>
-                        {namespace.cover_image_url && (
-                            <img
-                                src={namespace.cover_image_url}
-                                alt="Current cover"
-                                className="h-32 w-full rounded-md object-cover"
-                            />
-                        )}
-                        <Input
+                        <CoverImageDropzone
                             id="cover_image"
-                            name="cover_image"
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) =>
-                                setData(
-                                    'cover_image',
-                                    e.target.files?.[0] ?? null,
-                                )
-                            }
+                            currentImageUrl={namespace.cover_image_url}
+                            onChange={(file) => setData('cover_image', file)}
+                            error={errors.cover_image}
                         />
-                        <p className="text-xs text-muted-foreground">
-                            {namespace.cover_image_url
-                                ? 'Upload a new image to replace the current one.'
-                                : 'Optional. JPEG, PNG, GIF, or WebP. Max 2MB.'}
-                        </p>
-                        <InputError message={errors.cover_image} />
                     </div>
 
                     <div className="flex items-center gap-2">
