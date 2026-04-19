@@ -56,13 +56,17 @@ function findHeadingOffset(
                 activeFence = null;
             }
 
-            offset += line.length + (offset + line.length < normalizedContent.length ? 1 : 0);
+            offset +=
+                line.length +
+                (offset + line.length < normalizedContent.length ? 1 : 0);
 
             continue;
         }
 
         if (activeFence !== null) {
-            offset += line.length + (offset + line.length < normalizedContent.length ? 1 : 0);
+            offset +=
+                line.length +
+                (offset + line.length < normalizedContent.length ? 1 : 0);
 
             continue;
         }
@@ -77,7 +81,9 @@ function findHeadingOffset(
             return offset;
         }
 
-        offset += line.length + (offset + line.length < normalizedContent.length ? 1 : 0);
+        offset +=
+            line.length +
+            (offset + line.length < normalizedContent.length ? 1 : 0);
     }
 
     return null;
