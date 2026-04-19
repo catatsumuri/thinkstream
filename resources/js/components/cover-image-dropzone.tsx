@@ -1,3 +1,4 @@
+import { ImageUp, Pencil, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import { cn } from '@/lib/utils';
@@ -102,34 +103,82 @@ export default function CoverImageDropzone({
                 onDragLeave={handleDragLeave}
                 onDrop={handleDrop}
                 className={cn(
-                    'relative cursor-pointer overflow-hidden rounded-md border border-dashed transition-colors',
+                    'group relative cursor-pointer overflow-hidden rounded-md border border-dashed transition-colors',
                     isDragging
-                        ? 'border-ring bg-ring/5'
-                        : 'border-input hover:border-ring/60',
+                        ? 'border-ring bg-ring/8'
+                        : 'border-input bg-muted/30 hover:border-ring/60 hover:bg-muted/50',
                 )}
+                style={
+                    !displayImage
+                        ? {
+                              backgroundImage: isDragging
+                                  ? 'radial-gradient(circle, color-mix(in oklch, var(--ring) 25%, transparent) 1.5px, transparent 1.5px)'
+                                  : 'radial-gradient(circle, color-mix(in oklch, var(--muted-foreground) 20%, transparent) 1.5px, transparent 1.5px)',
+                              backgroundSize: '18px 18px',
+                          }
+                        : undefined
+                }
             >
                 {displayImage ? (
-                    <img
-                        src={displayImage}
-                        alt="Cover preview"
-                        className="h-40 w-full object-cover"
-                    />
+                    <>
+                        <img
+                            src={displayImage}
+                            alt="Cover preview"
+                            className="h-40 w-full object-cover"
+                        />
+                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                            <div className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-white">
+                                <Pencil className="size-3" />
+                                Replace image
+                            </div>
+                        </div>
+                    </>
                 ) : (
-                    <div className="flex flex-col items-center justify-center gap-1 py-10 text-muted-foreground">
-                        <p className="text-sm">
-                            Drop image here or click to upload
-                        </p>
-                        <p className="text-xs">
+                    <div className="flex flex-col items-center justify-center gap-3 py-12 text-muted-foreground">
+                        <div
+                            className={cn(
+                                'rounded-full border-2 border-dashed p-4 transition-colors',
+                                isDragging
+                                    ? 'border-ring text-ring'
+                                    : 'border-muted-foreground/30',
+                            )}
+                        >
+                            <ImageUp
+                                className={cn(
+                                    'size-8 transition-transform',
+                                    isDragging && 'scale-110',
+                                )}
+                            />
+                        </div>
+                        <div className="flex flex-col items-center gap-1">
+                            <p className="text-sm font-medium">
+                                {isDragging
+                                    ? 'Drop to upload'
+                                    : 'Drop image here'}
+                            </p>
+                            {!isDragging && (
+                                <p className="text-xs">
+                                    or{' '}
+                                    <span className="underline underline-offset-2">
+                                        click to browse
+                                    </span>
+                                </p>
+                            )}
+                        </div>
+                        <p className="text-xs opacity-60">
                             JPEG, PNG, GIF, or WebP · Max 2 MB
                         </p>
                     </div>
                 )}
 
-                {isDragging && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-background/80">
-                        <p className="text-sm font-medium text-ring">
-                            Drop to upload
-                        </p>
+                {isDragging && displayImage && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                        <div className="flex flex-col items-center gap-2 text-white">
+                            <ImageUp className="size-8" />
+                            <p className="text-sm font-medium">
+                                Drop to replace
+                            </p>
+                        </div>
                     </div>
                 )}
             </div>
@@ -138,8 +187,9 @@ export default function CoverImageDropzone({
                 <button
                     type="button"
                     onClick={handleClear}
-                    className="w-fit text-xs text-muted-foreground hover:text-destructive"
+                    className="flex w-fit items-center gap-1 text-xs text-muted-foreground hover:text-destructive"
                 >
+                    <X className="size-3" />
                     Clear selection
                 </button>
             )}
