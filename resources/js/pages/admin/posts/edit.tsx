@@ -12,7 +12,6 @@ import { dashboard } from '@/routes';
 import {
     index,
     namespace as namespaceRoute,
-    edit,
     show,
     update,
     uploadImage,
