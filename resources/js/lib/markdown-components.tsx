@@ -104,9 +104,30 @@ function makeHeadingComponents(
     };
 }
 
+function MarkdownLink({
+    href,
+    children,
+    ...props
+}: ComponentPropsWithoutRef<'a'>) {
+    const isExternal = href?.startsWith('http');
+
+    return (
+        <a
+            href={href}
+            className="underline underline-offset-2 hover:opacity-70"
+            target={isExternal ? '_blank' : undefined}
+            rel={isExternal ? 'noopener noreferrer' : undefined}
+            {...props}
+        >
+            {children}
+        </a>
+    );
+}
+
 export function createMarkdownComponents(postSlug?: string): Components {
     return {
         ...makeHeadingComponents(postSlug),
+        a: MarkdownLink,
         code: CodeBlock,
         img: MarkdownImage,
         p: MarkdownParagraph,

@@ -26,7 +26,7 @@ export function Breadcrumbs({
                             return (
                                 <Fragment key={index}>
                                     <BreadcrumbItem>
-                                        {isLast ? (
+                                        {isLast || !item.href ? (
                                             <BreadcrumbPage>
                                                 {item.title}
                                             </BreadcrumbPage>

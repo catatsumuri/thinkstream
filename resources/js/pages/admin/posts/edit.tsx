@@ -12,7 +12,6 @@ import { dashboard } from '@/routes';
 import {
     index,
     namespace as namespaceRoute,
-    edit,
     show,
     update,
     uploadImage,
@@ -90,12 +89,13 @@ export default function Edit({
     setLayoutProps({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
-            { title: 'Posts', href: index.url() },
+            { title: 'Namespaces', href: index.url() },
             { title: namespace.name, href: namespaceRoute.url(namespace.id) },
             {
                 title: post.title,
-                href: edit.url({ namespace: namespace.id, post: post.slug }),
+                href: show.url({ namespace: namespace.id, post: post.slug }),
             },
+            { title: 'Edit' },
         ],
     });
 

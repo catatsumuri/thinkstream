@@ -65,7 +65,7 @@ export default function Namespace({
     setLayoutProps({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
-            { title: 'Posts', href: index.url() },
+            { title: 'Namespaces', href: index.url() },
             ...ancestors.map((ancestor) => ({
                 title: ancestor.name,
                 href: namespaceRoute.url(ancestor.id),

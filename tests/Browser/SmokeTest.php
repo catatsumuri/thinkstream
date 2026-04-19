@@ -71,6 +71,35 @@ MARKDOWN,
         );
 });
 
+test('markdown external links open in a new tab safely', function () {
+    $post = Post::factory()->published()->create([
+        'slug' => 'external-links',
+        'title' => 'External Links',
+        'content' => <<<'MARKDOWN'
+[External Docs](https://example.com/docs)
+
+[Internal Docs](/guides/internal)
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
+
+    $page
+        ->assertSee('External Links')
+        ->assertAttribute(
+            'a[href="https://example.com/docs"]',
+            'target',
+            '_blank',
+        )
+        ->assertAttribute(
+            'a[href="https://example.com/docs"]',
+            'rel',
+            'noopener noreferrer',
+        )
+        ->assertAttributeMissing('a[href="/guides/internal"]', 'target')
+        ->assertAttributeMissing('a[href="/guides/internal"]', 'rel');
+});
+
 test('table of contents supports encoded hashes for japanese headings', function () {
     $post = Post::factory()->published()->create([
         'slug' => 'upgrade-12-to-13',

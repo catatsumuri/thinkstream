@@ -24,7 +24,7 @@ const mainNavItems: NavItem[] = [
         icon: LayoutGrid,
     },
     {
-        title: 'Posts',
+        title: 'Namespaces',
         href: adminPostsIndex.url(),
         icon: NotebookPen,
     },
