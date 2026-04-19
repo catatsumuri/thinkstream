@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StorePostRequest;
 use App\Http\Requests\Admin\UpdatePostRequest;
+use App\Http\Requests\Admin\UploadPostImageRequest;
 use App\Models\Post;
 use App\Models\PostNamespace;
 use Illuminate\Http\RedirectResponse;
@@ -112,6 +113,21 @@ class PostController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Post saved.']);
 
         return to_route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]);
+    }
+
+    public function uploadNamespaceImage(UploadPostImageRequest $request, PostNamespace $namespace): RedirectResponse
+    {
+        $path = $request->file('image')->store("posts/{$namespace->full_path}", 'public');
+
+        return to_route('admin.posts.create', $namespace)->with('imageUrl', '/images/'.$path);
+    }
+
+    public function uploadImage(UploadPostImageRequest $request, PostNamespace $namespace, Post $post): RedirectResponse
+    {
+        $path = $request->file('image')->store("posts/{$post->id}", 'public');
+
+        return to_route('admin.posts.edit', ['namespace' => $namespace, 'post' => $post->slug])
+            ->with('imageUrl', '/images/'.$path);
     }
 
     public function destroy(PostNamespace $namespace, Post $post): RedirectResponse

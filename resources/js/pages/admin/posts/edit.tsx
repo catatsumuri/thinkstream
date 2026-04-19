@@ -15,6 +15,7 @@ import {
     edit,
     show,
     update,
+    uploadImage,
 } from '@/routes/admin/posts';
 
 type Namespace = {
@@ -171,6 +172,10 @@ export default function Edit({
                                 name="content"
                                 defaultValue={post.content}
                                 error={errors.content}
+                                uploadUrl={uploadImage.url({
+                                    namespace: namespace.id,
+                                    post: post.slug,
+                                })}
                             />
 
                             <div className="flex items-center gap-2">

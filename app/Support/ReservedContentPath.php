@@ -7,6 +7,7 @@ class ReservedContentPath
     public const ROOT_SEGMENTS = [
         'admin',
         'api',
+        'images',
         'login',
         'register',
     ];

@@ -14,6 +14,7 @@ import {
     namespace as namespaceRoute,
     create,
     store,
+    uploadNamespaceImage,
 } from '@/routes/admin/posts';
 
 type Namespace = {
@@ -164,6 +165,9 @@ export default function Create({
                             <MarkdownEditor
                                 name="content"
                                 error={errors.content}
+                                uploadUrl={uploadNamespaceImage.url(
+                                    namespace.id,
+                                )}
                             />
 
                             <div className="flex items-center gap-2">

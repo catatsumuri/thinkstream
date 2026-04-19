@@ -1,11 +1,16 @@
 <?php
 
 use App\Http\Controllers\Api\OgpController;
+use App\Http\Controllers\ImageController;
 use App\Http\Controllers\PostController;
 use App\Support\ReservedContentPath;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [PostController::class, 'index'])->name('home');
+
+Route::get('/images/{path}', [ImageController::class, 'show'])
+    ->where('path', '.+')
+    ->name('images.show');
 
 Route::get('/api/ogp', [OgpController::class, 'fetch'])
     ->middleware('throttle:60,1')
