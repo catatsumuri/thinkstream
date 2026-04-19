@@ -6,10 +6,9 @@ import {
     PanelRightClose,
     PanelRightOpen,
 } from 'lucide-react';
-import { useState } from 'react';
-import ContentNavTree, {
-    type ContentNavNode,
-} from '@/components/content-nav-tree';
+import { useMemo, useState } from 'react';
+import type { ContentNavNode } from '@/components/content-nav-tree';
+import ContentNavTree from '@/components/content-nav-tree';
 import MarkdownContent from '@/components/markdown-content';
 import TableOfContents from '@/components/table-of-contents';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
@@ -49,7 +48,11 @@ export default function Show({
     const { auth } = usePage<{
         auth: { user: { id: number; name: string } | null };
     }>().props;
-    const toc = useMarkdownToc([post]);
+    const tocPosts = useMemo(
+        () => [{ slug: post.slug, content: post.content }],
+        [post.content, post.slug],
+    );
+    const toc = useMarkdownToc(tocPosts);
     const entry = toc.get(post.slug);
     const isMobile = useIsMobile();
     const [tocOverride, setTocOverride] = useState<boolean | null>(null);

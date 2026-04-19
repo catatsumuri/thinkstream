@@ -1,8 +1,17 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
-import { CheckCircle2, Clock, FilePen } from 'lucide-react';
+import {
+    CheckCircle2,
+    Clock,
+    FilePen,
+    PanelRightClose,
+    PanelRightOpen,
+} from 'lucide-react';
+import { useMemo, useState } from 'react';
 import MarkdownContent from '@/components/markdown-content';
+import TableOfContents from '@/components/table-of-contents';
 import { Button } from '@/components/ui/button';
-import { createMarkdownComponents } from '@/lib/markdown-components';
+import { useMarkdownToc } from '@/hooks/use-markdown-toc';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { dashboard } from '@/routes';
 import {
     destroy,
@@ -35,6 +44,17 @@ export default function Show({
     namespace: Namespace;
     post: Post;
 }) {
+    const isMobile = useIsMobile();
+    const [tocOverride, setTocOverride] = useState<boolean | null>(null);
+    const tocPosts = useMemo(
+        () => [{ slug: post.slug, content: post.content }],
+        [post.content, post.slug],
+    );
+    const toc = useMarkdownToc(tocPosts);
+    const entry = toc.get(post.slug);
+    const hasHeadings = (entry?.headings.length ?? 0) > 0;
+    const tocVisible = tocOverride ?? !isMobile;
+
     setLayoutProps({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
@@ -80,7 +100,25 @@ export default function Show({
                         </div>
                     </div>
 
-                    <div className="flex shrink-0 gap-2">
+                    <div className="flex shrink-0 items-center gap-2">
+                        {hasHeadings && (
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    setTocOverride(
+                                        (prev) => !(prev ?? !isMobile),
+                                    )
+                                }
+                                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
+                            >
+                                {tocVisible ? (
+                                    <PanelRightClose size={16} />
+                                ) : (
+                                    <PanelRightOpen size={16} />
+                                )}
+                                TOC
+                            </button>
+                        )}
                         <Button variant="outline" asChild>
                             <Link
                                 href={edit.url({
@@ -110,13 +148,52 @@ export default function Show({
                     </div>
                 </div>
 
-                <div className="rounded-xl border p-6">
-                    <div className="prose max-w-none prose-neutral dark:prose-invert">
-                        <MarkdownContent
-                            content={post.content}
-                            components={createMarkdownComponents()}
+                {tocVisible && hasHeadings && (
+                    <div className="lg:hidden">
+                        <TableOfContents
+                            posts={[
+                                {
+                                    id: post.id,
+                                    title: post.title,
+                                    slug: post.slug,
+                                    headings: entry!.headings,
+                                },
+                            ]}
                         />
                     </div>
+                )}
+
+                <div
+                    className={
+                        tocVisible && hasHeadings
+                            ? 'lg:grid lg:grid-cols-[1fr_240px] lg:gap-8'
+                            : ''
+                    }
+                >
+                    <div className="rounded-xl border p-6">
+                        <div className="prose max-w-none prose-neutral dark:prose-invert">
+                            <MarkdownContent
+                                content={post.content}
+                                components={entry?.components}
+                            />
+                        </div>
+                    </div>
+
+                    {tocVisible && hasHeadings && (
+                        <aside className="hidden lg:block">
+                            <TableOfContents
+                                sticky
+                                posts={[
+                                    {
+                                        id: post.id,
+                                        title: post.title,
+                                        slug: post.slug,
+                                        headings: entry!.headings,
+                                    },
+                                ]}
+                            />
+                        </aside>
+                    )}
                 </div>
             </div>
         </>

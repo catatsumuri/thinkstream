@@ -42,6 +42,35 @@ MARKDOWN,
         );
 });
 
+test('formatted headings keep anchor ids and toc links in sync', function () {
+    $post = Post::factory()->published()->create([
+        'slug' => 'formatted-headings',
+        'title' => 'Formatted Headings',
+        'content' => <<<'MARKDOWN'
+## The `foo_bar` [Guide](https://example.com/docs)
+
+Body
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $post->full_path]))->resize(1600, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="heading-anchor-formatted-headings-the-foo-bar-guide"]')
+        ->assertPresent('[data-test="table-of-contents"][data-sticky="true"] [data-test="toc-link-formatted-headings-the-foo-bar-guide"]')
+        ->assertAttribute(
+            '[data-test="heading-anchor-formatted-headings-the-foo-bar-guide"]',
+            'href',
+            '#formatted-headings-the-foo-bar-guide',
+        )
+        ->assertAttribute(
+            '[data-test="table-of-contents"][data-sticky="true"] [data-test="toc-link-formatted-headings-the-foo-bar-guide"]',
+            'href',
+            '#formatted-headings-the-foo-bar-guide',
+        );
+});
+
 test('post navigation toggle stays within the viewport after page scroll', function () {
     $namespace = PostNamespace::factory()->create([
         'slug' => 'guides',
