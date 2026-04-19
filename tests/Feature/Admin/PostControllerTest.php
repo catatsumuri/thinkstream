@@ -351,6 +351,25 @@ test('updating a post allows keeping the same slug', function () {
     expect($post->fresh()->slug)->toBe('my-slug');
 });
 
+test('updating a post redirects back to the requested heading fragment', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'my-slug',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post]), [
+            'title' => 'Updated Title',
+            'slug' => 'my-slug',
+            'content' => 'Updated content.',
+            'return_heading' => 'my-slug-section-title',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('admin.posts.show', [$namespace, 'my-slug']).'#my-slug-section-title');
+});
+
 test('updating a post rejects a slug used by a child namespace in the same namespace', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create(['slug' => 'guide']);

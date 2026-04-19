@@ -1,6 +1,9 @@
 import { useMemo } from 'react';
 import type { Components } from 'react-markdown';
-import { createMarkdownComponents } from '@/lib/markdown-components';
+import {
+    createMarkdownComponents,
+    type MarkdownComponentOptions,
+} from '@/lib/markdown-components';
 import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
 import { slugify } from '@/lib/slugify';
 
@@ -68,6 +71,7 @@ function extractHeadings(content: string, postSlug: string): Heading[] {
  */
 export function useMarkdownToc(
     posts: Array<{ slug: string; content: string }>,
+    componentOptions: MarkdownComponentOptions = {},
 ): Map<string, TocEntry> {
     return useMemo(() => {
         const map = new Map<string, TocEntry>();
@@ -75,10 +79,13 @@ export function useMarkdownToc(
         for (const post of posts) {
             map.set(post.slug, {
                 headings: extractHeadings(post.content, post.slug),
-                components: createMarkdownComponents(post.slug),
+                components: createMarkdownComponents(
+                    post.slug,
+                    componentOptions,
+                ),
             });
         }
 
         return map;
-    }, [posts]);
+    }, [componentOptions, posts]);
 }

@@ -1,4 +1,4 @@
-import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
+import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
 import {
     CheckCircle2,
     Clock,
@@ -11,6 +11,7 @@ import MarkdownContent from '@/components/markdown-content';
 import TableOfContents from '@/components/table-of-contents';
 import { Button } from '@/components/ui/button';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
+import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { dashboard } from '@/routes';
 import {
@@ -20,6 +21,67 @@ import {
     namespace as namespaceRoute,
     show,
 } from '@/routes/admin/posts';
+
+function findHeadingOffset(
+    content: string,
+    headingText: string,
+    level: number,
+): number | null {
+    const normalizedTarget = normalizeMarkdownHeadingText(headingText);
+
+    if (!normalizedTarget) {
+        return null;
+    }
+
+    const normalizedContent = content.replace(/\r\n/g, '\n');
+    const lines = normalizedContent.split('\n');
+    let offset = 0;
+    let activeFence: string | null = null;
+
+    for (const line of lines) {
+        const trimmedLine = line.trimStart();
+        const fenceMatch = /^(`{3,}|~{3,})/.exec(trimmedLine);
+
+        if (fenceMatch) {
+            const fence = fenceMatch[1];
+            const remainder = trimmedLine.slice(fence.length);
+
+            if (activeFence === null) {
+                activeFence = fence;
+            } else if (
+                fence[0] === activeFence[0] &&
+                fence.length >= activeFence.length &&
+                remainder.trim() === ''
+            ) {
+                activeFence = null;
+            }
+
+            offset += line.length + (offset + line.length < normalizedContent.length ? 1 : 0);
+
+            continue;
+        }
+
+        if (activeFence !== null) {
+            offset += line.length + (offset + line.length < normalizedContent.length ? 1 : 0);
+
+            continue;
+        }
+
+        const m = /^(#{1,6})\s+(.+?)(?:\s+#+\s*)?$/.exec(trimmedLine);
+
+        if (
+            m &&
+            m[1].length === level &&
+            normalizeMarkdownHeadingText(m[2]) === normalizedTarget
+        ) {
+            return offset;
+        }
+
+        offset += line.length + (offset + line.length < normalizedContent.length ? 1 : 0);
+    }
+
+    return null;
+}
 
 type Namespace = {
     id: number;
@@ -50,7 +112,42 @@ export default function Show({
         () => [{ slug: post.slug, content: post.content }],
         [post.content, post.slug],
     );
-    const toc = useMarkdownToc(tocPosts);
+
+    const handleEditHeading = ({
+        level,
+        text,
+        id,
+    }: {
+        level: number;
+        text: string;
+        id: string;
+    }) => {
+        const offset = findHeadingOffset(post.content, text, level);
+        const editUrl = edit.url({ namespace: namespace.id, post: post.slug });
+
+        if (typeof offset !== 'number') {
+            router.visit(editUrl);
+
+            return;
+        }
+
+        const clampedOffset = Math.max(
+            0,
+            Math.min(offset, post.content.length),
+        );
+        const params = new URLSearchParams({ jump: clampedOffset.toString() });
+
+        if (id) {
+            params.set('return_heading', id);
+        }
+
+        router.visit(`${editUrl}?${params.toString()}`);
+    };
+
+    const toc = useMarkdownToc(tocPosts, {
+        headingAnchorPlacement: 'gutter',
+        onEditHeading: handleEditHeading,
+    });
     const entry = toc.get(post.slug);
     const hasHeadings = (entry?.headings.length ?? 0) > 0;
     const tocVisible = tocOverride ?? !isMobile;
