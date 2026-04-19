@@ -4,6 +4,8 @@ use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 uses(RefreshDatabase::class);
 
@@ -385,4 +387,59 @@ test('authenticated users can delete a post', function () {
         ->assertRedirect(route('admin.posts.namespace', $namespace));
 
     expect($post->fresh())->toBeNull();
+});
+
+test('authenticated users can upload an image to a post', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create(['namespace_id' => $namespace->id]);
+    $image = UploadedFile::fake()->image('photo.jpg');
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.uploadImage', [$namespace, $post]), ['image' => $image])
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('imageUrl', "/images/posts/{$post->id}/{$image->hashName()}")
+        ->assertRedirect(route('admin.posts.edit', [$namespace, $post]));
+
+    Storage::disk('public')->assertExists("posts/{$post->id}/{$image->hashName()}");
+});
+
+test('guests cannot upload images', function () {
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->create(['namespace_id' => $namespace->id]);
+
+    $this->post(route('admin.posts.uploadImage', [$namespace, $post]), [])
+        ->assertRedirect(route('login'));
+});
+
+test('image upload rejects non-image files', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create(['namespace_id' => $namespace->id]);
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.uploadImage', [$namespace, $post]), [
+            'image' => UploadedFile::fake()->create('document.pdf', 100, 'application/pdf'),
+        ])
+        ->assertSessionHasErrors('image');
+});
+
+test('authenticated users can upload an image during post creation', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $image = UploadedFile::fake()->image('photo.jpg');
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.uploadNamespaceImage', $namespace), ['image' => $image])
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('imageUrl', "/images/posts/{$namespace->full_path}/{$image->hashName()}")
+        ->assertRedirect(route('admin.posts.create', $namespace));
+
+    Storage::disk('public')->assertExists("posts/{$namespace->full_path}/{$image->hashName()}");
 });
