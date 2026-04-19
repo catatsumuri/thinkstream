@@ -1,6 +1,6 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
 import { ExternalLink } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownEditor from '@/components/markdown-editor';
 import { Button } from '@/components/ui/button';
@@ -48,6 +48,21 @@ export default function Edit({
     const isFutureDate = post.published_at
         ? new Date(post.published_at) > new Date()
         : false;
+
+    const { jumpTo, returnHeading } = useMemo(() => {
+        if (typeof window === 'undefined') {
+            return { jumpTo: undefined, returnHeading: null };
+        }
+
+        const params = new URLSearchParams(window.location.search);
+        const jumpParam = params.get('jump');
+        const n = Number(jumpParam);
+
+        return {
+            jumpTo: Number.isFinite(n) && jumpParam !== null ? n : undefined,
+            returnHeading: params.get('return_heading'),
+        };
+    }, []);
 
     const [isDraft, setIsDraft] = useState(post.is_draft);
     const [scheduleEnabled, setScheduleEnabled] = useState(isFutureDate);
@@ -136,6 +151,13 @@ export default function Edit({
                 >
                     {({ processing, errors }) => (
                         <>
+                            {returnHeading && (
+                                <input
+                                    type="hidden"
+                                    name="return_heading"
+                                    value={returnHeading}
+                                />
+                            )}
                             <div className="grid gap-2">
                                 <Label htmlFor="title">Title</Label>
                                 <Input
@@ -176,6 +198,7 @@ export default function Edit({
                                     namespace: namespace.id,
                                     post: post.slug,
                                 })}
+                                jumpTo={jumpTo}
                             />
 
                             <div className="flex items-center gap-2">

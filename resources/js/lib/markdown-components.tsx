@@ -1,4 +1,4 @@
-import { Link as LinkIcon } from 'lucide-react';
+import { Link as LinkIcon, Pencil } from 'lucide-react';
 import { Children, isValidElement } from 'react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import type { Components } from 'react-markdown';
@@ -7,6 +7,16 @@ import { MarkdownImage } from '@/components/markdown-image';
 import { extractRenderedHeadingText } from '@/lib/markdown-heading-text';
 import { parseMarkdownImageMetadata } from '@/lib/markdown-syntax';
 import { slugify } from '@/lib/slugify';
+import { cn } from '@/lib/utils';
+
+export type MarkdownComponentOptions = {
+    headingAnchorPlacement?: 'inline' | 'gutter';
+    onEditHeading?: (payload: {
+        level: number;
+        text: string;
+        id: string;
+    }) => void;
+};
 
 function copyAnchorUrl(id: string): void {
     if (typeof window === 'undefined') {
@@ -69,6 +79,10 @@ function MarkdownParagraph({
 
 function makeHeadingComponents(
     postSlug?: string,
+    {
+        headingAnchorPlacement = 'inline',
+        onEditHeading,
+    }: MarkdownComponentOptions = {},
 ): Pick<Components, 'h1' | 'h2' | 'h3'> {
     const makeTag = (level: 1 | 2 | 3) =>
         function Heading({ children }: { children?: ReactNode }) {
@@ -79,20 +93,59 @@ function makeHeadingComponents(
             const Tag = `h${level}` as 'h1' | 'h2' | 'h3';
 
             return (
-                <Tag id={id} className="group scroll-mt-24">
-                    <span className="inline-flex items-center gap-2">
-                        {children}
+                <Tag
+                    id={id}
+                    className={cn(
+                        'group scroll-mt-24',
+                        headingAnchorPlacement === 'gutter' && 'relative',
+                    )}
+                >
+                    {headingAnchorPlacement === 'gutter' && (
                         <a
                             href={`#${encodeURIComponent(id)}`}
                             onClick={() => copyAnchorUrl(id)}
                             aria-label={`Copy link to ${text}`}
                             title="Copy link to this section"
                             data-test={`heading-anchor-${id}`}
-                            className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none"
+                            data-anchor-placement={headingAnchorPlacement}
+                            className="absolute top-1/2 left-0 hidden -translate-x-[calc(100%+0.5rem)] -translate-y-1/2 rounded p-1 text-muted-foreground/60 opacity-0 transition-all group-hover:opacity-100 hover:bg-accent hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none md:inline-flex"
                         >
                             <LinkIcon className="size-4" />
                         </a>
-                    </span>
+                    )}
+                    {headingAnchorPlacement === 'inline' ? (
+                        <span className="inline-flex items-center gap-2">
+                            {children}
+                            <a
+                                href={`#${encodeURIComponent(id)}`}
+                                onClick={() => copyAnchorUrl(id)}
+                                aria-label={`Copy link to ${text}`}
+                                title="Copy link to this section"
+                                data-test={`heading-anchor-${id}`}
+                                data-anchor-placement={headingAnchorPlacement}
+                                className="text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100 hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none"
+                            >
+                                <LinkIcon className="size-4" />
+                            </a>
+                        </span>
+                    ) : onEditHeading && (level === 2 || level === 3) ? (
+                        <span className="inline-flex items-center gap-1.5">
+                            {children}
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    onEditHeading({ level, text, id })
+                                }
+                                aria-label={`Edit section: ${text}`}
+                                title="Edit this section"
+                                className="rounded p-1 text-muted-foreground/50 opacity-0 transition-all group-hover:opacity-100 hover:bg-accent hover:text-foreground focus-visible:opacity-100 focus-visible:outline-none"
+                            >
+                                <Pencil className="size-3.5" />
+                            </button>
+                        </span>
+                    ) : (
+                        children
+                    )}
                 </Tag>
             );
         };
@@ -124,9 +177,12 @@ function MarkdownLink({
     );
 }
 
-export function createMarkdownComponents(postSlug?: string): Components {
+export function createMarkdownComponents(
+    postSlug?: string,
+    options: MarkdownComponentOptions = {},
+): Components {
     return {
-        ...makeHeadingComponents(postSlug),
+        ...makeHeadingComponents(postSlug, options),
         a: MarkdownLink,
         code: CodeBlock,
         img: MarkdownImage,

@@ -2,6 +2,7 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -289,4 +290,227 @@ test('table of contents highlights the active heading and stays scrollable', fun
     expect($page->script(<<<'JS'
         (() => document.querySelector('[data-test="table-of-contents"][data-sticky="true"] [data-test="toc-link-index-section-12"]')?.getAttribute('data-active'))()
     JS))->toBe('true');
+});
+
+test('admin post deep links restore hashed headings and use gutter anchors', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->create([
+        'slug' => 'index',
+        'title' => 'Index',
+        'content' => collect(range(1, 20))
+            ->map(
+                fn (int $section): string => "## Intro {$section}\n\n".str_repeat(
+                    'Long body content. ',
+                    90,
+                ),
+            )
+            ->push("## Line Breaks\n\n".str_repeat('Long body content. ', 90))
+            ->implode("\n\n"),
+    ]);
+
+    $headingId = 'index-line-breaks';
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.show', [
+        'namespace' => $namespace->id,
+        'post' => $post->slug,
+    ], absolute: false))->resize(1600, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->wait(0.5);
+
+    $page->script(<<<JS
+        (() => {
+            const url = new URL(window.location.href);
+            url.hash = '{$headingId}';
+            window.location.assign(url.toString());
+
+            return true;
+        })()
+    JS);
+
+    $page->wait(0.8);
+
+    expect($page->script(<<<JS
+        (() => {
+            const anchor = document.querySelector('[data-test="heading-anchor-{$headingId}"]');
+            const tocLink = document.querySelector('[data-test="table-of-contents"][data-sticky="true"] [data-test="toc-link-{$headingId}"]');
+
+            if (! anchor || ! tocLink) {
+                return null;
+            }
+
+            return {
+                anchorPlacement: anchor.getAttribute('data-anchor-placement'),
+                tocHref: tocLink.getAttribute('href'),
+            };
+        })()
+    JS))->toBe([
+        'anchorPlacement' => 'gutter',
+        'tocHref' => "#{$headingId}",
+    ]);
+
+    $metrics = $page->script(<<<JS
+        (() => {
+            const heading = document.getElementById('{$headingId}');
+
+            if (! heading) {
+                return null;
+            }
+
+            const top = heading.getBoundingClientRect().top;
+
+            return {
+                top,
+                scrollY: window.scrollY,
+                innerHeight: window.innerHeight,
+                hash: window.location.hash,
+            };
+        })()
+    JS);
+
+    expect($metrics['hash'])->toBe("#{$headingId}");
+    expect($metrics['scrollY'])->toBeGreaterThan(0);
+    expect($metrics['top'])->toBeGreaterThanOrEqual(0);
+    expect($metrics['top'])->toBeLessThanOrEqual($metrics['innerHeight']);
+
+    expect($page->script(<<<JS
+        (() => {
+            const heading = document.getElementById('{$headingId}');
+            const anchor = document.querySelector('[data-test="heading-anchor-{$headingId}"]');
+
+            if (! heading || ! anchor) {
+                return null;
+            }
+
+            const headingRect = heading.getBoundingClientRect();
+            const anchorRect = anchor.getBoundingClientRect();
+
+            return anchorRect.right <= headingRect.left + 8;
+        })()
+    JS))->toBeTrue();
+});
+
+test('admin section edit returns to the heading after saving', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->create([
+        'slug' => 'index',
+        'title' => 'Index',
+        'content' => implode("\r\n\r\n", [
+            ...collect(range(1, 20))
+                ->map(
+                    fn (int $section): string => "## Intro {$section}\r\n\r\n".str_repeat(
+                        'Long body content. ',
+                        90,
+                    ),
+                )
+                ->all(),
+            implode("\n", [
+                '````md',
+                '## Not a heading',
+                '````',
+                '',
+                '## Line Breaks',
+                '',
+                str_repeat('Long body content. ', 90),
+            ]),
+        ]),
+    ]);
+
+    $headingId = 'index-line-breaks';
+    $expectedOffset = strpos(str_replace("\r\n", "\n", $post->content), '## Line Breaks');
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.show', [
+        'namespace' => $namespace->id,
+        'post' => $post->slug,
+    ], absolute: false))->resize(1600, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->wait(0.5);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const button = document.querySelector('button[aria-label="Edit section: Line Breaks"]');
+
+            if (! button) {
+                return null;
+            }
+
+            button.click();
+
+            return true;
+        })()
+    JS))->toBeTrue();
+
+    $page
+        ->wait(0.8)
+        ->assertSee('Edit Post');
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const textarea = document.querySelector('textarea[name="content"]');
+
+            if (! textarea) {
+                return null;
+            }
+
+            return {
+                selectionStart: textarea.selectionStart,
+                selectedText: textarea.value.slice(textarea.selectionStart, textarea.selectionEnd),
+            };
+        })()
+    JS))->toBe([
+        'selectionStart' => $expectedOffset,
+        'selectedText' => '## Line Breaks',
+    ]);
+
+    $page
+        ->click('Save Changes')
+        ->wait(0.8)
+        ->assertSee('Index');
+
+    $metrics = $page->script(<<<JS
+        (() => {
+            const heading = document.getElementById('{$headingId}');
+
+            if (! heading) {
+                return null;
+            }
+
+            const top = heading.getBoundingClientRect().top;
+
+            return {
+                hash: window.location.hash,
+                scrollY: window.scrollY,
+                top,
+                innerHeight: window.innerHeight,
+            };
+        })()
+    JS);
+
+    expect($metrics['hash'])->toBe("#{$headingId}");
+    expect($metrics['scrollY'])->toBeGreaterThan(0);
+    expect($metrics['top'])->toBeGreaterThanOrEqual(0);
+    expect($metrics['top'])->toBeLessThanOrEqual($metrics['innerHeight']);
 });

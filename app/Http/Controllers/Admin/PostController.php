@@ -112,7 +112,11 @@ class PostController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Post saved.']);
 
-        return to_route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]);
+        $fragment = $request->string('return_heading')->toString();
+        $hash = $fragment !== '' ? '#'.ltrim($fragment, '#') : '';
+
+        return redirect()->route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug])
+            ->setTargetUrl(route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]).$hash);
     }
 
     public function uploadNamespaceImage(UploadPostImageRequest $request, PostNamespace $namespace): RedirectResponse

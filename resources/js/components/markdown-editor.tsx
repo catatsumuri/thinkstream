@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownContent from '@/components/markdown-content';
 import { Label } from '@/components/ui/label';
+import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
 import { createMarkdownComponents } from '@/lib/markdown-components';
+import { slugify } from '@/lib/slugify';
 import { cn } from '@/lib/utils';
 import { router, usePage } from '@inertiajs/react';
 
@@ -12,6 +14,7 @@ type Props = {
     defaultValue?: string;
     error?: string;
     uploadUrl?: string;
+    jumpTo?: number;
 };
 
 export default function MarkdownEditor({
@@ -20,11 +23,14 @@ export default function MarkdownEditor({
     defaultValue = '',
     error,
     uploadUrl,
+    jumpTo,
 }: Props) {
     const [value, setValue] = useState(defaultValue);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const previewRef = useRef<HTMLDivElement>(null);
     const { props } = usePage<{ imageUrl?: string }>();
     const previousImageUrlRef = useRef<string | undefined>(undefined);
+    const hasJumpedRef = useRef(false);
 
     useEffect(() => {
         if (
@@ -54,6 +60,51 @@ export default function MarkdownEditor({
             });
         }
     }, [props.imageUrl]);
+
+    useEffect(() => {
+        if (hasJumpedRef.current || jumpTo === undefined) {
+            return;
+        }
+
+        const textarea = textareaRef.current;
+
+        if (!textarea) {
+            return;
+        }
+
+        const clamped = Math.max(0, Math.min(jumpTo, textarea.value.length));
+        const lineEnd = textarea.value.indexOf('\n', clamped);
+        const selectionEnd = lineEnd === -1 ? textarea.value.length : lineEnd;
+        textarea.focus();
+        textarea.setSelectionRange(clamped, selectionEnd);
+
+        const lineHeight =
+            Number.parseFloat(window.getComputedStyle(textarea).lineHeight) ||
+            20;
+        const lineIndex =
+            textarea.value.slice(0, clamped).split(/\r?\n/).length - 1;
+        textarea.scrollTop = Math.max(
+            0,
+            lineIndex * lineHeight - lineHeight * 2,
+        );
+
+        const line = textarea.value.slice(clamped, selectionEnd);
+        const headingMatch = /^(#{1,6})\s+(.+?)(?:\s+#+\s*)?$/.exec(line);
+
+        if (headingMatch && previewRef.current) {
+            const id = slugify(normalizeMarkdownHeadingText(headingMatch[2]));
+            const el = previewRef.current.querySelector(`#${CSS.escape(id)}`);
+
+            if (el) {
+                const containerTop =
+                    previewRef.current.getBoundingClientRect().top;
+                const elTop = el.getBoundingClientRect().top;
+                previewRef.current.scrollTop += elTop - containerTop - 16;
+            }
+        }
+
+        hasJumpedRef.current = true;
+    }, [jumpTo]);
 
     const handleImageUpload = (file: File) => {
         if (!uploadUrl || !file.type.startsWith('image/')) {
@@ -131,7 +182,10 @@ export default function MarkdownEditor({
                 </div>
                 <div className="grid gap-1">
                     <p className="text-xs text-muted-foreground">Preview</p>
-                    <div className="h-[600px] overflow-y-auto rounded-md border border-input bg-transparent px-3 py-2 text-sm">
+                    <div
+                        ref={previewRef}
+                        className="h-[600px] overflow-y-auto rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+                    >
                         {value ? (
                             <div className="prose prose-sm max-w-none dark:prose-invert">
                                 <MarkdownContent
