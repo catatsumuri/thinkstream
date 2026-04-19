@@ -106,10 +106,16 @@ export default function TableOfContents({
             return;
         }
 
-        activeItem.scrollIntoView({
-            block: 'nearest',
-            inline: 'nearest',
-        });
+        const containerTop = scrollContainer.getBoundingClientRect().top;
+        const itemTop = activeItem.getBoundingClientRect().top;
+        const offset = itemTop - containerTop;
+        const scrollTop = scrollContainer.scrollTop + offset;
+        const clampedTop =
+            scrollTop -
+            scrollContainer.clientHeight / 2 +
+            activeItem.offsetHeight / 2;
+
+        scrollContainer.scrollTop = Math.max(0, clampedTop);
     }, [activeId]);
 
     const registerItemRef =

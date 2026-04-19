@@ -43,7 +43,7 @@ export default function Create({
     setLayoutProps({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
-            { title: 'Posts', href: index.url() },
+            { title: 'Namespaces', href: index.url() },
             { title: namespace.name, href: namespaceRoute.url(namespace.id) },
             { title: 'New Post', href: create.url(namespace.id) },
         ],

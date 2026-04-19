@@ -402,12 +402,12 @@ export default function Index({
 
     return (
         <>
-            <Head title="Posts" />
+            <Head title="Namespaces" />
 
             <div className="space-y-6 p-4">
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-semibold">Posts</h1>
+                        <h1 className="text-2xl font-semibold">Namespaces</h1>
                         <p className="text-sm text-muted-foreground">
                             Manage namespaces and their posts
                         </p>
@@ -547,6 +547,6 @@ export default function Index({
 Index.layout = {
     breadcrumbs: [
         { title: 'Dashboard', href: dashboard() },
-        { title: 'Posts', href: index.url() },
+        { title: 'Namespaces', href: index.url() },
     ],
 };

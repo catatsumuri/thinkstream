@@ -14,7 +14,10 @@ import TableOfContents from '@/components/table-of-contents';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { login } from '@/routes';
-import { index as adminPosts } from '@/routes/admin/posts';
+import {
+    edit as adminPostEdit,
+    index as adminPosts,
+} from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
 
 type PostNamespace = {
@@ -162,12 +165,23 @@ export default function Show({
                                 </button>
                             )}
                             {auth.user ? (
-                                <Link
-                                    href={adminPosts.url()}
-                                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    Admin
-                                </Link>
+                                <>
+                                    <Link
+                                        href={adminPostEdit.url({
+                                            namespace: namespace.id,
+                                            post: post.slug,
+                                        })}
+                                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                                    >
+                                        Edit
+                                    </Link>
+                                    <Link
+                                        href={adminPosts.url()}
+                                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                                    >
+                                        Admin
+                                    </Link>
+                                </>
                             ) : (
                                 <Link
                                     href={login.url()}
