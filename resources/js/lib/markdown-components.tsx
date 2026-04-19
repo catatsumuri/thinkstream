@@ -4,14 +4,9 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import type { Components } from 'react-markdown';
 import { CodeBlock } from '@/components/code-block';
 import { MarkdownImage } from '@/components/markdown-image';
+import { extractRenderedHeadingText } from '@/lib/markdown-heading-text';
 import { parseMarkdownImageMetadata } from '@/lib/markdown-syntax';
-
-function slugify(text: string): string {
-    return text
-        .toLowerCase()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/[\s_]+/g, '-');
-}
+import { slugify } from '@/lib/slugify';
 
 function copyAnchorUrl(id: string): void {
     if (typeof window === 'undefined') {
@@ -77,10 +72,7 @@ function makeHeadingComponents(
 ): Pick<Components, 'h1' | 'h2' | 'h3'> {
     const makeTag = (level: 1 | 2 | 3) =>
         function Heading({ children }: { children?: ReactNode }) {
-            const text =
-                typeof children === 'string'
-                    ? children
-                    : String(children ?? '');
+            const text = extractRenderedHeadingText(children);
             const id = postSlug
                 ? `${postSlug}-${slugify(text)}`
                 : slugify(text);

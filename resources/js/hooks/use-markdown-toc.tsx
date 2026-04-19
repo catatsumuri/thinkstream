@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import type { Components } from 'react-markdown';
 import { createMarkdownComponents } from '@/lib/markdown-components';
+import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
+import { slugify } from '@/lib/slugify';
 
 export type Heading = { level: number; text: string; id: string };
 
@@ -8,13 +10,6 @@ export type TocEntry = {
     headings: Heading[];
     components: Components;
 };
-
-function slugify(text: string): string {
-    return text
-        .toLowerCase()
-        .replace(/[^\w\s-]/g, '')
-        .replace(/[\s_]+/g, '-');
-}
 
 function extractHeadings(content: string, postSlug: string): Heading[] {
     const headings: Heading[] = [];
@@ -55,7 +50,7 @@ function extractHeadings(content: string, postSlug: string): Heading[] {
             continue;
         }
 
-        const text = match[2].trim();
+        const text = normalizeMarkdownHeadingText(match[2].trim());
 
         headings.push({
             level: match[1].length,
