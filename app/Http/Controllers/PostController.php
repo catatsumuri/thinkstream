@@ -14,13 +14,40 @@ class PostController extends Controller
 {
     public function index(): Response
     {
+        $namespaces = PostNamespace::published()
+            ->whereNull('parent_id')
+            ->with('children')
+            ->orderBy('name')
+            ->get(['id', 'slug', 'full_path', 'name', 'description', 'cover_image']);
+
+        $allDescendantIds = $namespaces->mapWithKeys(
+            fn (PostNamespace $ns) => [$ns->id => $this->collectDescendantIds($ns)]
+        );
+
+        $postCounts = Post::query()
+            ->whereIn('namespace_id', $allDescendantIds->flatten()->unique())
+            ->tap(fn (Builder $query) => $this->applyPublishedPostScope($query))
+            ->selectRaw('namespace_id, COUNT(*) as count')
+            ->groupBy('namespace_id')
+            ->pluck('count', 'namespace_id');
+
+        $namespaces->each(function (PostNamespace $ns) use ($allDescendantIds, $postCounts): void {
+            $ns->posts_count = $allDescendantIds[$ns->id]->sum(fn (int $id) => $postCounts->get($id, 0));
+        });
+
         return Inertia::render('posts/index', [
-            'namespaces' => PostNamespace::published()
-                ->whereNull('parent_id')
-                ->withCount(['posts' => fn (Builder $query) => $this->applyPublishedPostScope($query)])
-                ->orderBy('name')
-                ->get(['id', 'slug', 'full_path', 'name', 'description', 'cover_image']),
+            'namespaces' => $namespaces,
         ]);
+    }
+
+    /**
+     * @return Collection<int, int>
+     */
+    private function collectDescendantIds(PostNamespace $namespace): Collection
+    {
+        return collect([$namespace->id])->merge(
+            $namespace->children->flatMap(fn (PostNamespace $child) => $this->collectDescendantIds($child))
+        );
     }
 
     public function resolve(string $path): Response
@@ -96,11 +123,38 @@ class PostController extends Controller
 
         return Inertia::render('posts/show', [
             'breadcrumbs' => $this->breadcrumbs($ancestors),
+            'cardImage' => $this->resolveCardImage($post, $namespace),
             'navRoot' => $this->buildNavigationNode($rootNamespace),
             'namespace' => $namespace->only(['id', 'slug', 'full_path', 'name', 'cover_image_url']),
-            'post' => $post->only(['id', 'slug', 'full_path', 'title', 'content', 'published_at']),
+            'postUrl' => route('posts.path', ['path' => $post->full_path]),
+            'post' => $post->only(['id', 'slug', 'full_path', 'title', 'content', 'published_at', 'updated_at']),
             'posts' => $namespace->sortPosts($posts),
         ]);
+    }
+
+    private function resolveCardImage(Post $post, PostNamespace $namespace): ?string
+    {
+        // 1. First image in post content
+        if (preg_match('/!\[[^\]]*\]\(([^)]+)\)/', $post->content, $matches)) {
+            $url = $matches[1];
+
+            return str_starts_with($url, 'http') ? $url : url($url);
+        }
+
+        // 2. Namespace cover image
+        if ($namespace->cover_image_url) {
+            return url($namespace->cover_image_url);
+        }
+
+        // 3. Parent namespace cover image
+        if ($namespace->parent_id) {
+            $parent = PostNamespace::select(['id', 'cover_image'])->find($namespace->parent_id);
+            if ($parent?->cover_image_url) {
+                return url($parent->cover_image_url);
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -179,7 +233,7 @@ class PostController extends Controller
 
         while ($currentParentId) {
             $ancestor = PostNamespace::query()
-                ->select(['id', 'parent_id', 'name', 'full_path', 'is_published'])
+                ->select(['id', 'parent_id', 'name', 'full_path', 'is_published', 'post_order'])
                 ->findOrFail($currentParentId);
 
             $ancestors->prepend($ancestor);

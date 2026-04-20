@@ -1,4 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { siX } from 'simple-icons';
 import {
     ChevronRight,
     PanelLeftClose,
@@ -35,18 +36,23 @@ type Post = {
     title: string;
     content: string;
     published_at: string;
+    updated_at: string;
 };
 
 export default function Show({
     breadcrumbs,
+    cardImage,
     navRoot,
     namespace,
     post,
+    postUrl,
 }: {
     breadcrumbs: Array<{ name: string; full_path: string }>;
+    cardImage: string | null;
     navRoot: ContentNavNode;
     namespace: PostNamespace;
     post: Post;
+    postUrl: string;
 }) {
     const { auth } = usePage<{
         auth: { user: { id: number; name: string } | null };
@@ -81,7 +87,23 @@ export default function Show({
 
     return (
         <>
-            <Head title={post.title} />
+            <Head title={`${post.title} | ${navRoot.name}`}>
+                <meta
+                    name="twitter:card"
+                    content={cardImage ? 'summary_large_image' : 'summary'}
+                />
+                <meta
+                    name="twitter:title"
+                    content={`${post.title} | ${navRoot.name}`}
+                />
+                {cardImage && <meta name="twitter:image" content={cardImage} />}
+                <meta
+                    property="og:title"
+                    content={`${post.title} | ${navRoot.name}`}
+                />
+                <meta property="og:url" content={postUrl} />
+                {cardImage && <meta property="og:image" content={cardImage} />}
+            </Head>
 
             <div className="min-h-screen bg-background">
                 {namespace.cover_image_url && (
@@ -260,23 +282,31 @@ export default function Show({
                         <article className="space-y-4">
                             <header
                                 id={`post-${post.slug}`}
-                                className="scroll-mt-24 space-y-1"
+                                className="scroll-mt-24 space-y-3"
                             >
                                 <h1 className="text-3xl font-bold">
                                     {post.title}
                                 </h1>
-                                <time
-                                    dateTime={post.published_at}
-                                    className="text-sm text-muted-foreground"
-                                >
-                                    {new Date(
-                                        post.published_at,
-                                    ).toLocaleDateString('en-US', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
-                                    })}
-                                </time>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-muted-foreground">
+                                        Share:
+                                    </span>
+                                    <a
+                                        href={`https://x.com/intent/tweet?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(`${post.title} | ${navRoot.name}`)}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                        title="Share on X"
+                                    >
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            className="size-4 fill-current"
+                                            aria-hidden="true"
+                                        >
+                                            <path d={siX.path} />
+                                        </svg>
+                                    </a>
+                                </div>
                             </header>
                             <div className="prose max-w-none prose-neutral dark:prose-invert">
                                 <MarkdownContent
@@ -284,6 +314,21 @@ export default function Show({
                                     components={entry?.components}
                                 />
                             </div>
+                            <footer className="border-t pt-4">
+                                <time
+                                    dateTime={post.updated_at}
+                                    className="text-sm text-muted-foreground"
+                                >
+                                    Last updated:{' '}
+                                    {new Date(
+                                        post.updated_at,
+                                    ).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric',
+                                    })}
+                                </time>
+                            </footer>
                         </article>
                     </main>
 

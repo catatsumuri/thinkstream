@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { ChevronDown, ChevronRight, FileText } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { path as contentPath } from '@/routes/posts';
 
 export type ContentNavNode = {
@@ -32,6 +33,9 @@ function TreeNode({
         <div className="space-y-1">
             <Link
                 href={contentPath.url(node.full_path)}
+                data-active={
+                    currentPath === node.full_path ? 'true' : undefined
+                }
                 className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors ${
                     currentPath === node.full_path
                         ? 'bg-accent font-medium text-accent-foreground'
@@ -68,6 +72,11 @@ function TreeNode({
                         <Link
                             key={post.full_path}
                             href={contentPath.url(post.full_path)}
+                            data-active={
+                                currentPath === post.full_path
+                                    ? 'true'
+                                    : undefined
+                            }
                             className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors ${
                                 currentPath === post.full_path
                                     ? 'bg-accent font-medium text-accent-foreground'
@@ -92,8 +101,24 @@ export default function ContentNavTree({
     currentPath: string;
     root: ContentNavNode;
 }) {
+    const navRef = useRef<HTMLElement>(null);
+
+    useEffect(() => {
+        const active = navRef.current?.querySelector(
+            '[data-active="true"]',
+        ) as HTMLElement | null;
+        if (!active || !navRef.current) return;
+        const container = navRef.current.closest(
+            '.overflow-y-auto',
+        ) as HTMLElement | null;
+        if (!container) return;
+        const containerRect = container.getBoundingClientRect();
+        const activeRect = active.getBoundingClientRect();
+        container.scrollTop += activeRect.top - containerRect.top - 16;
+    }, [currentPath]);
+
     return (
-        <nav className="space-y-1 text-sm">
+        <nav ref={navRef} className="space-y-1 text-sm">
             <TreeNode currentPath={currentPath} node={root} />
         </nav>
     );
