@@ -11,8 +11,8 @@ import MarkdownContent from '@/components/markdown-content';
 import TableOfContents from '@/components/table-of-contents';
 import { Button } from '@/components/ui/button';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
-import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
 import { dashboard } from '@/routes';
 import {
     destroy,
@@ -273,7 +273,7 @@ export default function Show({
                             : ''
                     }
                 >
-                    <div className="rounded-xl border p-6">
+                    <div className="min-w-0 rounded-xl border p-6">
                         <div className="prose max-w-none prose-neutral dark:prose-invert">
                             <MarkdownContent
                                 content={post.content}

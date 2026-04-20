@@ -39,13 +39,13 @@ class SyntaxSeeder extends Seeder
                 'user_id' => $user->id,
                 'title' => 'Markdown Syntax Guide',
                 'content' => trim(<<<'MD'
-# What is Markdown?
+## What is Markdown?
 
 Markdown is a lightweight markup language for formatting plain text. You use simple symbols like `#`, `*`, and `-` to define structure, and it converts to HTML for display. The goal is to keep source text readable as-is, even before rendering.
 
 ---
 
-# Headings
+## Headings
 
 Use `#` symbols to define heading levels. The number of `#` characters sets the level.
 
@@ -58,16 +58,16 @@ Use `#` symbols to define heading levels. The number of `#` characters sets the 
 
 The above renders as:
 
-### Heading 3
-#### Heading 4
+#### Heading 3
+##### Heading 4
 
 > Heading 1 is typically reserved for the page title and used only once per document.
 
 ---
 
-# Paragraphs and Line Breaks
+## Paragraphs and Line Breaks
 
-### Paragraphs
+#### Paragraphs
 
 Separate paragraphs with a **blank line**. A single newline without a blank line does not create a new paragraph — the lines are joined.
 
@@ -81,7 +81,7 @@ This is the first paragraph.
 
 This is the second paragraph.
 
-### Line Breaks
+#### Line Breaks
 
 To force a line break **within** a paragraph (without starting a new paragraph), end the line with **two or more spaces** before pressing Enter.
 
@@ -95,9 +95,9 @@ Line two (same paragraph, new line)
 
 ---
 
-# Text Formatting
+## Text Formatting
 
-### Bold
+#### Bold
 
 ```
 **This text is bold.**
@@ -107,7 +107,7 @@ __This also works.__
 **This text is bold.**
 __This also works.__
 
-### Italic
+#### Italic
 
 ```
 *This text is italic.*
@@ -117,7 +117,7 @@ _This also works._
 *This text is italic.*
 _This also works._
 
-### Bold and Italic
+#### Bold and Italic
 
 ```
 ***This text is bold and italic.***
@@ -125,7 +125,7 @@ _This also works._
 
 ***This text is bold and italic.***
 
-### Strikethrough
+#### Strikethrough
 
 ```
 ~~This text is crossed out.~~
@@ -133,7 +133,7 @@ _This also works._
 
 ~~This text is crossed out.~~
 
-### Inline Code
+#### Inline Code
 
 Wrap code in single backticks to render it as monospace inline code. Useful for referencing variable names, commands, or short snippets.
 
@@ -149,9 +149,9 @@ Set `DEBUG=true` in your environment.
 
 ---
 
-# Lists
+## Lists
 
-### Unordered Lists
+#### Unordered Lists
 
 Use `-`, `*`, or `+` to create bullet points. They are interchangeable.
 
@@ -165,7 +165,7 @@ Use `-`, `*`, or `+` to create bullet points. They are interchangeable.
 - Oranges
 - Bananas
 
-### Nested Lists
+#### Nested Lists
 
 Indent with two or four spaces to create sub-items.
 
@@ -189,7 +189,7 @@ Indent with two or four spaces to create sub-items.
   - Carrots
   - Spinach
 
-### Ordered Lists
+#### Ordered Lists
 
 ```
 1. First step
@@ -203,7 +203,7 @@ Indent with two or four spaces to create sub-items.
 
 > The actual numbers don't matter — Markdown will renumber them in order. You can use `1.` for every item and it still renders correctly.
 
-### Task Lists
+#### Task Lists
 
 Use `- [ ]` for an unchecked box and `- [x]` for a checked box.
 
@@ -221,9 +221,9 @@ Use `- [ ]` for an unchecked box and `- [x]` for a checked box.
 
 ---
 
-# Code Blocks
+## Code Blocks
 
-### Fenced Code Blocks
+#### Fenced Code Blocks
 
 Wrap code in triple backticks. Optionally add a language identifier after the opening fence for syntax highlighting.
 
@@ -323,7 +323,7 @@ JSON:
 }
 ```
 
-### Long Lines
+#### Long Lines
 
 Long lines scroll horizontally rather than wrapping, so the code block never distorts your layout.
 
@@ -333,9 +333,9 @@ SELECT users.id, users.name, orders.id AS order_id, orders.total, orders.status 
 
 ---
 
-# Links
+## Links
 
-### Inline Links
+#### Inline Links
 
 The basic form is `[visible text](URL)`.
 
@@ -345,7 +345,7 @@ The basic form is `[visible text](URL)`.
 
 [Visit the Markdown Guide](https://www.markdownguide.org)
 
-### Links with Titles
+#### Links with Titles
 
 Add a quoted title after the URL. It appears as a tooltip on hover.
 
@@ -355,7 +355,7 @@ Add a quoted title after the URL. It appears as a tooltip on hover.
 
 [Markdown Guide](https://www.markdownguide.org "The best Markdown reference")
 
-### Bare URLs
+#### Bare URLs
 
 Wrap a URL in angle brackets to turn it into a clickable link without custom text.
 
@@ -367,7 +367,7 @@ Wrap a URL in angle brackets to turn it into a clickable link without custom tex
 <https://www.example.com>
 <hello@example.com>
 
-### Reference-Style Links
+#### Reference-Style Links
 
 Define the URL separately and reference it by label. Useful for keeping long URLs out of the prose.
 
@@ -385,7 +385,7 @@ Check out [GitHub][gh] and [MDN][mdn] for documentation.
 
 ---
 
-# Blockquotes
+## Blockquotes
 
 Use `>` to create a blockquote. Add multiple `>` characters for nested quotes.
 
@@ -417,7 +417,7 @@ Blockquotes can contain other Markdown elements:
 
 ---
 
-# Tables
+## Tables
 
 Use `|` to separate columns and `-` for the header separator row.
 
@@ -435,7 +435,7 @@ Use `|` to separate columns and `-` for the header separator row.
 | Bob        | Editor    | No     |
 | Carol      | Viewer    | Yes    |
 
-### Column Alignment
+#### Column Alignment
 
 Add `:` to the separator row to control alignment per column.
 
@@ -461,7 +461,7 @@ MD),
                 'user_id' => $user->id,
                 'title' => 'Extended Markdown Syntax',
                 'content' => trim(<<<'MD'
-# Extended Markdown Syntax
+## Extended Markdown Syntax
 
 Extended syntax adds features beyond the core Markdown spec. This page covers GitHub Flavored Markdown (GFM) extensions, which are supported by this renderer.
 
@@ -469,7 +469,7 @@ Extended syntax adds features beyond the core Markdown spec. This page covers Gi
 
 ---
 
-# Strikethrough ✓ Renders here
+## Strikethrough ✓ Renders here
 
 Wrap text in `~~double tildes~~`.
 
@@ -481,7 +481,7 @@ The price was ~~$99~~ now **$49**.
 
 ---
 
-# Task Lists ✓ Renders here
+## Task Lists ✓ Renders here
 
 Use `- [ ]` for unchecked and `- [x]` for checked items.
 
@@ -499,7 +499,7 @@ Use `- [ ]` for unchecked and `- [x]` for checked items.
 
 ---
 
-# Tables ✓ Renders here
+## Tables ✓ Renders here
 
 Tables use `|` for column separators and `:` in the divider row for alignment.
 
@@ -521,7 +521,7 @@ Tables use `|` for column separators and `:` in the divider row for alignment.
 
 ---
 
-# Autolinks ✓ Renders here
+## Autolinks ✓ Renders here
 
 Angle-bracket autolinks turn a raw URL or email into a clickable link.
 
@@ -535,7 +535,7 @@ Contact us at <hello@example.com>.
 
 ---
 
-# Footnotes ✓ Renders here
+## Footnotes ✓ Renders here
 
 Add `[^label]` inline, then define the footnote anywhere in the document. The renderer collects them at the bottom.
 
@@ -566,7 +566,7 @@ The spec[^spec] describes the syntax. There are many implementations[^impl].
 
 ---
 
-# Highlight ✗ Requires plugin
+## Highlight ✗ Requires plugin
 
 The `==highlight==` syntax is **not** part of GFM. It requires a plugin such as `remark-mark-and-unmark`. Without it, the `==` delimiters are rendered as plain text.
 
@@ -578,7 +578,7 @@ With the plugin active it renders as a `<mark>` element (yellow background by de
 
 ---
 
-# Subscript and Superscript ✗ Requires plugin
+## Subscript and Superscript ✗ Requires plugin
 
 `~sub~` and `^sup^` are not standard GFM. They need `remark-sub` / `remark-sup` or similar.
 
@@ -591,7 +591,7 @@ Without the plugins the delimiters appear literally.
 
 ---
 
-# Definition Lists ✗ Requires plugin
+## Definition Lists ✗ Requires plugin
 
 Definition lists use a term followed by `:` definitions. Not supported in GFM — requires `remark-definition-list` or Pandoc.
 
@@ -605,7 +605,7 @@ HTML
 
 ---
 
-# Heading IDs ✗ Renderer-dependent
+## Heading IDs ✗ Renderer-dependent
 
 Some renderers accept `{#custom-id}` after a heading to set an explicit `id` attribute for deep linking.
 
@@ -617,7 +617,7 @@ GFM renderers (like GitHub) auto-generate IDs from heading text. Explicit IDs ar
 
 ---
 
-# Emoji Shortcodes ✗ Requires plugin
+## Emoji Shortcodes ✗ Requires plugin
 
 `:shortcode:` syntax is popular on GitHub but requires `remark-emoji` or similar to convert to actual emoji characters.
 
@@ -637,13 +637,13 @@ MD),
                 'user_id' => $user->id,
                 'title' => 'Zenn Syntax',
                 'content' => trim(<<<'MD'
-# Zenn Syntax
+## Zenn Syntax
 
 > Reference: https://zenn.dev/zenn/articles/markdown-guide
 
 Zenn supports a few convenient image patterns on top of regular Markdown.
 
-### Basic Image
+#### Basic Image
 
 ```md
 ![](/storage/namespaces/guide.png)
@@ -651,7 +651,7 @@ Zenn supports a few convenient image patterns on top of regular Markdown.
 
 ![](/storage/namespaces/guide.png)
 
-### Sized Image
+#### Sized Image
 
 Use `=250x` after the image URL to set the width in pixels.
 
@@ -661,7 +661,7 @@ Use `=250x` after the image URL to set the width in pixels.
 
 ![](/storage/namespaces/guide.png =250x)
 
-### Alt Text
+#### Alt Text
 
 ```md
 ![Guide cover](/storage/namespaces/guide.png =250x)
@@ -669,7 +669,7 @@ Use `=250x` after the image URL to set the width in pixels.
 
 ![Guide cover](/storage/namespaces/guide.png =250x)
 
-### Caption
+#### Caption
 
 Place italic text on the next line to display it like a caption.
 
@@ -681,7 +681,7 @@ Place italic text on the next line to display it like a caption.
 ![](/storage/namespaces/guide.png =250x)
 *Guide cover image*
 
-### Linked Image
+#### Linked Image
 
 ```md
 [![](/storage/namespaces/guide.png =250x)](https://zenn.dev)
@@ -689,7 +689,7 @@ Place italic text on the next line to display it like a caption.
 
 [![](/storage/namespaces/guide.png =250x)](https://zenn.dev)
 
-### Message
+#### Message
 
 Wrap content in `:::message` to display an info callout.
 
@@ -743,7 +743,7 @@ Helpful tip.
 Success or confirmation.
 :::
 
-### Details (Collapsible)
+#### Details (Collapsible)
 
 Wrap content in `:::details` followed by a title to create a collapsible block. The content is hidden until the reader clicks to expand it.
 
@@ -807,7 +807,7 @@ This note is inside a collapsible section.
 :::
 ::::
 
-### Link Card
+#### Link Card
 
 A URL placed alone on its own line is automatically displayed as a card.
 
@@ -833,7 +833,7 @@ https://www.youtube.com/watch?v=WRVsOCh907o
 
 https://www.youtube.com/watch?v=WRVsOCh907o
 
-### Code Block with Filename
+#### Code Block with Filename
 
 Add `:filename` after the language name to display a filename label above the code block.
 
@@ -853,7 +853,7 @@ export function greet(name: string): string {
 }
 ```
 
-### Diff Highlighting
+#### Diff Highlighting
 
 Start the fence with `diff` followed by the language name to enable diff highlighting. Lines beginning with `+` are shown in green and lines beginning with `-` in red.
 
@@ -876,7 +876,7 @@ You can combine `diff` with a filename using `` ```diff ts:src/utils.ts ``:
  }
 ```
 
-### GitHub Embed
+#### GitHub Embed
 
 A GitHub file URL placed alone on its own line is automatically embedded as a code block.
 
@@ -911,7 +911,7 @@ MD),
                 'user_id' => $user->id,
                 'title' => 'Mintlify Syntax',
                 'content' => trim(<<<'MD'
-# Mintlify Syntax
+## Mintlify Syntax
 
 > References:
 > - https://starter.mintlify.com/essentials/markdown
@@ -922,7 +922,7 @@ Mintlify ships with MDX-flavored components for docs sites. This page covers the
 
 ---
 
-# Callouts
+## Callouts
 
 Mintlify provides five callout types. Each maps to a Zenn-style `:::message` directive internally.
 
@@ -996,7 +996,7 @@ Check content here.
 
 ---
 
-# Cards
+## Cards
 
 Mintlify uses `<Card>` blocks to create linked navigation tiles.
 
@@ -1020,7 +1020,7 @@ Source:
 
 ---
 
-# Card Groups
+## Card Groups
 
 Cards are often grouped to create documentation indexes.
 
@@ -1075,7 +1075,7 @@ Rendered result for the same source:
 
 ---
 
-# Tabs
+## Tabs
 
 Mintlify commonly uses `<Tabs>` and `<Tab>` to switch between examples.
 
@@ -1125,7 +1125,7 @@ Possible fallback if tabs are unsupported: split content into headings such as `
 
 ---
 
-# Accordions
+## Accordions
 
 Accordion components create collapsible sections. The `title` attribute sets the visible label. An optional `icon` attribute is accepted but ignored by this renderer.
 
@@ -1161,7 +1161,7 @@ Mintlify is a documentation platform.
 
 ---
 
-# Steps
+## Steps
 
 Step-based walkthroughs use `<Steps>` and `<Step title="...">` to produce a numbered sequential guide.
 
@@ -1203,7 +1203,7 @@ Source:
 
 ---
 
-# Badge
+## Badge
 
 Use `<Badge>` to display status indicators, labels, and metadata inline within prose or as standalone elements.
 
@@ -1233,9 +1233,9 @@ This feature requires a <Badge color="orange" size="sm">Premium</Badge> subscrip
 
 ---
 
-# API Fields
+## API Fields
 
-### ResponseField
+#### ResponseField
 
 Use `<ResponseField>` to describe the fields of an API response. Supports `name`, `type`, `required`, `default`, and `deprecated`.
 
@@ -1273,7 +1273,7 @@ Source:
 </ResponseField>
 ```
 
-### ParamField
+#### ParamField
 
 Use `<ParamField>` to describe request parameters. The attribute key (`path`, `query`, or `body`) indicates where the parameter appears, and its value is the parameter name.
 
@@ -1309,7 +1309,7 @@ Source:
 
 ---
 
-# CodeGroup
+## CodeGroup
 
 `<CodeGroup>` displays multiple code blocks as a tabbed interface. The tab title comes from the meta string after the language identifier. Add `icon="..."` to the meta string when you want an icon in the tab label. Selecting a tab persists the choice across all CodeGroup instances on the page.
 
@@ -1401,7 +1401,7 @@ $data = $response->json();
 
 ---
 
-# Tooltip
+## Tooltip
 
 `<Tooltip>` wraps inline text and shows a popover on hover. Use `tip` for the tooltip body, `headline` for a bold title, and `cta` + `href` for an optional call-to-action link.
 
@@ -1421,7 +1421,7 @@ Simple tooltip: hover over <Tooltip tip="Hypertext Markup Language — the stand
 
 ---
 
-# Tree
+## Tree
 
 `<Tree>` displays a file-system hierarchy with collapsible folders. Use `<Tree.Folder>` for directories and `<Tree.File>` for files. Add `defaultOpen` to a folder to expand it on load.
 
@@ -1471,7 +1471,7 @@ Source:
 
 ---
 
-# Update
+## Update
 
 `<Update>` displays a changelog entry in a timeline layout. Use `label` for the date or version (it also becomes an anchor link), `description` for a subtitle, and `tags` for filter labels.
 
@@ -1479,7 +1479,7 @@ Live example:
 
 <Update label="2024-10-11" description="v0.2.0" tags={["Feature", "Improvement"]}>
 
-### Improved card icon support
+#### Improved card icon support
 
 Cards now support brand icons from the `simple-icons` library in addition to Lucide icons. Pass any brand name as the `icon` prop on `<Card>`.
 
@@ -1487,7 +1487,7 @@ Cards now support brand icons from the `simple-icons` library in addition to Luc
 
 <Update label="2024-09-01" description="v0.1.0" tags={["Initial release"]}>
 
-### First release
+#### First release
 
 Initial launch of Thinkstream with support for Markdown, GFM, Zenn syntax, and core Mintlify components including callouts, cards, tabs, steps, and code groups.
 
