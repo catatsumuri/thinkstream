@@ -11,7 +11,8 @@ class NamespaceBackupCommand extends Command
 {
     protected $signature = 'namespace:backup
                             {namespace : Namespace slug or ID}
-                            {--output= : Output zip path (defaults to storage/app/private/backups/slug-timestamp.zip)}';
+                            {--output= : Output zip path (defaults to storage/app/private/backups/slug-timestamp.zip)}
+                            {--with-revisions : Include post revision history in the backup}';
 
     protected $description = 'Backup a namespace and its posts as a zip archive';
 
@@ -52,7 +53,8 @@ class NamespaceBackupCommand extends Command
             return self::FAILURE;
         }
 
-        $postCount = $this->addNamespaceToZip($zip, $namespace, '');
+        $withRevisions = (bool) $this->option('with-revisions');
+        $postCount = $this->addNamespaceToZip($zip, $namespace, '', $withRevisions);
 
         $zip->close();
 
@@ -62,7 +64,7 @@ class NamespaceBackupCommand extends Command
         return self::SUCCESS;
     }
 
-    private function addNamespaceToZip(ZipArchive $zip, PostNamespace $namespace, string $prefix): int
+    private function addNamespaceToZip(ZipArchive $zip, PostNamespace $namespace, string $prefix, bool $withRevisions): int
     {
         $namespaceData = [
             'name' => $namespace->name,
@@ -77,7 +79,9 @@ class NamespaceBackupCommand extends Command
 
         $zip->addFromString($prefix.'_namespace.yaml', Yaml::dump($namespaceData, 4));
 
-        $posts = $namespace->posts()->get();
+        $posts = $withRevisions
+            ? $namespace->posts()->with('revisions.user')->get()
+            : $namespace->posts()->get();
 
         foreach ($posts as $post) {
             $frontmatter = [
@@ -91,12 +95,30 @@ class NamespaceBackupCommand extends Command
             $content = "---\n".Yaml::dump($frontmatter)."---\n\n".$post->content."\n";
 
             $zip->addFromString($prefix.$post->slug.'.md', $content);
+
+            if ($withRevisions && $post->revisions->isNotEmpty()) {
+                $revisionsData = $post->revisions
+                    ->sortBy('id')
+                    ->map(fn ($revision) => [
+                        'title' => $revision->title,
+                        'content' => $revision->content,
+                        'user_name' => $revision->user?->name,
+                        'created_at' => $revision->created_at->toIso8601String(),
+                    ])
+                    ->values()
+                    ->all();
+
+                $zip->addFromString(
+                    $prefix.$post->slug.'.revisions.json',
+                    json_encode($revisionsData, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                );
+            }
         }
 
         $postCount = $posts->count();
 
         foreach ($namespace->children()->get() as $child) {
-            $postCount += $this->addNamespaceToZip($zip, $child, $prefix.$child->slug.'/');
+            $postCount += $this->addNamespaceToZip($zip, $child, $prefix.$child->slug.'/', $withRevisions);
         }
 
         return $postCount;

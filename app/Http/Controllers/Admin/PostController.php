@@ -3,11 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\RestorePostRevisionRequest;
 use App\Http\Requests\Admin\StorePostRequest;
 use App\Http\Requests\Admin\UpdatePostRequest;
 use App\Http\Requests\Admin\UploadPostImageRequest;
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\PostRevision;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -108,7 +110,19 @@ class PostController extends Controller
 
     public function update(UpdatePostRequest $request, PostNamespace $namespace, Post $post): RedirectResponse
     {
-        $post->update($request->validated());
+        $data = $request->validated();
+        $hasChanges = $post->title !== ($data['title'] ?? $post->title)
+            || $post->content !== ($data['content'] ?? $post->content);
+
+        if ($hasChanges) {
+            $post->revisions()->create([
+                'user_id' => $request->user()->id,
+                'title' => $post->title,
+                'content' => $post->content,
+            ]);
+        }
+
+        $post->update($data);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Post saved.']);
 
@@ -117,6 +131,63 @@ class PostController extends Controller
 
         return redirect()->route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug])
             ->setTargetUrl(route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]).$hash);
+    }
+
+    public function revisions(PostNamespace $namespace, Post $post): Response
+    {
+        $revisions = $post->revisions()
+            ->with('user')
+            ->latest()
+            ->limit(50)
+            ->get()
+            ->map(fn (PostRevision $revision) => [
+                'id' => $revision->id,
+                'title' => $revision->title,
+                'content' => $revision->content,
+                'created_at' => $revision->created_at->toISOString(),
+                'user' => $revision->user ? [
+                    'id' => $revision->user->id,
+                    'name' => $revision->user->name,
+                ] : null,
+                'is_current' => false,
+            ]);
+
+        $currentRevision = [
+            'id' => 0,
+            'title' => $post->title,
+            'content' => $post->content,
+            'created_at' => $post->updated_at?->toISOString(),
+            'user' => null,
+            'is_current' => true,
+        ];
+
+        return Inertia::render('admin/posts/revisions', [
+            'namespace' => $namespace,
+            'post' => $post->only(['id', 'slug', 'title']),
+            'revisions' => $revisions->prepend($currentRevision)->values(),
+        ]);
+    }
+
+    public function restore(
+        RestorePostRevisionRequest $request,
+        PostNamespace $namespace,
+        Post $post,
+        PostRevision $revision
+    ): RedirectResponse {
+        $post->revisions()->create([
+            'user_id' => $request->user()->id,
+            'title' => $post->title,
+            'content' => $post->content,
+        ]);
+
+        $post->update([
+            'title' => $revision->title,
+            'content' => $revision->content,
+        ]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Revision restored.']);
+
+        return to_route('admin.posts.revisions', ['namespace' => $namespace, 'post' => $post->slug]);
     }
 
     public function uploadNamespaceImage(UploadPostImageRequest $request, PostNamespace $namespace): RedirectResponse

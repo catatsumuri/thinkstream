@@ -2,6 +2,7 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\PostRevision;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
@@ -48,6 +49,13 @@ function addNamespaceBackupTreeToZip(ZipArchive $zip, array $tree, string $prefi
                 'published_at' => $post['published_at'] ?? now()->toIso8601String(),
             ])."---\n\n".rtrim($post['content'])."\n"
         );
+
+        if (! empty($post['revisions'])) {
+            $zip->addFromString(
+                $prefix.$post['slug'].'.revisions.json',
+                json_encode($post['revisions'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+            );
+        }
     }
 
     foreach ($tree['children'] ?? [] as $child) {
@@ -256,6 +264,141 @@ test('namespace restore command fails when no user exists', function () {
 
         expect(PostNamespace::query()->where('slug', 'laravel-13')->exists())->toBeFalse()
             ->and(Post::query()->count())->toBe(0);
+    } finally {
+        File::delete($zipPath);
+    }
+});
+
+test('namespace backup --with-revisions includes revision json files', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create(['slug' => 'docs', 'name' => 'Docs']);
+    $post = Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
+        'title' => 'Intro',
+        'slug' => 'intro',
+        'content' => 'Hello.',
+    ]);
+    PostRevision::factory()->create([
+        'post_id' => $post->id,
+        'user_id' => $user->id,
+        'title' => 'Old Intro',
+        'content' => 'Old hello.',
+        'created_at' => now()->subHour(),
+    ]);
+
+    $zipPath = storage_path('framework/testing/'.Str::uuid().'.zip');
+
+    $this->artisan('namespace:backup', [
+        'namespace' => $namespace->slug,
+        '--output' => $zipPath,
+        '--with-revisions' => true,
+    ])->assertSuccessful();
+
+    $zip = new ZipArchive;
+    expect($zip->open($zipPath))->toBeTrue();
+    $revisionsJson = $zip->getFromName('intro.revisions.json');
+    $zip->close();
+
+    expect($revisionsJson)->not->toBeFalse();
+    $revisions = json_decode($revisionsJson, true);
+    expect($revisions)->toHaveCount(1)
+        ->and($revisions[0]['title'])->toBe('Old Intro')
+        ->and($revisions[0]['content'])->toBe('Old hello.')
+        ->and($revisions[0]['user_name'])->toBe($user->name);
+
+    File::delete($zipPath);
+});
+
+test('namespace backup without --with-revisions does not include revision files', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create(['slug' => 'docs2', 'name' => 'Docs2']);
+    $post = Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
+        'slug' => 'intro',
+        'content' => 'Hello.',
+    ]);
+    PostRevision::factory()->create(['post_id' => $post->id]);
+
+    $zipPath = storage_path('framework/testing/'.Str::uuid().'.zip');
+
+    $this->artisan('namespace:backup', [
+        'namespace' => $namespace->slug,
+        '--output' => $zipPath,
+    ])->assertSuccessful();
+
+    $zip = new ZipArchive;
+    expect($zip->open($zipPath))->toBeTrue();
+    $revisionsJson = $zip->getFromName('intro.revisions.json');
+    $zip->close();
+
+    expect($revisionsJson)->toBeFalse();
+
+    File::delete($zipPath);
+});
+
+test('namespace restore --with-revisions imports revisions from backup', function () {
+    $user = User::factory()->create();
+    $zipPath = createNamespaceBackupZip([
+        'slug' => 'my-ns',
+        'name' => 'My NS',
+        'full_path' => 'my-ns',
+        'posts' => [
+            [
+                'title' => 'Guide',
+                'slug' => 'guide',
+                'content' => '# Guide',
+                'revisions' => [
+                    [
+                        'title' => 'Old Guide',
+                        'content' => '# Old Guide',
+                        'user_name' => 'Alice',
+                        'created_at' => now()->subDay()->toIso8601String(),
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    try {
+        $this->artisan('namespace:restore', [
+            'path' => $zipPath,
+            '--with-revisions' => true,
+        ])->assertSuccessful();
+
+        $post = Post::query()->where('slug', 'guide')->firstOrFail();
+        expect($post->revisions()->count())->toBe(1);
+        $revision = $post->revisions()->first();
+        expect($revision->title)->toBe('Old Guide')
+            ->and($revision->content)->toBe('# Old Guide')
+            ->and($revision->user_id)->toBeNull();
+    } finally {
+        File::delete($zipPath);
+    }
+});
+
+test('namespace restore without --with-revisions skips revision files', function () {
+    $user = User::factory()->create();
+    $zipPath = createNamespaceBackupZip([
+        'slug' => 'my-ns2',
+        'name' => 'My NS2',
+        'full_path' => 'my-ns2',
+        'posts' => [
+            [
+                'title' => 'Guide',
+                'slug' => 'guide',
+                'content' => '# Guide',
+                'revisions' => [
+                    ['title' => 'Old', 'content' => 'Old', 'user_name' => null, 'created_at' => now()->subDay()->toIso8601String()],
+                ],
+            ],
+        ],
+    ]);
+
+    try {
+        $this->artisan('namespace:restore', [
+            'path' => $zipPath,
+        ])->assertSuccessful();
+
+        $post = Post::query()->where('slug', 'guide')->firstOrFail();
+        expect($post->revisions()->count())->toBe(0);
     } finally {
         File::delete($zipPath);
     }
