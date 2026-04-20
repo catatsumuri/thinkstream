@@ -8,7 +8,6 @@ import {
     edit,
     index,
     namespace as namespaceRoute,
-    revisions,
     show,
 } from '@/routes/admin/posts';
 import { restore } from '@/routes/admin/posts/revisions';
