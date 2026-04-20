@@ -151,8 +151,56 @@ test('published namespace shows post with breadcrumbs', function () {
             ->where('navRoot.children.0.posts.0.full_path', $post->full_path)
             ->where('namespace.full_path', $child->full_path)
             ->where('post.full_path', $post->full_path)
+            ->where('postUrl', route('posts.path', ['path' => $post->full_path]))
             ->where('breadcrumbs.0.full_path', $root->full_path)
             ->where('posts.0.full_path', $post->full_path)
+        );
+});
+
+test('homepage counts published posts from descendant namespaces', function () {
+    $root = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+    ]);
+    $child = PostNamespace::factory()->create([
+        'parent_id' => $root->id,
+        'slug' => 'laravel',
+        'is_published' => true,
+    ]);
+    $grandchild = PostNamespace::factory()->create([
+        'parent_id' => $child->id,
+        'slug' => 'routing',
+        'is_published' => true,
+    ]);
+
+    Post::factory()->for($root, 'namespace')->published()->create();
+    Post::factory()->for($child, 'namespace')->published()->create();
+    Post::factory()->for($grandchild, 'namespace')->published()->create();
+    Post::factory()->for($grandchild, 'namespace')->scheduled()->create();
+
+    $this->get(route('home'))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->where('namespaces.0.full_path', $root->full_path)
+            ->where('namespaces.0.posts_count', 3)
+        );
+});
+
+test('post page prefers first markdown image for social card metadata', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'routing',
+        'content' => "Intro\n\n![Cover](/images/cards/routing.png)\n\nMore text",
+    ]);
+
+    $this->get(route('posts.path', ['path' => $post->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->where('cardImage', url('/images/cards/routing.png'))
+            ->where('postUrl', route('posts.path', ['path' => $post->full_path]))
         );
 });
 

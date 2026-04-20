@@ -67,6 +67,8 @@ The public UI is built with Inertia + React and currently provides:
 
 The public controller assembles these views in `app/Http/Controllers/PostController.php`.
 
+> **SSR requirement:** Post pages emit Twitter Card and Open Graph meta tags. These tags are rendered client-side via Inertia, so crawlers (Twitter, Slack, etc.) will not read them unless SSR is enabled. The app must run with `@inertiajs/vite` SSR in production for social sharing previews to work.
+
 ### Admin side
 
 Authenticated users manage namespaces and posts under `/admin`.
@@ -78,16 +80,6 @@ Important details:
 - posts remain scoped to their namespace for admin editing
 
 Admin routes live in `routes/admin.php`.
-
-### Import flow
-
-ThinkStream can import local Inertia.js MDX docs into namespaces and posts:
-
-```bash
-php artisan posts:import-inertia-docs
-```
-
-The command is defined in `routes/console.php`, and the importer lives in `app/Services/InertiaJsDocsImporter.php`.
 
 ## Markdown support
 
@@ -186,7 +178,6 @@ vendor/bin/sail artisan test --compact
 vendor/bin/sail npm run markdown:test
 vendor/bin/sail npm run types:check
 vendor/bin/sail npm run build
-vendor/bin/sail artisan posts:import-inertia-docs
 ```
 
 ## Direction
