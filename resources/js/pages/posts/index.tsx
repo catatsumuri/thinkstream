@@ -1,8 +1,9 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ImageOff } from 'lucide-react';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
-import { login } from '@/routes';
-import { index as adminPosts } from '@/routes/admin/posts';
+import { Button } from '@/components/ui/button';
+import { useCurrentUrl } from '@/hooks/use-current-url';
+import { dashboard, login } from '@/routes';
 import { path as contentPath } from '@/routes/posts';
 
 type PostNamespace = {
@@ -19,6 +20,7 @@ export default function Index({ namespaces }: { namespaces: PostNamespace[] }) {
     const { auth } = usePage<{
         auth: { user: { id: number; name: string } | null };
     }>().props;
+    const { currentUrl } = useCurrentUrl();
 
     return (
         <>
@@ -29,19 +31,19 @@ export default function Index({ namespaces }: { namespaces: PostNamespace[] }) {
                     <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6">
                         <h1 className="text-2xl font-bold">ThinkStream</h1>
                         {auth.user ? (
-                            <Link
-                                href={adminPosts.url()}
-                                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                            >
-                                Admin
-                            </Link>
+                            <Button asChild variant="outline" size="sm">
+                                <Link href={dashboard()}>Dashboard</Link>
+                            </Button>
                         ) : (
-                            <Link
-                                href={login.url()}
-                                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                            >
-                                Login
-                            </Link>
+                            <Button asChild variant="outline" size="sm">
+                                <Link
+                                    href={login.url({
+                                        query: { intended: currentUrl },
+                                    })}
+                                >
+                                    Login
+                                </Link>
+                            </Button>
                         )}
                     </div>
                 </header>

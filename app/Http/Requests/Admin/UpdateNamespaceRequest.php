@@ -88,7 +88,7 @@ class UpdateNamespaceRequest extends FormRequest
                 'string',
                 'max:255',
                 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/',
-                Rule::notIn(ReservedContentPath::rootSegments()),
+                ...($this->parentId() === null ? [Rule::notIn(ReservedContentPath::rootSegments())] : []),
                 Rule::unique('namespaces', 'slug')
                     ->where(function ($query) {
                         return $this->parentId() === null

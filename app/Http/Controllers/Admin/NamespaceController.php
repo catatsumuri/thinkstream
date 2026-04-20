@@ -92,6 +92,12 @@ class NamespaceController extends Controller
 
         $namespace->update($data);
 
+        $returnTo = $this->safeReturnPath($request->string('return_to')->toString());
+
+        if ($returnTo !== null) {
+            return redirect()->to(route('posts.path', ['path' => $namespace->full_path], absolute: false));
+        }
+
         return to_route('admin.posts.index');
     }
 
@@ -104,5 +110,23 @@ class NamespaceController extends Controller
         $namespace->delete();
 
         return to_route('admin.posts.index');
+    }
+
+    private function safeReturnPath(string $path): ?string
+    {
+        if ($path === '') {
+            return null;
+        }
+
+        if (
+            ! str_starts_with($path, '/')
+            || str_starts_with($path, '//')
+            || parse_url($path, PHP_URL_SCHEME) !== null
+            || parse_url($path, PHP_URL_HOST) !== null
+        ) {
+            return null;
+        }
+
+        return $path;
     }
 }

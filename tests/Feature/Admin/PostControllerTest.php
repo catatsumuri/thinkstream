@@ -370,6 +370,49 @@ test('updating a post redirects back to the requested heading fragment', functio
         ->assertRedirect(route('admin.posts.show', [$namespace, 'my-slug']).'#my-slug-section-title');
 });
 
+test('updating a post redirects back to the updated canonical page', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create(['slug' => 'guides', 'full_path' => 'guides']);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'my-slug',
+        'full_path' => 'guides/my-slug',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post]), [
+            'title' => 'Updated Title',
+            'slug' => 'updated-slug',
+            'content' => 'Updated content.',
+            'return_heading' => 'updated-slug-section-title',
+            'return_to' => '/guides/my-slug',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/guides/updated-slug#updated-slug-section-title');
+
+    expect($post->fresh()->slug)->toBe('updated-slug');
+    expect($post->fresh()->full_path)->toBe('guides/updated-slug');
+});
+
+test('updating a post ignores unsafe return paths', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'my-slug',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post]), [
+            'title' => 'Updated Title',
+            'slug' => 'my-slug',
+            'content' => 'Updated content.',
+            'return_to' => 'https://example.com/phish',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('admin.posts.show', [$namespace, 'my-slug']));
+});
+
 test('updating a post rejects a slug used by a child namespace in the same namespace', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create(['slug' => 'guide']);

@@ -8,10 +8,12 @@ import {
 import { useState } from 'react';
 import type { ContentNavNode } from '@/components/content-nav-tree';
 import ContentNavTree from '@/components/content-nav-tree';
+import { Button } from '@/components/ui/button';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { login } from '@/routes';
-import { index as adminPosts } from '@/routes/admin/posts';
+import { dashboard, login } from '@/routes';
+import { edit as editNamespace } from '@/routes/admin/namespaces';
 import { path as contentPath } from '@/routes/posts';
 
 type PostNamespace = {
@@ -51,6 +53,7 @@ export default function Namespace({
     const { auth } = usePage<{
         auth: { user: { id: number; name: string } | null };
     }>().props;
+    const { currentUrl } = useCurrentUrl();
     const isMobile = useIsMobile();
     const [navOverride, setNavOverride] = useState<boolean | null>(null);
     const navVisible = navOverride ?? !isMobile;
@@ -120,19 +123,37 @@ export default function Namespace({
                                 Toggle Nav
                             </button>
                             {auth.user ? (
-                                <Link
-                                    href={adminPosts.url()}
-                                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    Admin
-                                </Link>
+                                <>
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link
+                                            href={editNamespace.url(
+                                                namespace.id,
+                                                {
+                                                    query: {
+                                                        return_to: currentUrl,
+                                                    },
+                                                },
+                                            )}
+                                        >
+                                            Edit Section
+                                        </Link>
+                                    </Button>
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link href={dashboard()}>
+                                            Dashboard
+                                        </Link>
+                                    </Button>
+                                </>
                             ) : (
-                                <Link
-                                    href={login.url()}
-                                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    Login
-                                </Link>
+                                <Button asChild variant="outline" size="sm">
+                                    <Link
+                                        href={login.url({
+                                            query: { intended: currentUrl },
+                                        })}
+                                    >
+                                        Login
+                                    </Link>
+                                </Button>
                             )}
                         </div>
                     </div>

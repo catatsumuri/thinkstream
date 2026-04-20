@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { siX } from 'simple-icons';
 import {
     ChevronRight,
@@ -12,13 +12,12 @@ import type { ContentNavNode } from '@/components/content-nav-tree';
 import ContentNavTree from '@/components/content-nav-tree';
 import MarkdownContent from '@/components/markdown-content';
 import TableOfContents from '@/components/table-of-contents';
+import { Button } from '@/components/ui/button';
+import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { login } from '@/routes';
-import {
-    edit as adminPostEdit,
-    index as adminPosts,
-} from '@/routes/admin/posts';
+import { dashboard, login } from '@/routes';
+import { edit as adminPostEdit } from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
 
 type PostNamespace = {
@@ -39,6 +38,73 @@ type Post = {
     updated_at: string;
 };
 
+function findHeadingOffset(
+    content: string,
+    headingText: string,
+    level: number,
+): number | null {
+    const normalizedTarget = headingText.trim().toLowerCase();
+
+    if (!normalizedTarget) {
+        return null;
+    }
+
+    const normalizedContent = content.replace(/\r\n/g, '\n');
+    const lines = normalizedContent.split('\n');
+    let offset = 0;
+    let activeFence: string | null = null;
+
+    for (const line of lines) {
+        const trimmedLine = line.trimStart();
+        const fenceMatch = /^(`{3,}|~{3,})/.exec(trimmedLine);
+
+        if (fenceMatch) {
+            const fence = fenceMatch[1];
+            const remainder = trimmedLine.slice(fence.length);
+
+            if (activeFence === null) {
+                activeFence = fence;
+            } else if (
+                fence[0] === activeFence[0] &&
+                fence.length >= activeFence.length &&
+                remainder.trim() === ''
+            ) {
+                activeFence = null;
+            }
+
+            offset +=
+                line.length +
+                (offset + line.length < normalizedContent.length ? 1 : 0);
+
+            continue;
+        }
+
+        if (activeFence !== null) {
+            offset +=
+                line.length +
+                (offset + line.length < normalizedContent.length ? 1 : 0);
+
+            continue;
+        }
+
+        const match = /^(#{1,6})\s+(.+?)(?:\s+#+\s*)?$/.exec(trimmedLine);
+
+        if (
+            match &&
+            match[1].length === level &&
+            match[2].trim().toLowerCase() === normalizedTarget
+        ) {
+            return offset;
+        }
+
+        offset +=
+            line.length +
+            (offset + line.length < normalizedContent.length ? 1 : 0);
+    }
+
+    return null;
+}
+
 export default function Show({
     breadcrumbs,
     cardImage,
@@ -57,11 +123,47 @@ export default function Show({
     const { auth } = usePage<{
         auth: { user: { id: number; name: string } | null };
     }>().props;
+    const { currentUrl } = useCurrentUrl();
+    const handleEditHeading = ({
+        level,
+        text,
+        id,
+    }: {
+        level: number;
+        text: string;
+        id: string;
+    }) => {
+        const offset = findHeadingOffset(post.content, text, level);
+
+        router.visit(
+            adminPostEdit.url(
+                {
+                    namespace: namespace.id,
+                    post: post.slug,
+                },
+                {
+                    query: {
+                        ...(typeof offset === 'number' ? { jump: offset } : {}),
+                        return_heading: id,
+                        return_to: currentUrl,
+                    },
+                },
+            ),
+        );
+    };
     const tocPosts = useMemo(
         () => [{ slug: post.slug, content: post.content }],
         [post.content, post.slug],
     );
-    const toc = useMarkdownToc(tocPosts);
+    const toc = useMarkdownToc(
+        tocPosts,
+        auth.user
+            ? {
+                  headingAnchorPlacement: 'gutter',
+                  onEditHeading: handleEditHeading,
+              }
+            : {},
+    );
     const entry = toc.get(post.slug);
     const isMobile = useIsMobile();
     const [tocOverride, setTocOverride] = useState<boolean | null>(null);
@@ -188,29 +290,39 @@ export default function Show({
                             )}
                             {auth.user ? (
                                 <>
-                                    <Link
-                                        href={adminPostEdit.url({
-                                            namespace: namespace.id,
-                                            post: post.slug,
-                                        })}
-                                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                    >
-                                        Edit
-                                    </Link>
-                                    <Link
-                                        href={adminPosts.url()}
-                                        className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                    >
-                                        Admin
-                                    </Link>
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link
+                                            href={adminPostEdit.url(
+                                                {
+                                                    namespace: namespace.id,
+                                                    post: post.slug,
+                                                },
+                                                {
+                                                    query: {
+                                                        return_to: currentUrl,
+                                                    },
+                                                },
+                                            )}
+                                        >
+                                            Edit Page
+                                        </Link>
+                                    </Button>
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link href={dashboard()}>
+                                            Dashboard
+                                        </Link>
+                                    </Button>
                                 </>
                             ) : (
-                                <Link
-                                    href={login.url()}
-                                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    Login
-                                </Link>
+                                <Button asChild variant="outline" size="sm">
+                                    <Link
+                                        href={login.url({
+                                            query: { intended: currentUrl },
+                                        })}
+                                    >
+                                        Login
+                                    </Link>
+                                </Button>
                             )}
                         </div>
                     </div>

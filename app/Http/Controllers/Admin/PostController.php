@@ -128,6 +128,11 @@ class PostController extends Controller
 
         $fragment = $request->string('return_heading')->toString();
         $hash = $fragment !== '' ? '#'.ltrim($fragment, '#') : '';
+        $returnTo = $this->safeReturnPath($request->string('return_to')->toString());
+
+        if ($returnTo !== null) {
+            return redirect()->to(route('posts.path', ['path' => $post->full_path], absolute: false).$hash);
+        }
 
         return redirect()->route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug])
             ->setTargetUrl(route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]).$hash);
@@ -212,5 +217,23 @@ class PostController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Post deleted.']);
 
         return to_route('admin.posts.namespace', $namespace);
+    }
+
+    private function safeReturnPath(string $path): ?string
+    {
+        if ($path === '') {
+            return null;
+        }
+
+        if (
+            ! str_starts_with($path, '/')
+            || str_starts_with($path, '//')
+            || parse_url($path, PHP_URL_SCHEME) !== null
+            || parse_url($path, PHP_URL_HOST) !== null
+        ) {
+            return null;
+        }
+
+        return $path;
     }
 }

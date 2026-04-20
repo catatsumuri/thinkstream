@@ -113,7 +113,7 @@ export default function Revisions({
                 title: 'Edit',
                 href: edit.url({ namespace: namespace.id, post: post.slug }),
             },
-            { title: '変更履歴' },
+            { title: 'Revision History' },
         ],
     });
 
@@ -150,13 +150,15 @@ export default function Revisions({
 
     return (
         <>
-            <Head title={`変更履歴: ${post.title}`} />
+            <Head title={`Revision History: ${post.title}`} />
 
             <div className="space-y-4 p-4">
                 <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                         <History className="size-5" />
-                        <h1 className="text-2xl font-semibold">変更履歴</h1>
+                        <h1 className="text-2xl font-semibold">
+                            Revision History
+                        </h1>
                     </div>
                     <Button asChild variant="outline" size="sm">
                         <Link

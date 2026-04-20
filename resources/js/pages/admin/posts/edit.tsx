@@ -50,9 +50,9 @@ export default function Edit({
         ? new Date(post.published_at) > new Date()
         : false;
 
-    const { jumpTo, returnHeading } = useMemo(() => {
+    const { jumpTo, returnHeading, returnTo } = useMemo(() => {
         if (typeof window === 'undefined') {
-            return { jumpTo: undefined, returnHeading: null };
+            return { jumpTo: undefined, returnHeading: null, returnTo: null };
         }
 
         const params = new URLSearchParams(window.location.search);
@@ -62,6 +62,7 @@ export default function Edit({
         return {
             jumpTo: Number.isFinite(n) && jumpParam !== null ? n : undefined,
             returnHeading: params.get('return_heading'),
+            returnTo: params.get('return_to'),
         };
     }, []);
 
@@ -135,7 +136,7 @@ export default function Edit({
                                     post: post.slug,
                                 })}
                             >
-                                変更履歴
+                                Revision History
                             </Link>
                         </Button>
                         {!post.is_draft &&
@@ -169,6 +170,13 @@ export default function Edit({
                                     type="hidden"
                                     name="return_heading"
                                     value={returnHeading}
+                                />
+                            )}
+                            {returnTo && (
+                                <input
+                                    type="hidden"
+                                    name="return_to"
+                                    value={returnTo}
                                 />
                             )}
                             <div className="grid gap-2">
@@ -300,10 +308,13 @@ export default function Edit({
                                 </Button>
                                 <Button type="button" variant="outline" asChild>
                                     <Link
-                                        href={show.url({
-                                            namespace: namespace.id,
-                                            post: post.slug,
-                                        })}
+                                        href={
+                                            returnTo ??
+                                            show.url({
+                                                namespace: namespace.id,
+                                                post: post.slug,
+                                            })
+                                        }
                                     >
                                         Cancel
                                     </Link>

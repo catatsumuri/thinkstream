@@ -96,6 +96,27 @@ test('storing a namespace rejects reserved slugs', function (string $slug) {
     ReservedContentPath::ROOT_SEGMENTS,
 ));
 
+test('storing a child namespace allows reserved slugs', function (string $slug) {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create(['slug' => 'guides']);
+
+    $this->actingAs($user)
+        ->post(route('admin.namespaces.store'), [
+            'parent_id' => $parent->id,
+            'slug' => $slug,
+            'name' => ucfirst($slug),
+        ])
+        ->assertRedirect(route('admin.posts.index'));
+
+    $this->assertDatabaseHas('namespaces', [
+        'parent_id' => $parent->id,
+        'slug' => $slug,
+    ]);
+})->with(fn (): array => array_combine(
+    ReservedContentPath::ROOT_SEGMENTS,
+    ReservedContentPath::ROOT_SEGMENTS,
+));
+
 test('updating a namespace rejects reserved slugs', function (string $slug) {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create(['slug' => 'guides']);
@@ -103,6 +124,32 @@ test('updating a namespace rejects reserved slugs', function (string $slug) {
     $this->actingAs($user)
         ->put(route('admin.namespaces.update', $namespace), ['slug' => $slug, 'name' => ucfirst($slug)])
         ->assertSessionHasErrors('slug');
+})->with(fn (): array => array_combine(
+    ReservedContentPath::ROOT_SEGMENTS,
+    ReservedContentPath::ROOT_SEGMENTS,
+));
+
+test('updating a child namespace allows reserved slugs', function (string $slug) {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create(['slug' => 'guides']);
+    $namespace = PostNamespace::factory()->create([
+        'parent_id' => $parent->id,
+        'slug' => 'child',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.namespaces.update', $namespace), [
+            'parent_id' => $parent->id,
+            'slug' => $slug,
+            'name' => ucfirst($slug),
+        ])
+        ->assertRedirect(route('admin.posts.index'));
+
+    $this->assertDatabaseHas('namespaces', [
+        'id' => $namespace->id,
+        'parent_id' => $parent->id,
+        'slug' => $slug,
+    ]);
 })->with(fn (): array => array_combine(
     ReservedContentPath::ROOT_SEGMENTS,
     ReservedContentPath::ROOT_SEGMENTS,
@@ -200,6 +247,39 @@ test('authenticated users can update a namespace', function () {
     expect($namespace->fresh()->slug)->toBe('new-slug');
     expect($namespace->fresh()->name)->toBe('New Name');
     expect($namespace->fresh()->description)->toBe('Updated description');
+});
+
+test('updating a namespace redirects back to the updated canonical section page', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.namespaces.update', $namespace), [
+            'slug' => 'manuals',
+            'name' => 'Manuals',
+            'description' => 'Updated description',
+            'return_to' => '/guides',
+        ])
+        ->assertRedirect('/manuals');
+
+    expect($namespace->fresh()->slug)->toBe('manuals');
+    expect($namespace->fresh()->full_path)->toBe('manuals');
+});
+
+test('updating a namespace ignores unsafe return paths', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create(['slug' => 'guides']);
+
+    $this->actingAs($user)
+        ->put(route('admin.namespaces.update', $namespace), [
+            'slug' => 'guides',
+            'name' => 'Guides',
+            'return_to' => 'https://example.com/phish',
+        ])
+        ->assertRedirect(route('admin.posts.index'));
 });
 
 test('updating a namespace allows keeping the same slug', function () {

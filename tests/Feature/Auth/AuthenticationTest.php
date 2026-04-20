@@ -33,6 +33,34 @@ test('users can authenticate using the login screen', function () {
     $response->assertRedirect(route('dashboard', absolute: false));
 });
 
+test('users are redirected to the intended canonical page after logging in from the login screen', function () {
+    $user = User::factory()->create();
+
+    $this->get(route('login', ['intended' => '/guides']));
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect('/guides');
+});
+
+test('external intended paths are ignored on the login screen', function () {
+    $user = User::factory()->create();
+
+    $this->get(route('login', ['intended' => 'https://example.com/phish']));
+
+    $response = $this->post(route('login.store'), [
+        'email' => $user->email,
+        'password' => 'password',
+    ]);
+
+    $this->assertAuthenticated();
+    $response->assertRedirect(route('dashboard', absolute: false));
+});
+
 test('users with two factor enabled are redirected to two factor challenge', function () {
     $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
 
