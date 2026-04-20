@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\PostRevision;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Symfony\Component\Yaml\Yaml;
@@ -11,7 +12,9 @@ use ZipArchive;
 
 class NamespaceRestoreCommand extends Command
 {
-    protected $signature = 'namespace:restore {path : Path to a backup zip or directory}';
+    protected $signature = 'namespace:restore
+                            {path : Path to a backup zip or directory}
+                            {--with-revisions : Import post revision history if present in the backup}';
 
     protected $description = 'Restore a namespace and its posts from a backup zip or directory';
 
@@ -90,14 +93,15 @@ class NamespaceRestoreCommand extends Command
             return self::FAILURE;
         }
 
-        $postCount = $this->restoreDirectory($path, null, $user);
+        $withRevisions = (bool) $this->option('with-revisions');
+        $postCount = $this->restoreDirectory($path, null, $user, $withRevisions);
 
         $this->info("Restored {$postCount} posts.");
 
         return self::SUCCESS;
     }
 
-    private function restoreDirectory(string $path, ?PostNamespace $parent, User $user): int
+    private function restoreDirectory(string $path, ?PostNamespace $parent, User $user, bool $withRevisions): int
     {
         $namespaceData = Yaml::parseFile($path.'/_namespace.yaml');
 
@@ -132,7 +136,7 @@ class NamespaceRestoreCommand extends Command
             $frontmatter = Yaml::parse($matches[1]);
             $body = trim(substr($raw, strlen($matches[0])));
 
-            Post::updateOrCreate(
+            $post = Post::updateOrCreate(
                 ['namespace_id' => $namespace->id, 'slug' => $frontmatter['slug']],
                 [
                     'user_id' => $user->id,
@@ -143,6 +147,10 @@ class NamespaceRestoreCommand extends Command
                 ],
             );
 
+            if ($withRevisions) {
+                $this->restoreRevisions($post, $path.'/'.$frontmatter['slug'].'.revisions.json');
+            }
+
             $postCount++;
         }
 
@@ -150,11 +158,39 @@ class NamespaceRestoreCommand extends Command
 
         foreach (glob($path.'/*/') as $childDir) {
             if (file_exists($childDir.'_namespace.yaml')) {
-                $postCount += $this->restoreDirectory($childDir, $namespace, $user);
+                $postCount += $this->restoreDirectory($childDir, $namespace, $user, $withRevisions);
             }
         }
 
         return $postCount;
+    }
+
+    private function restoreRevisions(Post $post, string $revisionsPath): void
+    {
+        if (! file_exists($revisionsPath)) {
+            return;
+        }
+
+        $data = json_decode(file_get_contents($revisionsPath), true);
+
+        if (! is_array($data) || empty($data)) {
+            return;
+        }
+
+        $post->revisions()->delete();
+
+        $now = now();
+
+        $records = array_map(fn (array $revision) => [
+            'post_id' => $post->id,
+            'user_id' => null,
+            'title' => $revision['title'],
+            'content' => $revision['content'],
+            'created_at' => $revision['created_at'],
+            'updated_at' => $now,
+        ], $data);
+
+        PostRevision::insert($records);
     }
 
     private function removeDirectory(string $path): void

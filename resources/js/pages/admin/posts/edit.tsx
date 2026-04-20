@@ -12,6 +12,7 @@ import { dashboard } from '@/routes';
 import {
     index,
     namespace as namespaceRoute,
+    revisions,
     show,
     update,
     uploadImage,
@@ -126,20 +127,32 @@ export default function Edit({
                             {namespace.slug}/{post.slug}
                         </p>
                     </div>
-                    {!post.is_draft &&
-                        post.published_at &&
-                        new Date(post.published_at) <= new Date() && (
-                            <Button variant="outline" size="sm" asChild>
-                                <a
-                                    href={`/${post.full_path}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                >
-                                    <ExternalLink className="size-4" />
-                                    View Live
-                                </a>
-                            </Button>
-                        )}
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" asChild>
+                            <Link
+                                href={revisions.url({
+                                    namespace: namespace.id,
+                                    post: post.slug,
+                                })}
+                            >
+                                変更履歴
+                            </Link>
+                        </Button>
+                        {!post.is_draft &&
+                            post.published_at &&
+                            new Date(post.published_at) <= new Date() && (
+                                <Button variant="outline" size="sm" asChild>
+                                    <a
+                                        href={`/${post.full_path}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                    >
+                                        <ExternalLink className="size-4" />
+                                        View Live
+                                    </a>
+                                </Button>
+                            )}
+                    </div>
                 </div>
 
                 <Form

@@ -11,7 +11,7 @@ class NamespaceBackupSeeder extends Seeder
 {
     public function run(): void
     {
-        $backupDir = database_path('backups');
+        $backupDir = storage_path('app/private/backups');
 
         $zips = glob($backupDir.'/*.zip');
 
