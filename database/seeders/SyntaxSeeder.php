@@ -58,7 +58,6 @@ Use `#` symbols to define heading levels. The number of `#` characters sets the 
 
 The above renders as:
 
-## Heading 2
 ### Heading 3
 #### Heading 4
 
@@ -68,7 +67,7 @@ The above renders as:
 
 # Paragraphs and Line Breaks
 
-## Paragraphs
+### Paragraphs
 
 Separate paragraphs with a **blank line**. A single newline without a blank line does not create a new paragraph — the lines are joined.
 
@@ -82,7 +81,7 @@ This is the first paragraph.
 
 This is the second paragraph.
 
-## Line Breaks
+### Line Breaks
 
 To force a line break **within** a paragraph (without starting a new paragraph), end the line with **two or more spaces** before pressing Enter.
 
@@ -98,7 +97,7 @@ Line two (same paragraph, new line)
 
 # Text Formatting
 
-## Bold
+### Bold
 
 ```
 **This text is bold.**
@@ -108,7 +107,7 @@ __This also works.__
 **This text is bold.**
 __This also works.__
 
-## Italic
+### Italic
 
 ```
 *This text is italic.*
@@ -118,7 +117,7 @@ _This also works._
 *This text is italic.*
 _This also works._
 
-## Bold and Italic
+### Bold and Italic
 
 ```
 ***This text is bold and italic.***
@@ -126,7 +125,7 @@ _This also works._
 
 ***This text is bold and italic.***
 
-## Strikethrough
+### Strikethrough
 
 ```
 ~~This text is crossed out.~~
@@ -134,7 +133,7 @@ _This also works._
 
 ~~This text is crossed out.~~
 
-## Inline Code
+### Inline Code
 
 Wrap code in single backticks to render it as monospace inline code. Useful for referencing variable names, commands, or short snippets.
 
@@ -152,7 +151,7 @@ Set `DEBUG=true` in your environment.
 
 # Lists
 
-## Unordered Lists
+### Unordered Lists
 
 Use `-`, `*`, or `+` to create bullet points. They are interchangeable.
 
@@ -166,7 +165,7 @@ Use `-`, `*`, or `+` to create bullet points. They are interchangeable.
 - Oranges
 - Bananas
 
-## Nested Lists
+### Nested Lists
 
 Indent with two or four spaces to create sub-items.
 
@@ -190,7 +189,7 @@ Indent with two or four spaces to create sub-items.
   - Carrots
   - Spinach
 
-## Ordered Lists
+### Ordered Lists
 
 ```
 1. First step
@@ -204,7 +203,7 @@ Indent with two or four spaces to create sub-items.
 
 > The actual numbers don't matter — Markdown will renumber them in order. You can use `1.` for every item and it still renders correctly.
 
-## Task Lists
+### Task Lists
 
 Use `- [ ]` for an unchecked box and `- [x]` for a checked box.
 
@@ -224,7 +223,7 @@ Use `- [ ]` for an unchecked box and `- [x]` for a checked box.
 
 # Code Blocks
 
-## Fenced Code Blocks
+### Fenced Code Blocks
 
 Wrap code in triple backticks. Optionally add a language identifier after the opening fence for syntax highlighting.
 
@@ -324,7 +323,7 @@ JSON:
 }
 ```
 
-## Long Lines
+### Long Lines
 
 Long lines scroll horizontally rather than wrapping, so the code block never distorts your layout.
 
@@ -336,7 +335,7 @@ SELECT users.id, users.name, orders.id AS order_id, orders.total, orders.status 
 
 # Links
 
-## Inline Links
+### Inline Links
 
 The basic form is `[visible text](URL)`.
 
@@ -346,7 +345,7 @@ The basic form is `[visible text](URL)`.
 
 [Visit the Markdown Guide](https://www.markdownguide.org)
 
-## Links with Titles
+### Links with Titles
 
 Add a quoted title after the URL. It appears as a tooltip on hover.
 
@@ -356,7 +355,7 @@ Add a quoted title after the URL. It appears as a tooltip on hover.
 
 [Markdown Guide](https://www.markdownguide.org "The best Markdown reference")
 
-## Bare URLs
+### Bare URLs
 
 Wrap a URL in angle brackets to turn it into a clickable link without custom text.
 
@@ -368,7 +367,7 @@ Wrap a URL in angle brackets to turn it into a clickable link without custom tex
 <https://www.example.com>
 <hello@example.com>
 
-## Reference-Style Links
+### Reference-Style Links
 
 Define the URL separately and reference it by label. Useful for keeping long URLs out of the prose.
 
@@ -436,7 +435,7 @@ Use `|` to separate columns and `-` for the header separator row.
 | Bob        | Editor    | No     |
 | Carol      | Viewer    | Yes    |
 
-## Column Alignment
+### Column Alignment
 
 Add `:` to the separator row to control alignment per column.
 
@@ -644,7 +643,7 @@ MD),
 
 Zenn supports a few convenient image patterns on top of regular Markdown.
 
-## Basic Image
+### Basic Image
 
 ```md
 ![](/storage/namespaces/guide.png)
@@ -652,7 +651,7 @@ Zenn supports a few convenient image patterns on top of regular Markdown.
 
 ![](/storage/namespaces/guide.png)
 
-## Sized Image
+### Sized Image
 
 Use `=250x` after the image URL to set the width in pixels.
 
@@ -662,7 +661,7 @@ Use `=250x` after the image URL to set the width in pixels.
 
 ![](/storage/namespaces/guide.png =250x)
 
-## Alt Text
+### Alt Text
 
 ```md
 ![Guide cover](/storage/namespaces/guide.png =250x)
@@ -670,7 +669,7 @@ Use `=250x` after the image URL to set the width in pixels.
 
 ![Guide cover](/storage/namespaces/guide.png =250x)
 
-## Caption
+### Caption
 
 Place italic text on the next line to display it like a caption.
 
@@ -682,7 +681,7 @@ Place italic text on the next line to display it like a caption.
 ![](/storage/namespaces/guide.png =250x)
 *Guide cover image*
 
-## Linked Image
+### Linked Image
 
 ```md
 [![](/storage/namespaces/guide.png =250x)](https://zenn.dev)
@@ -690,7 +689,7 @@ Place italic text on the next line to display it like a caption.
 
 [![](/storage/namespaces/guide.png =250x)](https://zenn.dev)
 
-## Message
+### Message
 
 Wrap content in `:::message` to display an info callout.
 
@@ -744,7 +743,7 @@ Helpful tip.
 Success or confirmation.
 :::
 
-## Details (Collapsible)
+### Details (Collapsible)
 
 Wrap content in `:::details` followed by a title to create a collapsible block. The content is hidden until the reader clicks to expand it.
 
@@ -808,7 +807,7 @@ This note is inside a collapsible section.
 :::
 ::::
 
-## Link Card
+### Link Card
 
 A URL placed alone on its own line is automatically displayed as a card.
 
@@ -834,7 +833,7 @@ https://www.youtube.com/watch?v=WRVsOCh907o
 
 https://www.youtube.com/watch?v=WRVsOCh907o
 
-## Code Block with Filename
+### Code Block with Filename
 
 Add `:filename` after the language name to display a filename label above the code block.
 
@@ -854,7 +853,7 @@ export function greet(name: string): string {
 }
 ```
 
-## Diff Highlighting
+### Diff Highlighting
 
 Start the fence with `diff` followed by the language name to enable diff highlighting. Lines beginning with `+` are shown in green and lines beginning with `-` in red.
 
@@ -877,7 +876,7 @@ You can combine `diff` with a filename using `` ```diff ts:src/utils.ts ``:
  }
 ```
 
-## GitHub Embed
+### GitHub Embed
 
 A GitHub file URL placed alone on its own line is automatically embedded as a code block.
 
@@ -1122,7 +1121,7 @@ Source example:
 </Tabs>
 ````
 
-Possible fallback if tabs are unsupported: split content into headings such as `## npm` and `## pnpm`.
+Possible fallback if tabs are unsupported: split content into headings such as `### npm` and `### pnpm`.
 
 ---
 
@@ -1236,7 +1235,7 @@ This feature requires a <Badge color="orange" size="sm">Premium</Badge> subscrip
 
 # API Fields
 
-## ResponseField
+### ResponseField
 
 Use `<ResponseField>` to describe the fields of an API response. Supports `name`, `type`, `required`, `default`, and `deprecated`.
 
@@ -1274,7 +1273,7 @@ Source:
 </ResponseField>
 ```
 
-## ParamField
+### ParamField
 
 Use `<ParamField>` to describe request parameters. The attribute key (`path`, `query`, or `body`) indicates where the parameter appears, and its value is the parameter name.
 
@@ -1480,7 +1479,7 @@ Live example:
 
 <Update label="2024-10-11" description="v0.2.0" tags={["Feature", "Improvement"]}>
 
-## Improved card icon support
+### Improved card icon support
 
 Cards now support brand icons from the `simple-icons` library in addition to Lucide icons. Pass any brand name as the `icon` prop on `<Card>`.
 
@@ -1488,7 +1487,7 @@ Cards now support brand icons from the `simple-icons` library in addition to Luc
 
 <Update label="2024-09-01" description="v0.1.0" tags={["Initial release"]}>
 
-## First release
+### First release
 
 Initial launch of Thinkstream with support for Markdown, GFM, Zenn syntax, and core Mintlify components including callouts, cards, tabs, steps, and code groups.
 
@@ -1499,7 +1498,7 @@ Source:
 ```mdx
 <Update label="2024-10-11" description="v0.2.0" tags={["Feature", "Improvement"]}>
 
-## Improved card icon support
+### Improved card icon support
 
 Cards now support brand icons from the `simple-icons` library in addition to Lucide icons. Pass any brand name as the `icon` prop on `<Card>`.
 
@@ -1507,7 +1506,7 @@ Cards now support brand icons from the `simple-icons` library in addition to Luc
 
 <Update label="2024-09-01" description="v0.1.0" tags={["Initial release"]}>
 
-## First release
+### First release
 
 Initial launch of Thinkstream with support for Markdown, GFM, Zenn syntax, and core Mintlify components including callouts, cards, tabs, steps, and code groups.
 
