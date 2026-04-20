@@ -88,6 +88,84 @@ test('namespace restore command imports a namespace backup zip', function () {
         ->and($posts->pluck('user_id')->unique()->all())->toBe([$user->id]);
 });
 
+test('namespace backup and restore commands preserve nested namespaces and posts', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'inertiajs-v3',
+        'name' => 'Inertia.js v3',
+        'description' => 'Inertia.js v3 guides.',
+        'post_order' => ['childspace', 'overview'],
+    ]);
+
+    $childNamespace = PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'childspace',
+        'name' => 'Child Space',
+        'description' => 'Nested guides.',
+        'post_order' => ['page'],
+    ]);
+
+    Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
+        'title' => 'Overview',
+        'slug' => 'overview',
+        'content' => "# Overview\n\nTop-level guide.",
+    ]);
+
+    Post::factory()->for($user)->for($childNamespace, 'namespace')->published()->create([
+        'title' => 'Page',
+        'slug' => 'page',
+        'content' => "# Page\n\nNested guide.",
+    ]);
+
+    $zipPath = storage_path('framework/testing/'.Str::uuid().'.zip');
+
+    $this->artisan('namespace:backup', [
+        'namespace' => $namespace->slug,
+        '--output' => $zipPath,
+    ])->assertSuccessful();
+
+    $zip = new ZipArchive;
+    expect($zip->open($zipPath))->toBeTrue()
+        ->and($zip->getFromName('_namespace.yaml'))->not->toBeFalse()
+        ->and($zip->getFromName('overview.md'))->toContain('title: Overview')
+        ->and($zip->getFromName('childspace/_namespace.yaml'))->not->toBeFalse()
+        ->and($zip->getFromName('childspace/page.md'))->toContain('title: Page');
+    $zip->close();
+
+    Post::query()->delete();
+    PostNamespace::query()->delete();
+
+    $this->artisan('namespace:restore', [
+        'path' => $zipPath,
+    ])->assertSuccessful();
+
+    $restoredNamespace = PostNamespace::query()
+        ->where('slug', 'inertiajs-v3')
+        ->first();
+    $restoredChildNamespace = PostNamespace::query()
+        ->where('slug', 'childspace')
+        ->first();
+    $restoredRootPost = Post::query()->where('slug', 'overview')->first();
+    $restoredChildPost = Post::query()->where('slug', 'page')->first();
+
+    expect($restoredNamespace)->not->toBeNull()
+        ->and($restoredNamespace->parent_id)->toBeNull()
+        ->and($restoredNamespace->full_path)->toBe('inertiajs-v3')
+        ->and($restoredNamespace->post_order)->toBe(['childspace', 'overview'])
+        ->and($restoredChildNamespace)->not->toBeNull()
+        ->and($restoredChildNamespace->parent_id)->toBe($restoredNamespace->id)
+        ->and($restoredChildNamespace->full_path)->toBe('inertiajs-v3/childspace')
+        ->and($restoredChildNamespace->post_order)->toBe(['page'])
+        ->and($restoredRootPost)->not->toBeNull()
+        ->and($restoredRootPost->namespace_id)->toBe($restoredNamespace->id)
+        ->and($restoredRootPost->full_path)->toBe('inertiajs-v3/overview')
+        ->and($restoredChildPost)->not->toBeNull()
+        ->and($restoredChildPost->namespace_id)->toBe($restoredChildNamespace->id)
+        ->and($restoredChildPost->full_path)->toBe('inertiajs-v3/childspace/page');
+
+    File::delete($zipPath);
+});
+
 test('namespace restore command fails when no user exists', function () {
     $this->artisan('namespace:restore', [
         'path' => database_path('backups/laravel-13.zip'),

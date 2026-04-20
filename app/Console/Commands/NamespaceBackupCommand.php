@@ -52,6 +52,18 @@ class NamespaceBackupCommand extends Command
             return self::FAILURE;
         }
 
+        $postCount = $this->addNamespaceToZip($zip, $namespace, '');
+
+        $zip->close();
+
+        $this->info("Backed up {$namespace->name} ({$postCount} posts) to:");
+        $this->line($zipPath);
+
+        return self::SUCCESS;
+    }
+
+    private function addNamespaceToZip(ZipArchive $zip, PostNamespace $namespace, string $prefix): int
+    {
         $namespaceData = [
             'name' => $namespace->name,
             'slug' => $namespace->slug,
@@ -63,7 +75,7 @@ class NamespaceBackupCommand extends Command
             'sort_order' => $namespace->sort_order,
         ];
 
-        $zip->addFromString('_namespace.yaml', Yaml::dump($namespaceData, 4));
+        $zip->addFromString($prefix.'_namespace.yaml', Yaml::dump($namespaceData, 4));
 
         $posts = $namespace->posts()->get();
 
@@ -78,14 +90,15 @@ class NamespaceBackupCommand extends Command
 
             $content = "---\n".Yaml::dump($frontmatter)."---\n\n".$post->content."\n";
 
-            $zip->addFromString($post->slug.'.md', $content);
+            $zip->addFromString($prefix.$post->slug.'.md', $content);
         }
 
-        $zip->close();
+        $postCount = $posts->count();
 
-        $this->info("Backed up {$namespace->name} ({$posts->count()} posts) to:");
-        $this->line($zipPath);
+        foreach ($namespace->children()->get() as $child) {
+            $postCount += $this->addNamespaceToZip($zip, $child, $prefix.$child->slug.'/');
+        }
 
-        return self::SUCCESS;
+        return $postCount;
     }
 }

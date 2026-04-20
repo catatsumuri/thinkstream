@@ -82,7 +82,6 @@ class NamespaceRestoreCommand extends Command
             return self::FAILURE;
         }
 
-        $namespaceData = Yaml::parseFile($namespacePath);
         $user = User::query()->first();
 
         if (! $user) {
@@ -91,10 +90,21 @@ class NamespaceRestoreCommand extends Command
             return self::FAILURE;
         }
 
+        $postCount = $this->restoreDirectory($path, null, $user);
+
+        $this->info("Restored {$postCount} posts.");
+
+        return self::SUCCESS;
+    }
+
+    private function restoreDirectory(string $path, ?PostNamespace $parent, User $user): int
+    {
+        $namespaceData = Yaml::parseFile($path.'/_namespace.yaml');
+
         $namespace = PostNamespace::updateOrCreate(
             ['slug' => $namespaceData['slug']],
             array_filter([
-                'full_path' => $namespaceData['full_path'] ?? null,
+                'parent_id' => $parent?->id,
                 'name' => $namespaceData['name'],
                 'description' => $namespaceData['description'] ?? null,
                 'cover_image' => $namespaceData['cover_image'] ?? null,
@@ -127,7 +137,6 @@ class NamespaceRestoreCommand extends Command
                 [
                     'user_id' => $user->id,
                     'title' => $frontmatter['title'],
-                    'full_path' => $frontmatter['full_path'] ?? null,
                     'content' => $body,
                     'is_draft' => $frontmatter['is_draft'] ?? false,
                     'published_at' => $frontmatter['published_at'] ?? null,
@@ -137,9 +146,15 @@ class NamespaceRestoreCommand extends Command
             $postCount++;
         }
 
-        $this->info("Restored {$namespace->name} ({$postCount} posts).");
+        $this->info("  Restored {$namespace->name} ({$postCount} posts).");
 
-        return self::SUCCESS;
+        foreach (glob($path.'/*/') as $childDir) {
+            if (file_exists($childDir.'_namespace.yaml')) {
+                $postCount += $this->restoreDirectory($childDir, $namespace, $user);
+            }
+        }
+
+        return $postCount;
     }
 
     private function removeDirectory(string $path): void
