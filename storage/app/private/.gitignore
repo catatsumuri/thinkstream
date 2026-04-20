@@ -1,2 +1,5 @@
 *
 !.gitignore
+!backups/
+backups/*
+!backups/.gitignore
