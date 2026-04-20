@@ -1,5 +1,11 @@
 import { Link as LinkIcon, Pencil } from 'lucide-react';
-import { Children, createContext, isValidElement, useContext, useRef } from 'react';
+import {
+    Children,
+    createContext,
+    isValidElement,
+    useContext,
+    useRef,
+} from 'react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import type { Components } from 'react-markdown';
 import { CodeBlock } from '@/components/code-block';
@@ -103,7 +109,9 @@ function makeHeadingComponents(
             const baseId = postSlug
                 ? `${postSlug}-${slugify(text)}`
                 : slugify(text);
-            const id = dispenseId ? dispenseId(baseId, selfRef.current) : baseId;
+            const id = dispenseId
+                ? dispenseId(baseId, selfRef.current)
+                : baseId;
             const Tag = `h${level}` as 'h1' | 'h2' | 'h3';
 
             return (
