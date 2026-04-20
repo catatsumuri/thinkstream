@@ -229,6 +229,82 @@ test('post navigation toggle stays within the viewport after page scroll', funct
     JS))->toBeTrue();
 });
 
+test('namespace navigation toggle removes the empty desktop gutter', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+        'description' => 'Practical guides, walkthroughs, and reference notes for writing and publishing posts.',
+        'is_published' => true,
+    ]);
+
+    Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'index',
+        'title' => 'Markdown Syntax Guide',
+    ]);
+
+    Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'zenn-syntax',
+        'title' => 'Zenn Syntax',
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $namespace->full_path]))->resize(1280, 720);
+
+    $page
+        ->assertSee('Guides')
+        ->assertSee('Toggle Nav');
+
+    $before = $page->script(<<<'JS'
+        (() => {
+            const layout = document.querySelector('[data-test="namespace-layout"]');
+
+            if (! layout) {
+                return null;
+            }
+
+            const style = window.getComputedStyle(layout);
+
+            return {
+                display: style.display,
+                gridTemplateColumns: style.gridTemplateColumns,
+            };
+        })()
+    JS);
+
+    $page
+        ->click('Toggle Nav')
+        ->wait(0.3);
+
+    $after = $page->script(<<<'JS'
+        (() => {
+            const layout = document.querySelector('[data-test="namespace-layout"]');
+
+            if (! layout) {
+                return null;
+            }
+
+            const style = window.getComputedStyle(layout);
+
+            return {
+                display: style.display,
+                gridTemplateColumns: style.gridTemplateColumns,
+                asideExists: !! document.querySelector('[data-test="namespace-nav"]'),
+                scrollWidth: document.documentElement.scrollWidth,
+                viewportWidth: window.innerWidth,
+            };
+        })()
+    JS);
+
+    expect($before['display'])->toBe('grid');
+    expect($before['gridTemplateColumns'])->toContain('240px');
+    expect($after)->toBe([
+        'display' => 'block',
+        'gridTemplateColumns' => 'none',
+        'asideExists' => false,
+        'scrollWidth' => 1280,
+        'viewportWidth' => 1280,
+    ]);
+});
+
 test('table of contents highlights the active heading and stays scrollable', function () {
     $namespace = PostNamespace::factory()->create([
         'slug' => 'guides',
@@ -397,6 +473,64 @@ test('admin post deep links restore hashed headings and use gutter anchors', fun
             const anchorRect = anchor.getBoundingClientRect();
 
             return anchorRect.right <= headingRect.left + 8;
+        })()
+    JS))->toBeTrue();
+});
+
+test('admin post table of contents stays within the viewport for wide markdown', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->create([
+        'slug' => 'index',
+        'title' => 'Index',
+        'content' => implode("\n\n", [
+            '## What is Markdown?',
+            str_repeat('Long body content with inline code like `DEBUG=true` and `<div>` references. ', 20),
+            '## SQL Example',
+            '```sql',
+            "SELECT users.id, users.name, orders.id AS order_id, orders.total, orders.status FROM users INNER JOIN orders ON orders.user_id = users.id WHERE orders.status IN ('pending', 'processing') ORDER BY orders.created_at DESC;",
+            '```',
+            ...collect(range(1, 18))
+                ->map(
+                    fn (int $section): string => "## Section {$section}\n\n".str_repeat(
+                        'Long body content. ',
+                        60,
+                    ),
+                )
+                ->all(),
+        ]),
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.show', [
+        'namespace' => $namespace->id,
+        'post' => $post->slug,
+    ], absolute: false))->resize(1280, 720);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="table-of-contents"][data-sticky="true"]')
+        ->wait(0.5);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const toc = document.querySelector('[data-test="table-of-contents"][data-sticky="true"]');
+
+            if (! toc) {
+                return null;
+            }
+
+            const rect = toc.getBoundingClientRect();
+
+            return rect.right <= window.innerWidth && document.documentElement.scrollWidth <= window.innerWidth;
         })()
     JS))->toBeTrue();
 });

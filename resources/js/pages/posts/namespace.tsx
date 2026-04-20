@@ -6,9 +6,8 @@ import {
     PanelLeftOpen,
 } from 'lucide-react';
 import { useState } from 'react';
-import ContentNavTree, {
-    type ContentNavNode,
-} from '@/components/content-nav-tree';
+import type { ContentNavNode } from '@/components/content-nav-tree';
+import ContentNavTree from '@/components/content-nav-tree';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { login } from '@/routes';
@@ -139,9 +138,15 @@ export default function Namespace({
                     </div>
                 </header>
 
-                <div className="mx-auto max-w-7xl px-4 py-10 lg:grid lg:grid-cols-[240px_1fr] lg:gap-12">
+                <div
+                    data-test="namespace-layout"
+                    className={`mx-auto max-w-7xl px-4 py-10 ${navVisible ? 'lg:grid lg:grid-cols-[240px_1fr] lg:gap-12' : ''}`}
+                >
                     {navVisible && (
-                        <aside className="mb-8 lg:mb-0 lg:block">
+                        <aside
+                            data-test="namespace-nav"
+                            className="mb-8 lg:mb-0 lg:block"
+                        >
                             <div className="lg:sticky lg:top-24">
                                 <p className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                     {navRoot.name}
@@ -156,7 +161,7 @@ export default function Namespace({
                         </aside>
                     )}
 
-                    <main className="space-y-12">
+                    <main data-test="namespace-main" className="space-y-12">
                         <section className="space-y-3">
                             <p className="text-sm text-muted-foreground">
                                 /{namespace.full_path}

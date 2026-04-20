@@ -25,10 +25,8 @@ import { MarkdownTab, MarkdownTabs } from '@/components/markdown-tabs';
 import { MarkdownTooltip } from '@/components/markdown-tooltip';
 import { MarkdownTree } from '@/components/markdown-tree';
 import { MarkdownUpdate } from '@/components/markdown-update';
-import {
-    MARKDOWN_CALLOUT_VARIANTS,
-    MARKDOWN_CUSTOM_COMPONENT_NAMES,
-} from '@/lib/markdown-syntax-manifest';
+import { HeadingIdContext } from '@/lib/markdown-components';
+import { createHeadingIdDispenser } from '@/lib/markdown-heading-ids';
 import {
     preprocessMarkdownContent,
     preprocessMarkdownSyntax,
@@ -77,6 +75,8 @@ function SummaryEl({
     );
 }
 
+type CalloutType = keyof typeof CALLOUT_CONFIG;
+
 const CALLOUT_CONFIG = {
     note: {
         Icon: Info,
@@ -109,10 +109,6 @@ const CALLOUT_CONFIG = {
         iconColor: 'text-green-500',
     },
 } as const;
-
-type CalloutType = (typeof MARKDOWN_CALLOUT_VARIANTS)[number];
-type CustomMarkdownComponentName =
-    (typeof MARKDOWN_CUSTOM_COMPONENT_NAMES)[number];
 
 function MessageBox({
     children,
@@ -158,10 +154,9 @@ export default function MarkdownContent({
     content,
     components,
 }: MarkdownContentProps) {
-    const customMarkdownComponents: Record<
-        CustomMarkdownComponentName,
-        (props: Record<string, unknown>) => React.ReactElement
-    > = {
+    const dispenseHeadingId = createHeadingIdDispenser();
+
+    const customMarkdownComponents = {
         tabs: (props: Record<string, unknown>) => <MarkdownTabs {...props} />,
         tab: (props: Record<string, unknown>) => <MarkdownTab {...props} />,
         card: (props: Record<string, unknown>) => (
@@ -213,7 +208,10 @@ export default function MarkdownContent({
         tree: (props: Record<string, unknown>) => (
             <MarkdownTree {...(props as Parameters<typeof MarkdownTree>[0])} />
         ),
-    };
+    } satisfies Record<
+        string,
+        (props: Record<string, unknown>) => React.ReactElement
+    >;
 
     const markdownComponents: Components &
         Partial<typeof customMarkdownComponents> = {
@@ -255,41 +253,43 @@ export default function MarkdownContent({
     };
 
     return (
-        <ReactMarkdown
-            remarkPlugins={[
-                [remarkGfm, { singleTilde: false }],
-                remarkCodeMeta,
-                remarkDirective,
-                remarkZennDirective,
-                remarkTabsDirective,
-                remarkCardDirective,
-                remarkStepsDirective,
-                remarkApiFieldsDirective,
-                remarkBadgeDirective,
-                remarkTooltipDirective,
-                remarkUpdateDirective,
-                remarkTreeDirective,
-                remarkCodeGroupDirective,
-                remarkLinkifyToCard,
-                remarkSupersub,
-                remarkDefinitionList,
-                remarkEmoji,
-                remarkMark,
-            ]}
-            remarkRehypeOptions={{
-                handlers: {
-                    ...defListHastHandlers,
-                    mark: (state: any, node: any) => ({
-                        type: 'element' as const,
-                        tagName: 'mark',
-                        properties: {},
-                        children: state.all(node),
-                    }),
-                } as any,
-            }}
-            components={markdownComponents}
-        >
-            {preprocessMarkdownContent(preprocessMarkdownSyntax(content))}
-        </ReactMarkdown>
+        <HeadingIdContext.Provider value={dispenseHeadingId}>
+            <ReactMarkdown
+                remarkPlugins={[
+                    [remarkGfm, { singleTilde: false }],
+                    remarkCodeMeta,
+                    remarkDirective,
+                    remarkZennDirective,
+                    remarkTabsDirective,
+                    remarkCardDirective,
+                    remarkStepsDirective,
+                    remarkApiFieldsDirective,
+                    remarkBadgeDirective,
+                    remarkTooltipDirective,
+                    remarkUpdateDirective,
+                    remarkTreeDirective,
+                    remarkCodeGroupDirective,
+                    remarkLinkifyToCard,
+                    remarkSupersub,
+                    remarkDefinitionList,
+                    remarkEmoji,
+                    remarkMark,
+                ]}
+                remarkRehypeOptions={{
+                    handlers: {
+                        ...defListHastHandlers,
+                        mark: (state: any, node: any) => ({
+                            type: 'element' as const,
+                            tagName: 'mark',
+                            properties: {},
+                            children: state.all(node),
+                        }),
+                    } as any,
+                }}
+                components={markdownComponents}
+            >
+                {preprocessMarkdownContent(preprocessMarkdownSyntax(content))}
+            </ReactMarkdown>
+        </HeadingIdContext.Provider>
     );
 }

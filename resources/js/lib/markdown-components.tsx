@@ -1,5 +1,11 @@
 import { Link as LinkIcon, Pencil } from 'lucide-react';
-import { Children, isValidElement } from 'react';
+import {
+    Children,
+    createContext,
+    isValidElement,
+    useContext,
+    useRef,
+} from 'react';
 import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import type { Components } from 'react-markdown';
 import { CodeBlock } from '@/components/code-block';
@@ -8,6 +14,15 @@ import { extractRenderedHeadingText } from '@/lib/markdown-heading-text';
 import { parseMarkdownImageMetadata } from '@/lib/markdown-syntax';
 import { slugify } from '@/lib/slugify';
 import { cn } from '@/lib/utils';
+
+/**
+ * Provides a function that dispenses deduplicated heading IDs.
+ * Accepts a stable per-component identity object to avoid double-counting
+ * in React Strict Mode's double-invoke.
+ */
+export const HeadingIdContext = createContext<
+    ((baseId: string, self: object) => string) | null
+>(null);
 
 export type MarkdownComponentOptions = {
     headingAnchorPlacement?: 'inline' | 'gutter';
@@ -86,10 +101,17 @@ function makeHeadingComponents(
 ): Pick<Components, 'h1' | 'h2' | 'h3'> {
     const makeTag = (level: 1 | 2 | 3) =>
         function Heading({ children }: { children?: ReactNode }) {
+            const dispenseId = useContext(HeadingIdContext);
+            // Stable per-instance identity so Strict Mode's double-invoke
+            // doesn't increment the shared counter twice for the same heading.
+            const selfRef = useRef<object>({});
             const text = extractRenderedHeadingText(children);
-            const id = postSlug
+            const baseId = postSlug
                 ? `${postSlug}-${slugify(text)}`
                 : slugify(text);
+            const id = dispenseId
+                ? dispenseId(baseId, selfRef.current)
+                : baseId;
             const Tag = `h${level}` as 'h1' | 'h2' | 'h3';
 
             return (
