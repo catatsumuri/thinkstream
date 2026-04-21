@@ -15,7 +15,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { matchesDeleteConfirmation } from '@/lib/delete-confirmation';
 import { dashboard } from '@/routes';
-import { backups as backupsRoute, index, namespace as namespaceRoute } from '@/routes/admin/posts';
+import {
+    backups as backupsRoute,
+    index,
+    namespace as namespaceRoute,
+} from '@/routes/admin/posts';
 
 type Namespace = {
     id: number;
