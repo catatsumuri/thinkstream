@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ImageOff } from 'lucide-react';
+import { ImageOff, Settings2 } from 'lucide-react';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { Button } from '@/components/ui/button';
 import { useCurrentUrl } from '@/hooks/use-current-url';
@@ -32,7 +32,13 @@ export default function Index({ namespaces }: { namespaces: PostNamespace[] }) {
                         <h1 className="text-2xl font-bold">ThinkStream</h1>
                         {auth.user ? (
                             <Button asChild variant="outline" size="sm">
-                                <Link href={dashboard()}>Dashboard</Link>
+                                <Link
+                                    href={dashboard()}
+                                    className="inline-flex items-center gap-1.5"
+                                >
+                                    <Settings2 className="size-4" />
+                                    Manage
+                                </Link>
                             </Button>
                         ) : (
                             <Button asChild variant="outline" size="sm">

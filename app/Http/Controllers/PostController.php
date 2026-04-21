@@ -70,6 +70,19 @@ class PostController extends Controller
             return $this->renderPost($post, $ancestors);
         }
 
+        if (auth()->check()) {
+            $previewPost = Post::query()
+                ->with('namespace:id,parent_id,slug,full_path,name,cover_image,is_published')
+                ->where('full_path', $normalizedPath)
+                ->first();
+
+            if ($previewPost) {
+                $ancestors = $this->ancestorChain($previewPost->namespace);
+
+                return $this->renderPost($previewPost, $ancestors, preview: true);
+            }
+        }
+
         $namespace = PostNamespace::query()
             ->where('full_path', $normalizedPath)
             ->where('is_published', true)
@@ -103,7 +116,7 @@ class PostController extends Controller
             'breadcrumbs' => $this->breadcrumbs($ancestors),
             'children' => $namespace->sortNamespaces($children),
             'navRoot' => $this->buildNavigationNode($rootNamespace),
-            'namespace' => $namespace->only(['id', 'slug', 'full_path', 'name', 'description', 'cover_image_url']),
+            'namespace' => $namespace->only(['id', 'slug', 'full_path', 'name', 'description', 'cover_image_url', 'is_published']),
             'posts' => $namespace->sortPosts($posts),
         ]);
     }
@@ -111,7 +124,7 @@ class PostController extends Controller
     /**
      * @param  Collection<int, PostNamespace>  $ancestors
      */
-    private function renderPost(Post $post, Collection $ancestors): Response
+    private function renderPost(Post $post, Collection $ancestors, bool $preview = false): Response
     {
         $namespace = $post->namespace;
         $rootNamespace = $this->rootNamespace($namespace, $ancestors);
@@ -129,6 +142,10 @@ class PostController extends Controller
             'postUrl' => route('posts.path', ['path' => $post->full_path]),
             'post' => $post->only(['id', 'slug', 'full_path', 'title', 'content', 'published_at', 'updated_at']),
             'posts' => $namespace->sortPosts($posts),
+            'preview' => $preview ? [
+                'status' => $post->is_draft ? 'draft' : 'scheduled',
+                'published_at' => $post->published_at?->toISOString(),
+            ] : null,
         ]);
     }
 

@@ -1,18 +1,19 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
-import { ExternalLink } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { Check, Save } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownEditor from '@/components/markdown-editor';
+import PostHeader from '@/components/post-header';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import {
     index,
     namespace as namespaceRoute,
-    revisions,
     show,
     update,
     uploadImage,
@@ -38,9 +39,11 @@ type Post = {
 export default function Edit({
     namespace,
     post,
+    slugPrefix,
 }: {
     namespace: Namespace;
     post: Post;
+    slugPrefix: string;
 }) {
     const initialPublishedAt = post.published_at
         ? new Date(post.published_at).toISOString().slice(0, 16)
@@ -65,6 +68,9 @@ export default function Edit({
             returnTo: params.get('return_to'),
         };
     }, []);
+
+    const [saved, setSaved] = useState(false);
+    const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [isDraft, setIsDraft] = useState(post.is_draft);
     const [scheduleEnabled, setScheduleEnabled] = useState(isFutureDate);
@@ -121,46 +127,23 @@ export default function Edit({
             <Head title={`Edit: ${post.title}`} />
 
             <div className="space-y-6 p-4">
-                <div className="flex items-start justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold">Edit Post</h1>
-                        <p className="text-sm text-muted-foreground">
-                            {namespace.slug}/{post.slug}
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" asChild>
-                            <Link
-                                href={revisions.url({
-                                    namespace: namespace.id,
-                                    post: post.slug,
-                                })}
-                            >
-                                Revision History
-                            </Link>
-                        </Button>
-                        {!post.is_draft &&
-                            post.published_at &&
-                            new Date(post.published_at) <= new Date() && (
-                                <Button variant="outline" size="sm" asChild>
-                                    <a
-                                        href={`/${post.full_path}`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                    >
-                                        <ExternalLink className="size-4" />
-                                        View Live
-                                    </a>
-                                </Button>
-                            )}
-                    </div>
-                </div>
+                <PostHeader namespace={namespace} post={post} mode="edit" />
 
                 <Form
                     {...update.form({
                         namespace: namespace.id,
                         post: post.slug,
                     })}
+                    options={{ preserveScroll: true }}
+                    onSuccess={() => {
+                        setSaved(true);
+                        if (savedTimer.current)
+                            clearTimeout(savedTimer.current);
+                        savedTimer.current = setTimeout(
+                            () => setSaved(false),
+                            2500,
+                        );
+                    }}
                     className="space-y-6"
                 >
                     {({ processing, errors }) => (
@@ -193,13 +176,21 @@ export default function Edit({
 
                             <div className="grid gap-2">
                                 <Label htmlFor="slug">Slug</Label>
-                                <Input
-                                    id="slug"
-                                    name="slug"
-                                    defaultValue={post.slug}
-                                    placeholder="my-post-slug"
-                                    required
-                                />
+                                <div className="flex rounded-md border border-input bg-transparent shadow-xs transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                                    <span className="inline-flex items-center border-r border-input bg-muted/30 px-3 text-sm whitespace-nowrap text-muted-foreground">
+                                        {slugPrefix}
+                                    </span>
+                                    <Input
+                                        id="slug"
+                                        name="slug"
+                                        defaultValue={post.slug}
+                                        placeholder="my-post-slug"
+                                        className={cn(
+                                            'rounded-l-none border-0 shadow-none focus-visible:border-0 focus-visible:ring-0',
+                                        )}
+                                        required
+                                    />
+                                </div>
                                 <p className="text-xs text-muted-foreground">
                                     Lowercase letters, numbers, and hyphens
                                     only.
@@ -207,6 +198,10 @@ export default function Edit({
                                 <p className="text-xs text-muted-foreground">
                                     Must be unique among pages and child
                                     namespaces under /{namespace.full_path}.
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    Path preview: /{slugPrefix}
+                                    {post.slug}
                                 </p>
                                 <InputError message={errors.slug} />
                             </div>
@@ -302,22 +297,24 @@ export default function Edit({
                                 <InputError message={errors.published_at} />
                             </div>
 
-                            <div className="flex gap-3">
-                                <Button type="submit" disabled={processing}>
-                                    Save Changes
-                                </Button>
-                                <Button type="button" variant="outline" asChild>
-                                    <Link
-                                        href={
-                                            returnTo ??
-                                            show.url({
-                                                namespace: namespace.id,
-                                                post: post.slug,
-                                            })
-                                        }
-                                    >
-                                        Cancel
-                                    </Link>
+                            <div className="fixed right-6 bottom-6 z-50">
+                                <Button
+                                    type="submit"
+                                    disabled={processing}
+                                    size="lg"
+                                    className={`gap-2.5 rounded-full px-6 shadow-xl transition-all hover:scale-105 active:scale-95 disabled:shadow-none ${saved ? 'bg-green-600 shadow-green-600/30 hover:bg-green-600' : 'shadow-primary/30'}`}
+                                >
+                                    {saved ? (
+                                        <>
+                                            <Check className="size-4.5" />
+                                            Saved
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Save className="size-4.5" />
+                                            Save Changes
+                                        </>
+                                    )}
                                 </Button>
                             </div>
                         </>

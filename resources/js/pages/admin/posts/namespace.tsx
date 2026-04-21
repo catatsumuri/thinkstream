@@ -1,5 +1,4 @@
 import { Head, Link, setLayoutProps } from '@inertiajs/react';
-import { Form } from '@inertiajs/react';
 import {
     CheckCircle2,
     Clock,
@@ -8,15 +7,13 @@ import {
     FolderOpen,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { timeAgo } from '@/lib/time';
 import { dashboard } from '@/routes';
 import { create as namespaceCreate } from '@/routes/admin/namespaces';
 import {
     index,
     namespace as namespaceRoute,
     create,
-    edit,
-    destroy,
-    show,
 } from '@/routes/admin/posts';
 
 type Namespace = {
@@ -39,9 +36,12 @@ type Post = {
     id: number;
     title: string;
     slug: string;
+    full_path: string;
     is_draft: boolean;
     published_at: string | null;
     created_at: string;
+    canonical_url: string | null;
+    admin_url: string;
 };
 
 type Ancestor = {
@@ -193,9 +193,6 @@ export default function Namespace({
                                     <th className="px-4 py-3 text-left font-medium">
                                         Created
                                     </th>
-                                    <th className="px-4 py-3 text-right font-medium">
-                                        Actions
-                                    </th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -205,15 +202,22 @@ export default function Namespace({
                                         className="border-b last:border-0"
                                     >
                                         <td className="px-4 py-3 font-medium">
-                                            <Link
-                                                href={show.url({
-                                                    namespace: namespace.id,
-                                                    post: post.slug,
-                                                })}
-                                                className="hover:underline"
-                                            >
-                                                {post.title}
-                                            </Link>
+                                            <div className="flex items-center gap-2">
+                                                <Link
+                                                    href={post.admin_url}
+                                                    className="hover:underline"
+                                                >
+                                                    {post.title}
+                                                </Link>
+                                                <a
+                                                    href={`/${post.full_path}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="text-muted-foreground transition-colors hover:text-foreground"
+                                                >
+                                                    <ExternalLink className="size-3.5" />
+                                                </a>
+                                            </div>
                                         </td>
                                         <td className="px-4 py-3 text-muted-foreground">
                                             /{namespace.full_path}/{post.slug}
@@ -241,65 +245,13 @@ export default function Namespace({
                                         <td className="px-4 py-3 text-muted-foreground">
                                             {new Date(
                                                 post.created_at,
-                                            ).toLocaleDateString()}
-                                        </td>
-                                        <td className="px-4 py-3 text-right">
-                                            <div className="flex items-center justify-end gap-2">
-                                                {!post.is_draft &&
-                                                    post.published_at &&
-                                                    new Date(
-                                                        post.published_at,
-                                                    ) <= new Date() && (
-                                                        <Button
-                                                            variant="outline"
-                                                            size="sm"
-                                                            asChild
-                                                        >
-                                                            <a
-                                                                href={`/${namespace.full_path}/${post.slug}`}
-                                                                target="_blank"
-                                                                rel="noreferrer"
-                                                            >
-                                                                <ExternalLink className="size-4" />
-                                                                View
-                                                            </a>
-                                                        </Button>
-                                                    )}
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    asChild
-                                                >
-                                                    <Link
-                                                        href={edit.url({
-                                                            namespace:
-                                                                namespace.id,
-                                                            post: post.slug,
-                                                        })}
-                                                    >
-                                                        Edit
-                                                    </Link>
-                                                </Button>
-                                                <Form
-                                                    {...destroy.form({
-                                                        namespace: namespace.id,
-                                                        post: post.slug,
-                                                    })}
-                                                >
-                                                    {({ processing }) => (
-                                                        <Button
-                                                            type="submit"
-                                                            variant="destructive"
-                                                            size="sm"
-                                                            disabled={
-                                                                processing
-                                                            }
-                                                        >
-                                                            Delete
-                                                        </Button>
-                                                    )}
-                                                </Form>
-                                            </div>
+                                            ).toLocaleString(undefined, {
+                                                dateStyle: 'medium',
+                                                timeStyle: 'short',
+                                            })}
+                                            <span className="ml-1.5 text-xs opacity-60">
+                                                ({timeAgo(post.created_at)})
+                                            </span>
                                         </td>
                                     </tr>
                                 ))}

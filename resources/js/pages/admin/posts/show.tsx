@@ -1,26 +1,19 @@
-import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
+import { Head, router, setLayoutProps } from '@inertiajs/react';
 import {
-    CheckCircle2,
-    Clock,
-    FilePen,
+    AlertTriangle,
+    ExternalLink,
     PanelRightClose,
     PanelRightOpen,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import MarkdownContent from '@/components/markdown-content';
+import PostHeader from '@/components/post-header';
 import TableOfContents from '@/components/table-of-contents';
-import { Button } from '@/components/ui/button';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
 import { dashboard } from '@/routes';
-import {
-    destroy,
-    edit,
-    index,
-    namespace as namespaceRoute,
-    show,
-} from '@/routes/admin/posts';
+import { edit, index, namespace as namespaceRoute, show } from '@/routes/admin/posts';
 
 function findHeadingOffset(
     content: string,
@@ -93,12 +86,14 @@ type Namespace = {
     id: number;
     name: string;
     slug: string;
+    full_path: string;
 };
 
 type Post = {
     id: number;
     title: string;
     slug: string;
+    full_path: string;
     content: string;
     is_draft: boolean;
     published_at: string | null;
@@ -157,7 +152,6 @@ export default function Show({
     const entry = toc.get(post.slug);
     const hasHeadings = (entry?.headings.length ?? 0) > 0;
     const tocVisible = tocOverride ?? !isMobile;
-
     setLayoutProps({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
@@ -175,35 +169,30 @@ export default function Show({
             <Head title={post.title} />
 
             <div className="space-y-6 p-4">
-                <div className="flex items-start justify-between gap-4">
-                    <div className="space-y-1">
-                        <h1 className="text-2xl font-semibold">{post.title}</h1>
-                        <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            <span>
-                                {namespace.slug}/{post.slug}
-                            </span>
-                            <span>·</span>
-                            {post.is_draft ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                    <FilePen className="size-3" />
-                                    Draft
-                                </span>
-                            ) : !post.published_at ||
-                              new Date(post.published_at) > new Date() ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                    <Clock className="size-3" />
-                                    Scheduled
-                                </span>
-                            ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                    <CheckCircle2 className="size-3" />
-                                    Published
-                                </span>
-                            )}
-                        </div>
-                    </div>
+                <PostHeader namespace={namespace} post={post} />
 
-                    <div className="flex shrink-0 items-center gap-2">
+                <section className="space-y-4">
+                    <div className="flex items-center justify-between gap-4 rounded-xl border bg-card px-5 py-4">
+                        <div className="flex items-center gap-3">
+                            <div>
+                                <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                    Preview
+                                </p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                    Canonical rendering inside the admin
+                                    workflow.
+                                </p>
+                            </div>
+                            <a
+                                href={`/${post.full_path}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="text-muted-foreground transition-colors hover:text-foreground"
+                                title="Open canonical URL"
+                            >
+                                <ExternalLink className="size-4" />
+                            </a>
+                        </div>
                         {hasHeadings && (
                             <button
                                 type="button"
@@ -222,70 +211,11 @@ export default function Show({
                                 TOC
                             </button>
                         )}
-                        <Button variant="outline" asChild>
-                            <Link
-                                href={edit.url({
-                                    namespace: namespace.id,
-                                    post: post.slug,
-                                })}
-                            >
-                                Edit
-                            </Link>
-                        </Button>
-                        <Form
-                            {...destroy.form({
-                                namespace: namespace.id,
-                                post: post.slug,
-                            })}
-                        >
-                            {({ processing }) => (
-                                <Button
-                                    type="submit"
-                                    variant="destructive"
-                                    disabled={processing}
-                                >
-                                    Delete
-                                </Button>
-                            )}
-                        </Form>
-                    </div>
-                </div>
-
-                {tocVisible && hasHeadings && (
-                    <div className="lg:hidden">
-                        <TableOfContents
-                            posts={[
-                                {
-                                    id: post.id,
-                                    title: post.title,
-                                    slug: post.slug,
-                                    headings: entry!.headings,
-                                },
-                            ]}
-                        />
-                    </div>
-                )}
-
-                <div
-                    className={
-                        tocVisible && hasHeadings
-                            ? 'lg:grid lg:grid-cols-[1fr_240px] lg:gap-8'
-                            : ''
-                    }
-                >
-                    <div className="min-w-0 rounded-xl border p-6">
-                        <div className="prose max-w-none prose-neutral dark:prose-invert">
-                            <MarkdownContent
-                                content={post.content}
-                                components={entry?.components}
-                            />
-                        </div>
                     </div>
 
                     {tocVisible && hasHeadings && (
-                        <aside className="hidden lg:block">
+                        <div className="xl:hidden">
                             <TableOfContents
-                                sticky
                                 posts={[
                                     {
                                         id: post.id,
@@ -295,9 +225,87 @@ export default function Show({
                                     },
                                 ]}
                             />
-                        </aside>
+                        </div>
                     )}
-                </div>
+
+                    <div
+                        className={
+                            tocVisible && hasHeadings
+                                ? 'xl:grid xl:grid-cols-[1fr_240px] xl:gap-8'
+                                : ''
+                        }
+                    >
+                        <div className="min-w-0 rounded-xl border bg-card p-6">
+                            <div className="mb-6 rounded-lg border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+                                /{post.full_path}
+                            </div>
+                            {post.is_draft && (
+                                <div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/40 dark:bg-amber-900/20">
+                                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                    <div className="text-amber-800 dark:text-amber-400">
+                                        <p className="font-semibold">
+                                            Draft — not publicly visible
+                                        </p>
+                                        <p className="text-sm">
+                                            This post is saved as a draft.
+                                            Visitors will see a 404.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+                            {!post.is_draft &&
+                                post.published_at &&
+                                new Date(post.published_at) > new Date() && (
+                                    <div className="mb-6 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800/40 dark:bg-blue-900/20">
+                                        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                                        <div className="text-blue-800 dark:text-blue-400">
+                                            <p className="font-semibold">
+                                                Scheduled — not yet public
+                                            </p>
+                                            <p className="text-sm">
+                                                Publicly accessible from{' '}
+                                                <span className="font-medium">
+                                                    {new Date(
+                                                        post.published_at,
+                                                    ).toLocaleString(
+                                                        undefined,
+                                                        {
+                                                            dateStyle: 'long',
+                                                            timeStyle: 'short',
+                                                        },
+                                                    )}
+                                                </span>
+                                                . Visitors will see a 404 until
+                                                then.
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            <div className="prose max-w-none prose-neutral dark:prose-invert">
+                                <MarkdownContent
+                                    content={post.content}
+                                    components={entry?.components}
+                                />
+                            </div>
+                        </div>
+
+                        {tocVisible && hasHeadings && (
+                            <aside className="hidden xl:block">
+                                <TableOfContents
+                                    sticky
+                                    posts={[
+                                        {
+                                            id: post.id,
+                                            title: post.title,
+                                            slug: post.slug,
+                                            headings: entry!.headings,
+                                        },
+                                    ]}
+                                />
+                            </aside>
+                        )}
+                    </div>
+                </section>
             </div>
         </>
     );

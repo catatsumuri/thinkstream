@@ -2,6 +2,7 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\User;
 use App\Support\ReservedContentPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -56,6 +57,8 @@ test('published namespace shows child namespaces and direct posts', function () 
     $namespace = PostNamespace::factory()->create([
         'is_published' => true,
         'slug' => 'guides',
+        'name' => 'Guides',
+        'description' => 'Practical guides for the canonical namespace page.',
     ]);
     $child = PostNamespace::factory()->create([
         'parent_id' => $namespace->id,
@@ -75,12 +78,47 @@ test('published namespace shows child namespaces and direct posts', function () 
         ->assertInertia(fn ($page) => $page
             ->component('posts/namespace')
             ->where('namespace.full_path', $namespace->full_path)
+            ->where('namespace.name', 'Guides')
+            ->where('namespace.description', 'Practical guides for the canonical namespace page.')
+            ->where('namespace.is_published', true)
             ->where('navRoot.full_path', $namespace->full_path)
             ->has('children', 1)
             ->where('navRoot.children.0.full_path', $child->full_path)
             ->where('children.0.full_path', $child->full_path)
             ->where('posts.0.full_path', $post->full_path)
             ->where('navRoot.posts.0.full_path', $post->full_path)
+        );
+});
+
+test('guest namespace page receives no authenticated user', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+    ]);
+
+    $this->get(route('posts.path', ['path' => $namespace->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/namespace')
+            ->where('auth.user', null)
+        );
+});
+
+test('authenticated namespace page receives the current user for canonical controls', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('posts.path', ['path' => $namespace->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/namespace')
+            ->where('auth.user.id', $user->id)
+            ->where('auth.user.name', $user->name)
+            ->where('namespace.id', $namespace->id)
         );
 });
 
@@ -154,6 +192,44 @@ test('published namespace shows post with breadcrumbs', function () {
             ->where('postUrl', route('posts.path', ['path' => $post->full_path]))
             ->where('breadcrumbs.0.full_path', $root->full_path)
             ->where('posts.0.full_path', $post->full_path)
+        );
+});
+
+test('guest post page receives no authenticated user', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'routing',
+    ]);
+
+    $this->get(route('posts.path', ['path' => $post->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/show')
+            ->where('auth.user', null)
+        );
+});
+
+test('authenticated post page receives the current user for canonical controls', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'routing',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('posts.path', ['path' => $post->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/show')
+            ->where('auth.user.id', $user->id)
+            ->where('auth.user.name', $user->name)
+            ->where('post.id', $post->id)
         );
 });
 

@@ -27,7 +27,18 @@ import {
     FilePen,
     Folder,
     GripVertical,
+    Pencil,
+    Trash2,
 } from 'lucide-react';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { useEffect, useState } from 'react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import { Button } from '@/components/ui/button';
@@ -186,21 +197,52 @@ function SortableRow({
                     )}
                     <Button variant="outline" size="sm" asChild>
                         <Link href={NamespaceController.edit.url(namespace.id)}>
+                            <Pencil className="size-4" />
                             Edit
                         </Link>
                     </Button>
-                    <Form {...NamespaceController.destroy.form(namespace.id)}>
-                        {({ processing }) => (
-                            <Button
-                                type="submit"
-                                variant="destructive"
-                                size="sm"
-                                disabled={processing}
-                            >
+                    <Dialog>
+                        <DialogTrigger asChild>
+                            <Button variant="destructive" size="sm">
+                                <Trash2 className="size-4" />
                                 Delete
                             </Button>
-                        )}
-                    </Form>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogTitle>
+                                Delete &ldquo;{namespace.name}&rdquo;?
+                            </DialogTitle>
+                            <DialogDescription>
+                                This will permanently delete the namespace, all
+                                child namespaces, and all their posts. This
+                                action cannot be undone.
+                            </DialogDescription>
+                            <Form
+                                {...NamespaceController.destroy.form(
+                                    namespace.id,
+                                )}
+                            >
+                                {({ processing }) => (
+                                    <DialogFooter className="gap-2">
+                                        <DialogClose asChild>
+                                            <Button variant="secondary">
+                                                Cancel
+                                            </Button>
+                                        </DialogClose>
+                                        <Button
+                                            variant="destructive"
+                                            disabled={processing}
+                                            asChild
+                                        >
+                                            <button type="submit">
+                                                Delete
+                                            </button>
+                                        </Button>
+                                    </DialogFooter>
+                                )}
+                            </Form>
+                        </DialogContent>
+                    </Dialog>
                 </div>
             </td>
         </tr>
@@ -291,23 +333,52 @@ function ChildRow({
                                     namespace.id,
                                 )}
                             >
+                                <Pencil className="size-4" />
                                 Edit
                             </Link>
                         </Button>
-                        <Form
-                            {...NamespaceController.destroy.form(namespace.id)}
-                        >
-                            {({ processing }) => (
-                                <Button
-                                    type="submit"
-                                    variant="destructive"
-                                    size="sm"
-                                    disabled={processing}
-                                >
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                    <Trash2 className="size-4" />
                                     Delete
                                 </Button>
-                            )}
-                        </Form>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogTitle>
+                                    Delete &ldquo;{namespace.name}&rdquo;?
+                                </DialogTitle>
+                                <DialogDescription>
+                                    This will permanently delete the namespace,
+                                    all child namespaces, and all their posts.
+                                    This action cannot be undone.
+                                </DialogDescription>
+                                <Form
+                                    {...NamespaceController.destroy.form(
+                                        namespace.id,
+                                    )}
+                                >
+                                    {({ processing }) => (
+                                        <DialogFooter className="gap-2">
+                                            <DialogClose asChild>
+                                                <Button variant="secondary">
+                                                    Cancel
+                                                </Button>
+                                            </DialogClose>
+                                            <Button
+                                                variant="destructive"
+                                                disabled={processing}
+                                                asChild
+                                            >
+                                                <button type="submit">
+                                                    Delete
+                                                </button>
+                                            </Button>
+                                        </DialogFooter>
+                                    )}
+                                </Form>
+                            </DialogContent>
+                        </Dialog>
                     </div>
                 </td>
             </tr>

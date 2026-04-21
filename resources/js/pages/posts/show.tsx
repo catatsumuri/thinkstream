@@ -1,11 +1,13 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { siX } from 'simple-icons';
 import {
+    AlertTriangle,
     ChevronRight,
     PanelLeftClose,
     PanelLeftOpen,
     PanelRightClose,
     PanelRightOpen,
+    Settings2,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { ContentNavNode } from '@/components/content-nav-tree';
@@ -105,6 +107,11 @@ function findHeadingOffset(
     return null;
 }
 
+type Preview = {
+    status: 'draft' | 'scheduled';
+    published_at: string | null;
+} | null;
+
 export default function Show({
     breadcrumbs,
     cardImage,
@@ -112,6 +119,7 @@ export default function Show({
     namespace,
     post,
     postUrl,
+    preview = null,
 }: {
     breadcrumbs: Array<{ name: string; full_path: string }>;
     cardImage: string | null;
@@ -119,6 +127,7 @@ export default function Show({
     namespace: PostNamespace;
     post: Post;
     postUrl: string;
+    preview?: Preview;
 }) {
     const { auth } = usePage<{
         auth: { user: { id: number; name: string } | null };
@@ -208,6 +217,51 @@ export default function Show({
             </Head>
 
             <div className="min-h-screen bg-background">
+                {preview && (
+                    <div
+                        className={`sticky top-0 z-[60] border-b px-4 py-3 ${preview.status === 'draft' ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/40' : 'border-blue-300 bg-blue-50 dark:border-blue-700 dark:bg-blue-900/40'}`}
+                    >
+                        <div className="mx-auto flex max-w-7xl items-center gap-3">
+                            <AlertTriangle
+                                className={`size-5 shrink-0 ${preview.status === 'draft' ? 'text-amber-600 dark:text-amber-400' : 'text-blue-600 dark:text-blue-400'}`}
+                            />
+                            <div
+                                className={`flex flex-wrap items-baseline gap-x-2 text-sm font-semibold ${preview.status === 'draft' ? 'text-amber-800 dark:text-amber-300' : 'text-blue-800 dark:text-blue-300'}`}
+                            >
+                                {preview.status === 'draft' ? (
+                                    <>
+                                        <span className="tracking-wide uppercase">
+                                            Draft
+                                        </span>
+                                        <span className="font-normal opacity-80">
+                                            This post is not published. Only
+                                            logged-in users can see this
+                                            preview.
+                                        </span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="tracking-wide uppercase">
+                                            Scheduled
+                                        </span>
+                                        <span className="font-normal opacity-80">
+                                            Publishes on{' '}
+                                            {preview.published_at &&
+                                                new Date(
+                                                    preview.published_at,
+                                                ).toLocaleString(undefined, {
+                                                    dateStyle: 'long',
+                                                    timeStyle: 'short',
+                                                })}
+                                            . Only logged-in users can see this
+                                            preview.
+                                        </span>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {namespace.cover_image_url && (
                     <div className="h-48 w-full overflow-hidden md:h-64">
                         <img
@@ -308,8 +362,12 @@ export default function Show({
                                         </Link>
                                     </Button>
                                     <Button asChild variant="outline" size="sm">
-                                        <Link href={dashboard()}>
-                                            Dashboard
+                                        <Link
+                                            href={dashboard()}
+                                            className="inline-flex items-center gap-1.5"
+                                        >
+                                            <Settings2 className="size-4" />
+                                            Manage
                                         </Link>
                                     </Button>
                                 </>

@@ -103,11 +103,7 @@ class NamespaceController extends Controller
 
     public function destroy(PostNamespace $namespace): RedirectResponse
     {
-        if ($namespace->cover_image) {
-            Storage::disk('public')->delete($namespace->cover_image);
-        }
-
-        $namespace->delete();
+        $namespace->deleteRecursively();
 
         return to_route('admin.posts.index');
     }

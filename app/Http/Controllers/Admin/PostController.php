@@ -61,11 +61,33 @@ class PostController extends Controller
 
     public function namespaceIndex(PostNamespace $namespace): Response
     {
+        $posts = $namespace->sortPosts($namespace->posts()->latest()->get([
+            'id',
+            'title',
+            'slug',
+            'full_path',
+            'is_draft',
+            'published_at',
+            'created_at',
+        ]))->map(fn (Post $post) => [
+            'id' => $post->id,
+            'title' => $post->title,
+            'slug' => $post->slug,
+            'full_path' => $post->full_path,
+            'is_draft' => $post->is_draft,
+            'published_at' => $post->published_at,
+            'created_at' => $post->created_at,
+            'canonical_url' => ! $post->is_draft && $post->published_at !== null && $post->published_at->isPast()
+                ? route('posts.path', ['path' => $post->full_path], absolute: false)
+                : null,
+            'admin_url' => route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug], absolute: false),
+        ]);
+
         return Inertia::render('admin/posts/namespace', [
             'namespace' => $namespace,
             'ancestors' => $namespace->ancestors()->map(fn (PostNamespace $ns) => ['id' => $ns->id, 'name' => $ns->name]),
             'children' => $namespace->sortNamespaces($namespace->children()->withCount('posts')->get()),
-            'posts' => $namespace->sortPosts($namespace->posts()->latest()->get(['id', 'title', 'slug', 'is_draft', 'published_at', 'created_at'])),
+            'posts' => $posts,
         ]);
     }
 
@@ -73,9 +95,7 @@ class PostController extends Controller
     {
         return Inertia::render('admin/posts/create', [
             'namespace' => $namespace,
-            'slugPrefix' => $namespace->full_path !== $namespace->slug
-                ? trim($namespace->full_path, '/').'/'
-                : null,
+            'slugPrefix' => trim($namespace->full_path, '/').'/',
         ]);
     }
 
@@ -88,6 +108,12 @@ class PostController extends Controller
         ]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Post created.']);
+
+        $returnTo = $this->safeReturnPath($request->string('return_to')->toString());
+
+        if ($returnTo !== null) {
+            return redirect()->to(route('posts.path', ['path' => $post->full_path], absolute: false));
+        }
 
         return to_route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]);
     }
@@ -105,6 +131,7 @@ class PostController extends Controller
         return Inertia::render('admin/posts/edit', [
             'namespace' => $namespace,
             'post' => $post,
+            'slugPrefix' => trim($namespace->full_path, '/').'/',
         ]);
     }
 
@@ -124,8 +151,6 @@ class PostController extends Controller
 
         $post->update($data);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Post saved.']);
-
         $fragment = $request->string('return_heading')->toString();
         $hash = $fragment !== '' ? '#'.ltrim($fragment, '#') : '';
         $returnTo = $this->safeReturnPath($request->string('return_to')->toString());
@@ -134,8 +159,8 @@ class PostController extends Controller
             return redirect()->to(route('posts.path', ['path' => $post->full_path], absolute: false).$hash);
         }
 
-        return redirect()->route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug])
-            ->setTargetUrl(route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]).$hash);
+        return redirect()->route('admin.posts.edit', ['namespace' => $namespace, 'post' => $post->slug])
+            ->setTargetUrl(route('admin.posts.edit', ['namespace' => $namespace, 'post' => $post->slug]).$hash);
     }
 
     public function revisions(PostNamespace $namespace, Post $post): Response

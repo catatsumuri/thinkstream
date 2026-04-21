@@ -372,6 +372,51 @@ test('authenticated users can delete a namespace', function () {
     expect($namespace->fresh())->toBeNull();
 });
 
+test('deleting a namespace also deletes its posts', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->create(['namespace_id' => $namespace->id]);
+
+    $this->actingAs($user)
+        ->delete(route('admin.namespaces.destroy', $namespace))
+        ->assertRedirect(route('admin.posts.index'));
+
+    expect($namespace->fresh())->toBeNull();
+    expect($post->fresh())->toBeNull();
+});
+
+test('deleting a namespace recursively deletes child namespaces', function () {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create();
+    $child = PostNamespace::factory()->create(['parent_id' => $parent->id]);
+
+    $this->actingAs($user)
+        ->delete(route('admin.namespaces.destroy', $parent))
+        ->assertRedirect(route('admin.posts.index'));
+
+    expect($parent->fresh())->toBeNull();
+    expect($child->fresh())->toBeNull();
+});
+
+test('deleting a namespace recursively deletes child namespaces and their posts', function () {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create();
+    $child = PostNamespace::factory()->create(['parent_id' => $parent->id]);
+    $grandchild = PostNamespace::factory()->create(['parent_id' => $child->id]);
+    $post = Post::factory()->create(['namespace_id' => $child->id]);
+    $grandchildPost = Post::factory()->create(['namespace_id' => $grandchild->id]);
+
+    $this->actingAs($user)
+        ->delete(route('admin.namespaces.destroy', $parent))
+        ->assertRedirect(route('admin.posts.index'));
+
+    expect($parent->fresh())->toBeNull();
+    expect($child->fresh())->toBeNull();
+    expect($grandchild->fresh())->toBeNull();
+    expect($post->fresh())->toBeNull();
+    expect($grandchildPost->fresh())->toBeNull();
+});
+
 test('storing a namespace can set is_published to false', function () {
     $user = User::factory()->create();
 
