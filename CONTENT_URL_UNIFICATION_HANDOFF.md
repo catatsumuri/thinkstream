@@ -2,7 +2,7 @@
 
 ## Summary
 
-This document captures the current status of the content URL unification work as of 2026-04-20.
+This document captures the current status of the content URL unification work as of 2026-04-21.
 
 The product direction is still:
 
@@ -11,7 +11,24 @@ The product direction is still:
 - Let authenticated users enter edit flows from canonical public pages.
 - Return users to canonical public pages after editing.
 
-That said, Phase 1 is now materially in place. Save redirects now recompute the latest canonical URL from updated model state, while cancel flows can still use a carried `return_to` query value.
+That said, Phase 1 is now functionally in place on this branch. The current branch commit now covers canonical preview/edit affordances, canonical-aware create and save redirects, recursive namespace deletion, and the admin UI reshaping needed to make canonical pages the primary content surface.
+
+## Current Evaluation
+
+Overall status is good: the branch now delivers the intended Phase 1 journey well enough to treat the canonical content URL as the primary read/edit surface without changing the route model yet.
+
+What is now in solid shape:
+
+- canonical post pages expose direct edit entry and heading-level edit jumps
+- canonical namespace pages expose inline section editing and in-context post creation
+- admin create/save flows now recompute redirects from current model state instead of stale entry URLs
+- namespace deletion now recursively deletes descendant namespaces and posts
+- affected feature tests, type-checking, and production build are green on this branch
+
+What still looks like follow-up rather than blocker work:
+
+- the admin namespace post table still renders its external-link icon from `post.full_path` instead of the new `canonical_url` field, so the UI contract is not fully aligned yet
+- admin detail screens still overlap with the new canonical authoring surface more than they should
 
 ## Problem Statement
 
@@ -75,7 +92,7 @@ This mismatch is still the underlying reason that Phase 3 would be useful later.
 
 ## Current Status
 
-### Implemented in the current worktree
+### Committed on this branch
 
 #### 1. Canonical login return flow
 
@@ -100,6 +117,7 @@ Current public affordances:
 
 - `Edit Page`
 - heading-level section editing from the canonical post page
+- `Manage` as the secondary admin/operations entry
 
 Relevant file:
 
@@ -107,38 +125,51 @@ Relevant file:
 
 #### 3. Public namespace page edit entry
 
-Authenticated users can now enter namespace editing directly from the canonical namespace page.
+Authenticated users can now edit namespace metadata directly from the canonical namespace page.
 
 Current public affordances:
 
-- `Edit Section`
+- inline `Edit Section` / `Done` toggle
+- `New Post`
+- `Manage` as the secondary admin/operations entry
 
 Relevant file:
 
 - [resources/js/pages/posts/namespace.tsx](/opt/home-admin/thinkstream/resources/js/pages/posts/namespace.tsx:123)
 
-#### 4. Admin save redirects recompute canonical pages
+#### 4. Admin create/edit redirects recompute canonical pages
 
-Admin edit pages now accept `return_to` for entry/cancel behavior, while save redirects recompute the latest canonical public URL from updated model state.
+Admin post and namespace edit pages now accept `return_to` for entry/cancel behavior, while save redirects recompute the latest canonical public URL from updated model state. Post creation also accepts `return_to`, so entering `New Post` from a canonical namespace page returns to the newly created canonical post page.
 
 Relevant files:
 
-- [app/Http/Controllers/Admin/PostController.php](/opt/home-admin/thinkstream/app/Http/Controllers/Admin/PostController.php:111)
+- [app/Http/Controllers/Admin/PostController.php](/opt/home-admin/thinkstream/app/Http/Controllers/Admin/PostController.php:77)
 - [app/Http/Controllers/Admin/NamespaceController.php](/opt/home-admin/thinkstream/app/Http/Controllers/Admin/NamespaceController.php:82)
+- [resources/js/pages/admin/posts/create.tsx](/opt/home-admin/thinkstream/resources/js/pages/admin/posts/create.tsx:36)
 - [resources/js/pages/admin/posts/edit.tsx](/opt/home-admin/thinkstream/resources/js/pages/admin/posts/edit.tsx:50)
 - [resources/js/pages/admin/namespaces/edit.tsx](/opt/home-admin/thinkstream/resources/js/pages/admin/namespaces/edit.tsx:20)
 
-#### 5. Admin has been de-emphasized in public headers
+#### 5. Public admin affordances have been reframed
 
 Public pages now prefer:
 
 - `Login`
-- `Dashboard`
+- `Manage`
 - content-specific edit controls
 
 instead of treating `Admin` as the primary CTA.
 
-#### 6. Revision label cleanup
+#### 6. Slug prefix UI has been aligned in post create/edit
+
+Admin post create and edit screens now consistently show the namespace path prefix in the slug field, including root namespaces.
+
+Relevant files:
+
+- [app/Http/Controllers/Admin/PostController.php](/opt/home-admin/thinkstream/app/Http/Controllers/Admin/PostController.php:72)
+- [resources/js/pages/admin/posts/create.tsx](/opt/home-admin/thinkstream/resources/js/pages/admin/posts/create.tsx:38)
+- [resources/js/pages/admin/posts/edit.tsx](/opt/home-admin/thinkstream/resources/js/pages/admin/posts/edit.tsx:34)
+
+#### 7. Revision label cleanup
 
 The accidental Japanese `変更履歴` label has been normalized back to `Revision History`.
 
@@ -154,7 +185,10 @@ The following were already run in Sail during this work:
 ```bash
 vendor/bin/sail artisan test --compact tests/Feature/Auth/AuthenticationTest.php tests/Feature/PrivateModeTest.php
 vendor/bin/sail artisan test --compact tests/Feature/Admin/PostControllerTest.php tests/Feature/Admin/NamespaceControllerTest.php
+vendor/bin/sail artisan test --compact tests/Feature/PostControllerTest.php
+vendor/bin/sail npm run types:check
 vendor/bin/sail bin pint --dirty --format agent
+vendor/bin/sail npm run build
 ```
 
 Playwright also confirmed:
@@ -162,6 +196,7 @@ Playwright also confirmed:
 - `/guides -> Login -> authenticate -> /guides`
 - `/guides/index -> Login -> authenticate -> /guides/index`
 - authenticated canonical post page shows `Edit Page`
+- authenticated canonical namespace page shows `Edit Section`
 
 ## Redirect Correctness Status
 
@@ -170,6 +205,7 @@ The stale-`return_to` save redirect problem has now been addressed.
 Current behavior:
 
 - `return_to` is still accepted as a signal that the user entered from a canonical page
+- after `$post = Post::create(...)`, create redirects can use the post's new `full_path`
 - after `$post->update($data)`, save redirects use the post's updated `full_path`
 - after `$namespace->update($data)`, save redirects use the namespace's updated `full_path`
 - `return_heading` is preserved only as a fragment/hash
@@ -192,8 +228,7 @@ That means:
 Examples:
 
 - post canonical: `Edit Page`, `Edit Section`
-- namespace canonical: `Edit Section`
-- maybe `New Post` later if it feels natural in-context
+- namespace canonical: inline `Edit Section`, `New Post`
 
 ### `/admin` should contain
 
@@ -216,19 +251,21 @@ Goal:
 
 Status:
 
-- partially done
+- materially done, with remaining cleanup/coverage work
 
 Done:
 
 1. canonical login return flow
 2. canonical post edit entry
-3. canonical namespace edit entry
-4. `Dashboard` is now more clearly secondary/admin utility
+3. canonical namespace inline edit entry
+4. canonical namespace `New Post` entry
+5. `Manage` is now the public secondary admin utility label
+6. admin create/edit redirects recompute canonical save destinations
 
 Not done cleanly yet:
 
-1. namespace canonical management affordances still need product-level pruning/expansion
-2. public-page auth-state coverage is still thinner than ideal
+1. namespace canonical management affordances may still need product-level pruning
+2. admin detail screens may still duplicate public detail screens more than necessary
 
 ### Phase 2
 
@@ -255,34 +292,33 @@ Examples:
 - `/guides/edit`
 - `/guides/extended-syntax/edit`
 
-Still not started, and should not be started until Phase 1 redirect behavior is cleaned up.
+Still not started, and should not be started until the remaining Phase 1 cleanup is explicitly considered complete.
 
-## Next Commit Recommendation
+## Next Work Recommendation
 
-The next commit should focus on the remaining product and coverage gaps, not redirect correctness.
+The next work should focus on the remaining UI contract gaps and product cleanup, not redirect correctness.
 
 ### Concrete next step
 
-1. Decide whether canonical namespace pages should keep only `Edit Section` or also expose `New Post`.
-2. Add broader auth-state coverage for canonical namespace/post page controls.
-3. Reduce duplication between canonical detail pages and admin detail pages where it still exists.
+1. Align the admin namespace post table with the controller contract by only showing a public external-link target when `canonical_url` exists.
+2. Reduce duplication between canonical detail pages and admin detail pages where it still exists.
+3. Decide whether admin post show remains necessary as canonical pages become the primary authoring surface.
 
 Suggested files:
 
-- [app/Http/Controllers/Admin/PostController.php](/opt/home-admin/thinkstream/app/Http/Controllers/Admin/PostController.php:111)
-- [app/Http/Controllers/Admin/NamespaceController.php](/opt/home-admin/thinkstream/app/Http/Controllers/Admin/NamespaceController.php:82)
-- [tests/Feature/Admin/PostControllerTest.php](/opt/home-admin/thinkstream/tests/Feature/Admin/PostControllerTest.php:370)
-- [tests/Feature/Admin/NamespaceControllerTest.php](/opt/home-admin/thinkstream/tests/Feature/Admin/NamespaceControllerTest.php:249)
+- [resources/js/pages/posts/show.tsx](/opt/home-admin/thinkstream/resources/js/pages/posts/show.tsx:292)
+- [resources/js/pages/posts/namespace.tsx](/opt/home-admin/thinkstream/resources/js/pages/posts/namespace.tsx:123)
+- [resources/js/pages/admin/posts/namespace.tsx](/opt/home-admin/thinkstream/resources/js/pages/admin/posts/namespace.tsx:199)
+- [resources/js/pages/admin/posts/show.tsx](/opt/home-admin/thinkstream/resources/js/pages/admin/posts/show.tsx:1)
+- [tests/Feature/PostControllerTest.php](/opt/home-admin/thinkstream/tests/Feature/PostControllerTest.php:90)
 
 ## Secondary Follow-Up After That
 
-Once redirect correctness is fixed, the next product decision should be made explicitly for canonical namespace pages:
+The next product decision should be made explicitly for canonical namespace pages:
 
-- keep only `Edit Section`
-- or add `New Post`
+- keep the current `Edit Section` + `New Post` surface
+- or prune it back if it starts to feel too close to admin
 - but do not turn canonical namespace pages into a full admin dashboard by default
-
-That decision should be made before adding more namespace-level controls.
 
 ## Test Plan Going Forward
 
@@ -290,28 +326,26 @@ Required additional coverage:
 
 1. Updating a post with a changed slug redirects to the new canonical URL.
 2. Updating a namespace with a changed slug redirects to the new canonical URL.
-3. Public namespace page shows authenticated edit affordances.
-4. Public namespace page hides those affordances from guests.
+3. Public canonical pages receive the expected auth state for their edit/manage controls.
+4. Any future namespace-level controls should add explicit auth/guest coverage when introduced.
 
 Suggested commands:
 
 ```bash
 vendor/bin/sail artisan test --compact tests/Feature/Admin/PostControllerTest.php tests/Feature/Admin/NamespaceControllerTest.php
 vendor/bin/sail artisan test --compact tests/Feature/Auth/AuthenticationTest.php tests/Feature/PrivateModeTest.php
+vendor/bin/sail artisan test --compact tests/Feature/PostControllerTest.php
 vendor/bin/sail bin pint --dirty --format agent
+vendor/bin/sail npm run build
 ```
 
 ## Risks and Constraints
 
-### Risk 1: stale carried paths
-
-If save redirects continue to trust a carried `return_to`, users may land on outdated URLs after slug changes.
-
-### Risk 2: public pages becoming pseudo-admin dashboards
+### Risk 1: public pages becoming pseudo-admin dashboards
 
 If too many management controls are added to canonical namespace pages, the public/admin separation will blur again.
 
-### Risk 3: future path collisions
+### Risk 2: future path collisions
 
 If Phase 3 introduces `/{path}/edit` or `/{path}/create`, reserved segment design must be handled deliberately.
 
@@ -323,4 +357,4 @@ Relevant files:
 ## Notes
 
 - Laravel Boost MCP tools were expected by project instructions, but the MCP server was not available in this session, so analysis and implementation were done from repository code directly.
-- The document was updated after partial Phase 1 implementation in the working tree on 2026-04-20.
+- The document was updated after commit `fb71e6c` on 2026-04-21.
