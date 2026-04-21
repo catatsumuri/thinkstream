@@ -1,4 +1,4 @@
-import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
+import { Form, Head, setLayoutProps } from '@inertiajs/react';
 import { Check, Save } from 'lucide-react';
 import { useMemo, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
@@ -137,8 +137,11 @@ export default function Edit({
                     options={{ preserveScroll: true }}
                     onSuccess={() => {
                         setSaved(true);
-                        if (savedTimer.current)
+
+                        if (savedTimer.current) {
                             clearTimeout(savedTimer.current);
+                        }
+
                         savedTimer.current = setTimeout(
                             () => setSaved(false),
                             2500,
