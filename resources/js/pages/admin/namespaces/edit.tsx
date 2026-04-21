@@ -1,4 +1,5 @@
 import { Head, setLayoutProps, useForm } from '@inertiajs/react';
+import { useMemo } from 'react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import CoverImageDropzone from '@/components/cover-image-dropzone';
 import InputError from '@/components/input-error';
@@ -19,6 +20,14 @@ type Namespace = {
 };
 
 export default function Edit({ namespace }: { namespace: Namespace }) {
+    const returnTo = useMemo(() => {
+        if (typeof window === 'undefined') {
+            return null;
+        }
+
+        return new URLSearchParams(window.location.search).get('return_to');
+    }, []);
+
     setLayoutProps({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
@@ -34,6 +43,7 @@ export default function Edit({ namespace }: { namespace: Namespace }) {
         description: string;
         is_published: boolean;
         cover_image: File | null;
+        return_to: string;
     }>({
         _method: 'put',
         name: namespace.name,
@@ -41,6 +51,7 @@ export default function Edit({ namespace }: { namespace: Namespace }) {
         description: namespace.description ?? '',
         is_published: namespace.is_published,
         cover_image: null,
+        return_to: returnTo ?? '',
     });
 
     function submit(e: React.FormEvent) {
@@ -135,7 +146,7 @@ export default function Edit({ namespace }: { namespace: Namespace }) {
                             Save Changes
                         </Button>
                         <Button type="button" variant="outline" asChild>
-                            <a href={postsIndex.url()}>Cancel</a>
+                            <a href={returnTo ?? postsIndex.url()}>Cancel</a>
                         </Button>
                     </div>
                 </form>

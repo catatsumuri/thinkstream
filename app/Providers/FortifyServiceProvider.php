@@ -47,11 +47,15 @@ class FortifyServiceProvider extends ServiceProvider
      */
     private function configureViews(): void
     {
-        Fortify::loginView(fn (Request $request) => Inertia::render('auth/login', [
-            'canResetPassword' => Features::enabled(Features::resetPasswords()),
-            'canRegister' => Features::enabled(Features::registration()),
-            'status' => $request->session()->get('status'),
-        ]));
+        Fortify::loginView(function (Request $request) {
+            $this->storeIntendedPath($request);
+
+            return Inertia::render('auth/login', [
+                'canResetPassword' => Features::enabled(Features::resetPasswords()),
+                'canRegister' => Features::enabled(Features::registration()),
+                'status' => $request->session()->get('status'),
+            ]);
+        });
 
         Fortify::resetPasswordView(fn (Request $request) => Inertia::render('auth/reset-password', [
             'email' => $request->email,
@@ -87,5 +91,26 @@ class FortifyServiceProvider extends ServiceProvider
 
             return Limit::perMinute(5)->by($throttleKey);
         });
+    }
+
+    private function storeIntendedPath(Request $request): ?string
+    {
+        $intended = $request->query('intended');
+
+        if (! is_string($intended) || ! $this->isSafeRelativePath($intended)) {
+            return null;
+        }
+
+        $request->session()->put('url.intended', $intended);
+
+        return $intended;
+    }
+
+    private function isSafeRelativePath(string $path): bool
+    {
+        return str_starts_with($path, '/')
+            && ! str_starts_with($path, '//')
+            && parse_url($path, PHP_URL_SCHEME) === null
+            && parse_url($path, PHP_URL_HOST) === null;
     }
 }

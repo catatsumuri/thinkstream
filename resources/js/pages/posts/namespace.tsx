@@ -1,5 +1,7 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import {
+    AlertTriangle,
+    ArrowRightLeft,
     ChevronRight,
     ImageOff,
     PanelLeftClose,
@@ -8,10 +10,13 @@ import {
 import { useState } from 'react';
 import type { ContentNavNode } from '@/components/content-nav-tree';
 import ContentNavTree from '@/components/content-nav-tree';
+import { Button } from '@/components/ui/button';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import ViewContextBadge from '@/components/view-context-badge';
+import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { login } from '@/routes';
-import { index as adminPosts } from '@/routes/admin/posts';
+import { namespace as adminNamespaceRoute } from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
 
 type PostNamespace = {
@@ -21,6 +26,7 @@ type PostNamespace = {
     name: string;
     description?: string | null;
     cover_image_url: string | null;
+    is_published: boolean;
 };
 
 type ChildNamespace = PostNamespace & {
@@ -41,16 +47,19 @@ export default function Namespace({
     navRoot,
     namespace,
     posts,
+    preview = false,
 }: {
     breadcrumbs: Array<{ name: string; full_path: string }>;
     children: ChildNamespace[];
     navRoot: ContentNavNode;
     namespace: PostNamespace;
     posts: Post[];
+    preview?: boolean;
 }) {
     const { auth } = usePage<{
         auth: { user: { id: number; name: string } | null };
     }>().props;
+    const { currentUrl } = useCurrentUrl();
     const isMobile = useIsMobile();
     const [navOverride, setNavOverride] = useState<boolean | null>(null);
     const navVisible = navOverride ?? !isMobile;
@@ -60,6 +69,22 @@ export default function Namespace({
             <Head title={namespace.name} />
 
             <div className="min-h-screen bg-background">
+                {preview && (
+                    <div className="sticky top-0 z-[60] border-b border-amber-300 bg-amber-50 px-4 py-3 dark:border-amber-700 dark:bg-amber-900/40">
+                        <div className="mx-auto flex max-w-7xl items-center gap-3">
+                            <AlertTriangle className="size-5 shrink-0 text-amber-600 dark:text-amber-400" />
+                            <div className="flex flex-wrap items-baseline gap-x-2 text-sm font-semibold text-amber-800 dark:text-amber-300">
+                                <span className="tracking-wide uppercase">
+                                    Unpublished
+                                </span>
+                                <span className="font-normal opacity-80">
+                                    This namespace is not publicly visible. Only
+                                    logged-in users can see this preview.
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                )}
                 {namespace.cover_image_url && (
                     <div className="h-48 w-full overflow-hidden md:h-64">
                         <img
@@ -120,19 +145,33 @@ export default function Namespace({
                                 Toggle Nav
                             </button>
                             {auth.user ? (
-                                <Link
-                                    href={adminPosts.url()}
-                                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    Admin
-                                </Link>
+                                <div className="flex flex-wrap items-center gap-2">
+                                    <Button asChild variant="outline" size="sm">
+                                        <Link
+                                            href={adminNamespaceRoute.url(
+                                                namespace.id,
+                                            )}
+                                            className="inline-flex items-center gap-1.5"
+                                        >
+                                            <ArrowRightLeft className="size-4" />
+                                            Manage
+                                        </Link>
+                                    </Button>
+                                    <ViewContextBadge
+                                        label="Site View"
+                                        variant="site"
+                                    />
+                                </div>
                             ) : (
-                                <Link
-                                    href={login.url()}
-                                    className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    Login
-                                </Link>
+                                <Button asChild variant="outline" size="sm">
+                                    <Link
+                                        href={login.url({
+                                            query: { intended: currentUrl },
+                                        })}
+                                    >
+                                        Login
+                                    </Link>
+                                </Button>
                             )}
                         </div>
                     </div>
@@ -166,11 +205,15 @@ export default function Namespace({
                             <p className="text-sm text-muted-foreground">
                                 /{namespace.full_path}
                             </p>
-                            {namespace.description && (
+                            {namespace.description ? (
                                 <p className="max-w-3xl text-base leading-7 text-muted-foreground">
                                     {namespace.description}
                                 </p>
-                            )}
+                            ) : auth.user ? (
+                                <p className="max-w-3xl text-base leading-7 text-muted-foreground">
+                                    No description yet.
+                                </p>
+                            ) : null}
                         </section>
 
                         {children.length > 0 && (

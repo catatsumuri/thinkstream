@@ -40,6 +40,11 @@ export default function Create({
     namespace: Namespace;
     slugPrefix?: string | null;
 }) {
+    const returnTo =
+        typeof window !== 'undefined'
+            ? new URLSearchParams(window.location.search).get('return_to')
+            : null;
+
     setLayoutProps({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
@@ -254,8 +259,20 @@ export default function Create({
                                 <Button type="submit" disabled={processing}>
                                     {isDraft ? 'Save Draft' : 'Create Post'}
                                 </Button>
+                                {returnTo && (
+                                    <input
+                                        type="hidden"
+                                        name="return_to"
+                                        value={returnTo}
+                                    />
+                                )}
                                 <Button type="button" variant="outline" asChild>
-                                    <a href={namespaceRoute.url(namespace.id)}>
+                                    <a
+                                        href={
+                                            returnTo ??
+                                            namespaceRoute.url(namespace.id)
+                                        }
+                                    >
                                         Cancel
                                     </a>
                                 </Button>

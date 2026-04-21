@@ -70,22 +70,51 @@ class PostController extends Controller
             return $this->renderPost($post, $ancestors);
         }
 
+        if (auth()->check()) {
+            $previewPost = Post::query()
+                ->with('namespace:id,parent_id,slug,full_path,name,cover_image,is_published')
+                ->where('full_path', $normalizedPath)
+                ->first();
+
+            if ($previewPost) {
+                $ancestors = $this->ancestorChain($previewPost->namespace);
+
+                return $this->renderPost($previewPost, $ancestors, preview: true);
+            }
+        }
+
         $namespace = PostNamespace::query()
             ->where('full_path', $normalizedPath)
             ->where('is_published', true)
-            ->firstOrFail();
+            ->first();
 
-        $ancestors = $this->ancestorChain($namespace);
+        if ($namespace) {
+            $ancestors = $this->ancestorChain($namespace);
 
-        abort_unless($this->namespaceChainIsPublished($namespace, $ancestors), 404);
+            abort_unless($this->namespaceChainIsPublished($namespace, $ancestors), 404);
 
-        return $this->renderNamespace($namespace, $ancestors);
+            return $this->renderNamespace($namespace, $ancestors);
+        }
+
+        if (auth()->check()) {
+            $previewNamespace = PostNamespace::query()
+                ->where('full_path', $normalizedPath)
+                ->first();
+
+            if ($previewNamespace) {
+                $ancestors = $this->ancestorChain($previewNamespace);
+
+                return $this->renderNamespace($previewNamespace, $ancestors, preview: true);
+            }
+        }
+
+        abort(404);
     }
 
     /**
      * @param  Collection<int, PostNamespace>  $ancestors
      */
-    private function renderNamespace(PostNamespace $namespace, Collection $ancestors): Response
+    private function renderNamespace(PostNamespace $namespace, Collection $ancestors, bool $preview = false): Response
     {
         $rootNamespace = $this->rootNamespace($namespace, $ancestors);
         $children = $namespace->children()
@@ -103,15 +132,16 @@ class PostController extends Controller
             'breadcrumbs' => $this->breadcrumbs($ancestors),
             'children' => $namespace->sortNamespaces($children),
             'navRoot' => $this->buildNavigationNode($rootNamespace),
-            'namespace' => $namespace->only(['id', 'slug', 'full_path', 'name', 'description', 'cover_image_url']),
+            'namespace' => $namespace->only(['id', 'slug', 'full_path', 'name', 'description', 'cover_image_url', 'is_published']),
             'posts' => $namespace->sortPosts($posts),
+            'preview' => $preview,
         ]);
     }
 
     /**
      * @param  Collection<int, PostNamespace>  $ancestors
      */
-    private function renderPost(Post $post, Collection $ancestors): Response
+    private function renderPost(Post $post, Collection $ancestors, bool $preview = false): Response
     {
         $namespace = $post->namespace;
         $rootNamespace = $this->rootNamespace($namespace, $ancestors);
@@ -129,6 +159,10 @@ class PostController extends Controller
             'postUrl' => route('posts.path', ['path' => $post->full_path]),
             'post' => $post->only(['id', 'slug', 'full_path', 'title', 'content', 'published_at', 'updated_at']),
             'posts' => $namespace->sortPosts($posts),
+            'preview' => $preview ? [
+                'status' => $post->is_draft ? 'draft' : 'scheduled',
+                'published_at' => $post->published_at?->toISOString(),
+            ] : null,
         ]);
     }
 

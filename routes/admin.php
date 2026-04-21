@@ -13,6 +13,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::prefix('posts')->name('posts.')->group(function () {
         Route::get('/', [PostController::class, 'index'])->name('index');
         Route::get('/{namespace}', [PostController::class, 'namespaceIndex'])->name('namespace');
+        Route::patch('/{namespace}/reorder-posts', [PostController::class, 'reorderPosts'])->name('reorderPosts');
+        Route::patch('/{namespace}/reorder-namespaces', [PostController::class, 'reorderNamespaces'])->name('reorderNamespaces');
         Route::get('/{namespace}/create', [PostController::class, 'create'])->name('create');
         Route::post('/{namespace}/image', [PostController::class, 'uploadNamespaceImage'])->name('uploadNamespaceImage');
         Route::post('/{namespace}', [PostController::class, 'store'])->name('store');

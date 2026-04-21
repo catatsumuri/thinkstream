@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class PostNamespace extends Model
@@ -109,6 +110,23 @@ class PostNamespace extends Model
     public function posts(): HasMany
     {
         return $this->hasMany(Post::class, 'namespace_id');
+    }
+
+    public function deleteRecursively(): void
+    {
+        DB::transaction(function (): void {
+            foreach ($this->children()->get() as $child) {
+                $child->deleteRecursively();
+            }
+
+            $this->posts()->delete();
+
+            if ($this->cover_image) {
+                Storage::disk('public')->delete($this->cover_image);
+            }
+
+            $this->delete();
+        });
     }
 
     /**

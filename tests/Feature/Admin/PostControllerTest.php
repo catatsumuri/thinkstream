@@ -143,11 +143,186 @@ test('namespace post list defaults to latest posts when no custom order exists',
         );
 });
 
+test('namespace post list prefers canonical urls for live posts and admin urls for unpublished posts', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+    ]);
+    $livePost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'live-post',
+        'full_path' => 'guides/live-post',
+        'is_draft' => false,
+        'published_at' => now()->subMinute(),
+    ]);
+    $draftPost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'draft-post',
+        'full_path' => 'guides/draft-post',
+        'is_draft' => true,
+        'published_at' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.namespace', $namespace))
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/namespace')
+            ->where('posts.0.id', $draftPost->id)
+            ->where('posts.0.canonical_url', null)
+            ->where('posts.0.admin_url', route('admin.posts.show', [$namespace, $draftPost], false))
+            ->where('posts.1.id', $livePost->id)
+            ->where('posts.1.canonical_url', '/guides/live-post')
+            ->where('posts.1.admin_url', route('admin.posts.show', [$namespace, $livePost], false))
+        );
+});
+
+test('authenticated users can reorder posts while preserving child namespace order', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'post_order' => ['child-alpha', 'first-post', 'child-beta', 'second-post'],
+    ]);
+    PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'child-alpha',
+    ]);
+    PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'child-beta',
+    ]);
+    $firstPost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'first-post',
+    ]);
+    $secondPost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'second-post',
+    ]);
+
+    $this->actingAs($user)
+        ->from(route('admin.posts.namespace', $namespace))
+        ->patch(route('admin.posts.reorderPosts', $namespace), [
+            'slugs' => [$secondPost->slug, $firstPost->slug],
+        ])
+        ->assertRedirect(route('admin.posts.namespace', $namespace))
+        ->assertSessionHasNoErrors();
+
+    expect($namespace->fresh()->post_order)->toBe([
+        'child-alpha',
+        'child-beta',
+        'second-post',
+        'first-post',
+    ]);
+});
+
+test('reordering posts rejects slugs outside the namespace posts', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'post_order' => ['child-alpha', 'first-post'],
+    ]);
+    PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'child-alpha',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'first-post',
+    ]);
+    $foreignPost = Post::factory()->for($user)->create([
+        'slug' => 'foreign-post',
+    ]);
+
+    $this->actingAs($user)
+        ->from(route('admin.posts.namespace', $namespace))
+        ->patch(route('admin.posts.reorderPosts', $namespace), [
+            'slugs' => [$foreignPost->slug],
+        ])
+        ->assertRedirect(route('admin.posts.namespace', $namespace))
+        ->assertSessionHasErrors('slugs.0');
+
+    expect($namespace->fresh()->post_order)->toBe(['child-alpha', 'first-post']);
+});
+
+test('authenticated users can reorder child namespaces while preserving post order', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'post_order' => ['child-alpha', 'first-post', 'child-beta', 'second-post'],
+    ]);
+    $firstChild = PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'child-alpha',
+    ]);
+    $secondChild = PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'child-beta',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'first-post',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'second-post',
+    ]);
+
+    $this->actingAs($user)
+        ->from(route('admin.posts.namespace', $namespace))
+        ->patch(route('admin.posts.reorderNamespaces', $namespace), [
+            'slugs' => [$secondChild->slug, $firstChild->slug],
+        ])
+        ->assertRedirect(route('admin.posts.namespace', $namespace))
+        ->assertSessionHasNoErrors();
+
+    expect($namespace->fresh()->post_order)->toBe([
+        'child-beta',
+        'child-alpha',
+        'first-post',
+        'second-post',
+    ]);
+});
+
+test('reordering child namespaces rejects slugs outside the namespace children', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'post_order' => ['child-alpha', 'first-post'],
+    ]);
+    PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'child-alpha',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'first-post',
+    ]);
+    $foreignChild = PostNamespace::factory()->create([
+        'slug' => 'foreign-child',
+    ]);
+
+    $this->actingAs($user)
+        ->from(route('admin.posts.namespace', $namespace))
+        ->patch(route('admin.posts.reorderNamespaces', $namespace), [
+            'slugs' => [$foreignChild->slug],
+        ])
+        ->assertRedirect(route('admin.posts.namespace', $namespace))
+        ->assertSessionHasErrors('slugs.0');
+
+    expect($namespace->fresh()->post_order)->toBe(['child-alpha', 'first-post']);
+});
+
 test('authenticated users can view the create form', function () {
     $user = User::factory()->create();
-    $namespace = PostNamespace::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+    ]);
 
-    $this->actingAs($user)->get(route('admin.posts.create', $namespace))->assertOk();
+    $this->actingAs($user)
+        ->get(route('admin.posts.create', $namespace))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/create')
+            ->where('slugPrefix', 'guides/')
+        );
 });
 
 test('create form exposes a slug prefix for nested namespaces', function () {
@@ -169,6 +344,27 @@ test('create form exposes a slug prefix for nested namespaces', function () {
             ->component('admin/posts/create')
             ->where('namespace.id', $namespace->id)
             ->where('slugPrefix', 'guides/laravel/')
+        );
+});
+
+test('edit form exposes a slug prefix for root namespaces', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+    ]);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'test',
+        'full_path' => 'guides/test',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.edit', [$namespace, $post]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/edit')
+            ->where('slugPrefix', 'guides/')
         );
 });
 
@@ -198,6 +394,25 @@ test('authenticated users can store a post', function () {
     ]);
 
     expect(Post::query()->where('slug', 'hello-world')->value('published_at'))->not->toBeNull();
+});
+
+test('storing a post redirects back to the canonical page when entered from a canonical namespace', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.store', $namespace), [
+            'title' => 'Hello World',
+            'slug' => 'hello-world',
+            'content' => '# Hello',
+            'published_at' => null,
+            'return_to' => '/guides',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/guides/hello-world');
 });
 
 test('storing a post requires a title', function () {
@@ -323,11 +538,7 @@ test('authenticated users can update a post', function () {
             'published_at' => null,
         ])
         ->assertSessionHasNoErrors()
-        ->assertSessionHas('inertia.flash_data.toast', [
-            'type' => 'success',
-            'message' => 'Post saved.',
-        ])
-        ->assertRedirect(route('admin.posts.show', [$namespace, 'new-slug']));
+        ->assertRedirect(route('admin.posts.edit', [$namespace, 'new-slug']));
 
     $post->refresh();
     expect($post->title)->toBe('New Title');
@@ -346,7 +557,7 @@ test('updating a post allows keeping the same slug', function () {
             'slug' => 'my-slug',
             'content' => 'Updated content.',
         ])
-        ->assertRedirect(route('admin.posts.show', [$namespace, 'my-slug']));
+        ->assertRedirect(route('admin.posts.edit', [$namespace, 'my-slug']));
 
     expect($post->fresh()->slug)->toBe('my-slug');
 });
@@ -367,7 +578,50 @@ test('updating a post redirects back to the requested heading fragment', functio
             'return_heading' => 'my-slug-section-title',
         ])
         ->assertSessionHasNoErrors()
-        ->assertRedirect(route('admin.posts.show', [$namespace, 'my-slug']).'#my-slug-section-title');
+        ->assertRedirect(route('admin.posts.edit', [$namespace, 'my-slug']).'#my-slug-section-title');
+});
+
+test('updating a post redirects back to the updated canonical page', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create(['slug' => 'guides', 'full_path' => 'guides']);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'my-slug',
+        'full_path' => 'guides/my-slug',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post]), [
+            'title' => 'Updated Title',
+            'slug' => 'updated-slug',
+            'content' => 'Updated content.',
+            'return_heading' => 'updated-slug-section-title',
+            'return_to' => '/guides/my-slug',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/guides/updated-slug#updated-slug-section-title');
+
+    expect($post->fresh()->slug)->toBe('updated-slug');
+    expect($post->fresh()->full_path)->toBe('guides/updated-slug');
+});
+
+test('updating a post ignores unsafe return paths', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'my-slug',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post]), [
+            'title' => 'Updated Title',
+            'slug' => 'my-slug',
+            'content' => 'Updated content.',
+            'return_to' => 'https://example.com/phish',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('admin.posts.edit', [$namespace, 'my-slug']));
 });
 
 test('updating a post rejects a slug used by a child namespace in the same namespace', function () {

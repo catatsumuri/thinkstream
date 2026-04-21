@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
-import { LayoutGrid, NotebookPen } from 'lucide-react';
+import { Globe, LayoutGrid, NotebookPen } from 'lucide-react';
+import { index as adminPostsIndex } from '@/actions/App/Http/Controllers/Admin/PostController';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
 import { NavMain } from '@/components/nav-main';
@@ -13,8 +14,8 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-import { index as adminPostsIndex } from '@/actions/App/Http/Controllers/Admin/PostController';
-import { dashboard } from '@/routes';
+import { useCurrentUrl } from '@/hooks/use-current-url';
+import { dashboard, home } from '@/routes';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -28,11 +29,26 @@ const mainNavItems: NavItem[] = [
         href: adminPostsIndex.url(),
         icon: NotebookPen,
     },
+    {
+        title: 'Site',
+        href: home(),
+        icon: Globe,
+    },
 ];
 
 const footerNavItems: NavItem[] = [];
 
 export function AppSidebar() {
+    const { currentUrl } = useCurrentUrl();
+    const postsIndexUrl = adminPostsIndex.url();
+    const isPostsActive =
+        currentUrl === postsIndexUrl ||
+        currentUrl.startsWith(`${postsIndexUrl}/`);
+    const resolvedMainNavItems = mainNavItems.map((item) => ({
+        ...item,
+        isActive: item.href === postsIndexUrl ? isPostsActive : item.isActive,
+    }));
+
     return (
         <Sidebar collapsible="icon" variant="inset">
             <SidebarHeader>
@@ -48,7 +64,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                <NavMain items={mainNavItems} />
+                <NavMain items={resolvedMainNavItems} />
             </SidebarContent>
 
             <SidebarFooter>

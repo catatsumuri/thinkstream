@@ -12,6 +12,7 @@ use App\Models\PostNamespace;
 use App\Models\PostRevision;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -61,11 +62,33 @@ class PostController extends Controller
 
     public function namespaceIndex(PostNamespace $namespace): Response
     {
+        $posts = $namespace->sortPosts($namespace->posts()->latest()->get([
+            'id',
+            'title',
+            'slug',
+            'full_path',
+            'is_draft',
+            'published_at',
+            'created_at',
+        ]))->map(fn (Post $post) => [
+            'id' => $post->id,
+            'title' => $post->title,
+            'slug' => $post->slug,
+            'full_path' => $post->full_path,
+            'is_draft' => $post->is_draft,
+            'published_at' => $post->published_at,
+            'created_at' => $post->created_at,
+            'canonical_url' => ! $post->is_draft && $post->published_at !== null && $post->published_at->isPast()
+                ? route('posts.path', ['path' => $post->full_path], absolute: false)
+                : null,
+            'admin_url' => route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug], absolute: false),
+        ]);
+
         return Inertia::render('admin/posts/namespace', [
             'namespace' => $namespace,
             'ancestors' => $namespace->ancestors()->map(fn (PostNamespace $ns) => ['id' => $ns->id, 'name' => $ns->name]),
             'children' => $namespace->sortNamespaces($namespace->children()->withCount('posts')->get()),
-            'posts' => $namespace->sortPosts($namespace->posts()->latest()->get(['id', 'title', 'slug', 'is_draft', 'published_at', 'created_at'])),
+            'posts' => $posts,
         ]);
     }
 
@@ -73,9 +96,7 @@ class PostController extends Controller
     {
         return Inertia::render('admin/posts/create', [
             'namespace' => $namespace,
-            'slugPrefix' => $namespace->full_path !== $namespace->slug
-                ? trim($namespace->full_path, '/').'/'
-                : null,
+            'slugPrefix' => trim($namespace->full_path, '/').'/',
         ]);
     }
 
@@ -89,7 +110,51 @@ class PostController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Post created.']);
 
+        $returnTo = $this->safeReturnPath($request->string('return_to')->toString());
+
+        if ($returnTo !== null) {
+            return redirect()->to(route('posts.path', ['path' => $post->full_path], absolute: false));
+        }
+
         return to_route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]);
+    }
+
+    public function reorderPosts(Request $request, PostNamespace $namespace): RedirectResponse
+    {
+        $postSlugs = $namespace->posts()->pluck('slug')->all();
+        $slugs = $request->validate([
+            'slugs' => ['required', 'array'],
+            'slugs.*' => ['string', 'distinct:strict', Rule::in($postSlugs)],
+        ])['slugs'];
+
+        $existingOrder = $namespace->post_order ?? [];
+        $childSlugs = $namespace->children()->pluck('slug')->all();
+        $namespaceSlugsInOrder = array_values(
+            array_filter($existingOrder, fn (string $slug) => in_array($slug, $childSlugs, true))
+        );
+
+        $namespace->update(['post_order' => [...$namespaceSlugsInOrder, ...$slugs]]);
+
+        return back();
+    }
+
+    public function reorderNamespaces(Request $request, PostNamespace $namespace): RedirectResponse
+    {
+        $childSlugs = $namespace->children()->pluck('slug')->all();
+        $slugs = $request->validate([
+            'slugs' => ['required', 'array'],
+            'slugs.*' => ['string', 'distinct:strict', Rule::in($childSlugs)],
+        ])['slugs'];
+
+        $existingOrder = $namespace->post_order ?? [];
+        $postSlugs = $namespace->posts()->pluck('slug')->all();
+        $postSlugsInOrder = array_values(
+            array_filter($existingOrder, fn (string $slug) => in_array($slug, $postSlugs, true))
+        );
+
+        $namespace->update(['post_order' => [...$slugs, ...$postSlugsInOrder]]);
+
+        return back();
     }
 
     public function show(PostNamespace $namespace, Post $post): Response
@@ -105,6 +170,7 @@ class PostController extends Controller
         return Inertia::render('admin/posts/edit', [
             'namespace' => $namespace,
             'post' => $post,
+            'slugPrefix' => trim($namespace->full_path, '/').'/',
         ]);
     }
 
@@ -124,13 +190,16 @@ class PostController extends Controller
 
         $post->update($data);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Post saved.']);
-
         $fragment = $request->string('return_heading')->toString();
         $hash = $fragment !== '' ? '#'.ltrim($fragment, '#') : '';
+        $returnTo = $this->safeReturnPath($request->string('return_to')->toString());
 
-        return redirect()->route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug])
-            ->setTargetUrl(route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]).$hash);
+        if ($returnTo !== null) {
+            return redirect()->to(route('posts.path', ['path' => $post->full_path], absolute: false).$hash);
+        }
+
+        return redirect()->route('admin.posts.edit', ['namespace' => $namespace, 'post' => $post->slug])
+            ->setTargetUrl(route('admin.posts.edit', ['namespace' => $namespace, 'post' => $post->slug]).$hash);
     }
 
     public function revisions(PostNamespace $namespace, Post $post): Response
@@ -212,5 +281,23 @@ class PostController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Post deleted.']);
 
         return to_route('admin.posts.namespace', $namespace);
+    }
+
+    private function safeReturnPath(string $path): ?string
+    {
+        if ($path === '') {
+            return null;
+        }
+
+        if (
+            ! str_starts_with($path, '/')
+            || str_starts_with($path, '//')
+            || parse_url($path, PHP_URL_SCHEME) !== null
+            || parse_url($path, PHP_URL_HOST) !== null
+        ) {
+            return null;
+        }
+
+        return $path;
     }
 }
