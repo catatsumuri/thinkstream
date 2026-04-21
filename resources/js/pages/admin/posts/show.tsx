@@ -13,7 +13,12 @@ import { useMarkdownToc } from '@/hooks/use-markdown-toc';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
 import { dashboard } from '@/routes';
-import { edit, index, namespace as namespaceRoute, show } from '@/routes/admin/posts';
+import {
+    edit,
+    index,
+    namespace as namespaceRoute,
+    show,
+} from '@/routes/admin/posts';
 
 function findHeadingOffset(
     content: string,
