@@ -1,25 +1,29 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { siX } from 'simple-icons';
 import {
     AlertTriangle,
+    ArrowRightLeft,
     ChevronRight,
     PanelLeftClose,
     PanelLeftOpen,
     PanelRightClose,
     PanelRightOpen,
-    Settings2,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { siX } from 'simple-icons';
 import type { ContentNavNode } from '@/components/content-nav-tree';
 import ContentNavTree from '@/components/content-nav-tree';
 import MarkdownContent from '@/components/markdown-content';
 import TableOfContents from '@/components/table-of-contents';
 import { Button } from '@/components/ui/button';
+import ViewContextBadge from '@/components/view-context-badge';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { dashboard, login } from '@/routes';
-import { edit as adminPostEdit } from '@/routes/admin/posts';
+import { login } from '@/routes';
+import {
+    edit as adminPostEdit,
+    show as adminPostShow,
+} from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
 
 type PostNamespace = {
@@ -343,34 +347,24 @@ export default function Show({
                                 </button>
                             )}
                             {auth.user ? (
-                                <>
+                                <div className="flex flex-wrap items-center gap-2">
                                     <Button asChild variant="outline" size="sm">
                                         <Link
-                                            href={adminPostEdit.url(
-                                                {
-                                                    namespace: namespace.id,
-                                                    post: post.slug,
-                                                },
-                                                {
-                                                    query: {
-                                                        return_to: currentUrl,
-                                                    },
-                                                },
-                                            )}
-                                        >
-                                            Edit Page
-                                        </Link>
-                                    </Button>
-                                    <Button asChild variant="outline" size="sm">
-                                        <Link
-                                            href={dashboard()}
+                                            href={adminPostShow.url({
+                                                namespace: namespace.id,
+                                                post: post.slug,
+                                            })}
                                             className="inline-flex items-center gap-1.5"
                                         >
-                                            <Settings2 className="size-4" />
+                                            <ArrowRightLeft className="size-4" />
                                             Manage
                                         </Link>
                                     </Button>
-                                </>
+                                    <ViewContextBadge
+                                        label="Site View"
+                                        variant="site"
+                                    />
+                                </div>
                             ) : (
                                 <Button asChild variant="outline" size="sm">
                                     <Link

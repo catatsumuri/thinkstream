@@ -177,6 +177,138 @@ test('namespace post list prefers canonical urls for live posts and admin urls f
         );
 });
 
+test('authenticated users can reorder posts while preserving child namespace order', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'post_order' => ['child-alpha', 'first-post', 'child-beta', 'second-post'],
+    ]);
+    PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'child-alpha',
+    ]);
+    PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'child-beta',
+    ]);
+    $firstPost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'first-post',
+    ]);
+    $secondPost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'second-post',
+    ]);
+
+    $this->actingAs($user)
+        ->from(route('admin.posts.namespace', $namespace))
+        ->patch(route('admin.posts.reorderPosts', $namespace), [
+            'slugs' => [$secondPost->slug, $firstPost->slug],
+        ])
+        ->assertRedirect(route('admin.posts.namespace', $namespace))
+        ->assertSessionHasNoErrors();
+
+    expect($namespace->fresh()->post_order)->toBe([
+        'child-alpha',
+        'child-beta',
+        'second-post',
+        'first-post',
+    ]);
+});
+
+test('reordering posts rejects slugs outside the namespace posts', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'post_order' => ['child-alpha', 'first-post'],
+    ]);
+    PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'child-alpha',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'first-post',
+    ]);
+    $foreignPost = Post::factory()->for($user)->create([
+        'slug' => 'foreign-post',
+    ]);
+
+    $this->actingAs($user)
+        ->from(route('admin.posts.namespace', $namespace))
+        ->patch(route('admin.posts.reorderPosts', $namespace), [
+            'slugs' => [$foreignPost->slug],
+        ])
+        ->assertRedirect(route('admin.posts.namespace', $namespace))
+        ->assertSessionHasErrors('slugs.0');
+
+    expect($namespace->fresh()->post_order)->toBe(['child-alpha', 'first-post']);
+});
+
+test('authenticated users can reorder child namespaces while preserving post order', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'post_order' => ['child-alpha', 'first-post', 'child-beta', 'second-post'],
+    ]);
+    $firstChild = PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'child-alpha',
+    ]);
+    $secondChild = PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'child-beta',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'first-post',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'second-post',
+    ]);
+
+    $this->actingAs($user)
+        ->from(route('admin.posts.namespace', $namespace))
+        ->patch(route('admin.posts.reorderNamespaces', $namespace), [
+            'slugs' => [$secondChild->slug, $firstChild->slug],
+        ])
+        ->assertRedirect(route('admin.posts.namespace', $namespace))
+        ->assertSessionHasNoErrors();
+
+    expect($namespace->fresh()->post_order)->toBe([
+        'child-beta',
+        'child-alpha',
+        'first-post',
+        'second-post',
+    ]);
+});
+
+test('reordering child namespaces rejects slugs outside the namespace children', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'post_order' => ['child-alpha', 'first-post'],
+    ]);
+    PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'child-alpha',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'first-post',
+    ]);
+    $foreignChild = PostNamespace::factory()->create([
+        'slug' => 'foreign-child',
+    ]);
+
+    $this->actingAs($user)
+        ->from(route('admin.posts.namespace', $namespace))
+        ->patch(route('admin.posts.reorderNamespaces', $namespace), [
+            'slugs' => [$foreignChild->slug],
+        ])
+        ->assertRedirect(route('admin.posts.namespace', $namespace))
+        ->assertSessionHasErrors('slugs.0');
+
+    expect($namespace->fresh()->post_order)->toBe(['child-alpha', 'first-post']);
+});
+
 test('authenticated users can view the create form', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create([

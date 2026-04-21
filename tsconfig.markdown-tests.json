@@ -12,6 +12,7 @@
     },
     "include": [
         "resources/js/lib/markdown-card-href.ts",
+        "resources/js/lib/delete-confirmation.ts",
         "resources/js/lib/markdown-syntax-manifest.ts",
         "resources/js/lib/markdown-syntax.ts",
         "resources/js/lib/remark-tabs-directive.ts",

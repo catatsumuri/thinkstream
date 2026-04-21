@@ -1,19 +1,46 @@
-import { Head, Link, setLayoutProps } from '@inertiajs/react';
+import type { DragEndEvent } from '@dnd-kit/core';
 import {
+    DndContext,
+    KeyboardSensor,
+    PointerSensor,
+    closestCenter,
+    useSensor,
+    useSensors,
+} from '@dnd-kit/core';
+import {
+    SortableContext,
+    arrayMove,
+    sortableKeyboardCoordinates,
+    useSortable,
+    verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import { Head, Link, router, setLayoutProps } from '@inertiajs/react';
+import {
+    ArrowUpDown,
+    Check,
     CheckCircle2,
     Clock,
     ExternalLink,
+    FilePlus2,
     FilePen,
+    FileText,
+    FolderPlus,
     FolderOpen,
+    GripVertical,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import NamespaceHeader from '@/components/namespace-header';
 import { Button } from '@/components/ui/button';
 import { timeAgo } from '@/lib/time';
 import { dashboard } from '@/routes';
 import { create as namespaceCreate } from '@/routes/admin/namespaces';
 import {
+    create,
     index,
     namespace as namespaceRoute,
-    create,
+    reorderNamespaces,
+    reorderPosts,
 } from '@/routes/admin/posts';
 
 type Namespace = {
@@ -21,6 +48,7 @@ type Namespace = {
     slug: string;
     full_path: string;
     name: string;
+    is_published: boolean;
 };
 
 type ChildNamespace = {
@@ -49,18 +77,237 @@ type Ancestor = {
     name: string;
 };
 
+function SortableChildRow({
+    child,
+    reorderMode,
+}: {
+    child: ChildNamespace;
+    reorderMode: boolean;
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: child.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <tr ref={setNodeRef} style={style} className="border-b last:border-0">
+            <td className="w-8 px-2 py-3">
+                {reorderMode && (
+                    <button
+                        {...attributes}
+                        {...listeners}
+                        className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
+                    >
+                        <GripVertical className="size-4" />
+                    </button>
+                )}
+            </td>
+            <td className="px-4 py-3">
+                <div className="flex items-center gap-2">
+                    <FolderOpen className="size-4 text-muted-foreground" />
+                    <Link
+                        href={namespaceRoute.url(child.id)}
+                        className="font-medium text-primary hover:underline"
+                    >
+                        {child.name}
+                    </Link>
+                </div>
+            </td>
+            <td className="px-4 py-3 text-muted-foreground">
+                /{child.full_path}
+            </td>
+            <td className="px-4 py-3">
+                {child.is_published ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
+                        <CheckCircle2 className="size-3" />
+                        Published
+                    </span>
+                ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        <FilePen className="size-3" />
+                        Draft
+                    </span>
+                )}
+            </td>
+            <td className="px-4 py-3 text-muted-foreground">
+                {child.posts_count} {child.posts_count === 1 ? 'post' : 'posts'}
+            </td>
+        </tr>
+    );
+}
+
+function SortablePostRow({
+    post,
+    namespaceFullPath,
+    reorderMode,
+}: {
+    post: Post;
+    namespaceFullPath: string;
+    reorderMode: boolean;
+}) {
+    const {
+        attributes,
+        listeners,
+        setNodeRef,
+        transform,
+        transition,
+        isDragging,
+    } = useSortable({ id: post.id });
+
+    const style = {
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+    };
+
+    return (
+        <tr ref={setNodeRef} style={style} className="border-b last:border-0">
+            <td className="w-8 px-2 py-3">
+                {reorderMode && (
+                    <button
+                        {...attributes}
+                        {...listeners}
+                        className="cursor-grab touch-none text-muted-foreground hover:text-foreground active:cursor-grabbing"
+                    >
+                        <GripVertical className="size-4" />
+                    </button>
+                )}
+            </td>
+            <td className="px-4 py-3 font-medium">
+                <div className="flex items-center gap-2">
+                    <FileText className="size-4 text-muted-foreground" />
+                    <Link href={post.admin_url} className="hover:underline">
+                        {post.title}
+                    </Link>
+                </div>
+            </td>
+            <td className="px-4 py-3 text-muted-foreground">
+                <div className="flex items-center gap-2">
+                    <span>
+                        /{namespaceFullPath}/{post.slug}
+                    </span>
+                    <a
+                        href={`/${post.full_path}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-muted-foreground transition-colors hover:text-foreground"
+                    >
+                        <ExternalLink className="size-3.5" />
+                    </a>
+                </div>
+            </td>
+            <td className="px-4 py-3">
+                {post.is_draft ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                        <FilePen className="size-3" />
+                        Draft
+                    </span>
+                ) : !post.published_at ||
+                  new Date(post.published_at) > new Date() ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                        <Clock className="size-3" />
+                        Scheduled
+                    </span>
+                ) : (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        <CheckCircle2 className="size-3" />
+                        Published
+                    </span>
+                )}
+            </td>
+            <td
+                className="px-4 py-3 text-muted-foreground"
+                suppressHydrationWarning
+            >
+                {new Date(post.created_at).toLocaleString(undefined, {
+                    dateStyle: 'medium',
+                    timeStyle: 'short',
+                })}
+                <span className="ml-1.5 text-xs opacity-60">
+                    ({timeAgo(post.created_at)})
+                </span>
+            </td>
+        </tr>
+    );
+}
+
 export default function Namespace({
     namespace,
     ancestors,
-    children,
-    posts,
+    children: initialChildren,
+    posts: initialPosts,
 }: {
     namespace: Namespace;
     ancestors: Ancestor[];
     children: ChildNamespace[];
     posts: Post[];
 }) {
+    const [children, setChildren] = useState(initialChildren);
+    const [posts, setPosts] = useState(initialPosts);
+    const [namespacesReorderMode, setNamespacesReorderMode] = useState(false);
+    const [postsReorderMode, setPostsReorderMode] = useState(false);
+
+    useEffect(() => {
+        setChildren(initialChildren);
+    }, [initialChildren]);
+    useEffect(() => {
+        setPosts(initialPosts);
+    }, [initialPosts]);
+
     const childNamespaceCreateUrl = `${namespaceCreate.url()}?${new URLSearchParams({ parent: String(namespace.id) }).toString()}`;
+
+    const sensors = useSensors(
+        useSensor(PointerSensor),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
+        }),
+    );
+
+    function handleNamespaceDragEnd(event: DragEndEvent) {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) {
+            return;
+        }
+
+        const oldIndex = children.findIndex((c) => c.id === active.id);
+        const newIndex = children.findIndex((c) => c.id === over.id);
+        const reordered = arrayMove(children, oldIndex, newIndex);
+        setChildren(reordered);
+        router.patch(
+            reorderNamespaces.url(namespace.id),
+            { slugs: reordered.map((c) => c.slug) },
+            { preserveScroll: true },
+        );
+    }
+
+    function handlePostDragEnd(event: DragEndEvent) {
+        const { active, over } = event;
+
+        if (!over || active.id === over.id) {
+            return;
+        }
+
+        const oldIndex = posts.findIndex((p) => p.id === active.id);
+        const newIndex = posts.findIndex((p) => p.id === over.id);
+        const reordered = arrayMove(posts, oldIndex, newIndex);
+        setPosts(reordered);
+        router.patch(
+            reorderPosts.url(namespace.id),
+            { slugs: reordered.map((p) => p.slug) },
+            { preserveScroll: true },
+        );
+    }
 
     setLayoutProps({
         breadcrumbs: [
@@ -79,82 +326,66 @@ export default function Namespace({
             <Head title={`Posts — ${namespace.name}`} />
 
             <div className="space-y-6 p-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold">
-                            {namespace.name}
-                        </h1>
-                        <p className="text-sm text-muted-foreground">
-                            /{namespace.slug}
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <Button variant="outline" asChild>
-                            <Link href={childNamespaceCreateUrl}>
-                                New Child Namespace
-                            </Link>
-                        </Button>
-                        <Button asChild>
-                            <Link href={create.url(namespace.id)}>
-                                New Post
-                            </Link>
-                        </Button>
-                    </div>
-                </div>
+                <NamespaceHeader namespace={namespace} />
 
                 {children.length > 0 && (
                     <div className="space-y-2">
-                        <h2 className="text-sm font-medium text-muted-foreground">
-                            Child Namespaces
-                        </h2>
-                        <div className="rounded-xl border">
-                            <table className="w-full text-sm">
-                                <tbody>
-                                    {children.map((child) => (
-                                        <tr
-                                            key={child.id}
-                                            className="border-b last:border-0"
-                                        >
-                                            <td className="px-4 py-3">
-                                                <div className="flex items-center gap-2">
-                                                    <FolderOpen className="size-4 text-muted-foreground" />
-                                                    <Link
-                                                        href={namespaceRoute.url(
-                                                            child.id,
-                                                        )}
-                                                        className="font-medium text-primary hover:underline"
-                                                    >
-                                                        {child.name}
-                                                    </Link>
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground">
-                                                /{child.full_path}
-                                            </td>
-                                            <td className="px-4 py-3">
-                                                {child.is_published ? (
-                                                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800 dark:bg-green-900/30 dark:text-green-400">
-                                                        <CheckCircle2 className="size-3" />
-                                                        Published
-                                                    </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                                        <FilePen className="size-3" />
-                                                        Draft
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-4 py-3 text-muted-foreground">
-                                                {child.posts_count}{' '}
-                                                {child.posts_count === 1
-                                                    ? 'post'
-                                                    : 'posts'}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-sm font-medium text-muted-foreground">
+                                Child Namespaces
+                            </h2>
+                            <Button
+                                variant={
+                                    namespacesReorderMode
+                                        ? 'secondary'
+                                        : 'outline'
+                                }
+                                size="sm"
+                                onClick={() =>
+                                    setNamespacesReorderMode((v) => !v)
+                                }
+                            >
+                                {namespacesReorderMode ? (
+                                    <>
+                                        <Check className="size-4" />
+                                        Done
+                                    </>
+                                ) : (
+                                    <>
+                                        <ArrowUpDown className="size-4" />
+                                        Reorder
+                                    </>
+                                )}
+                            </Button>
                         </div>
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleNamespaceDragEnd}
+                        >
+                            <div className="rounded-xl border">
+                                <table className="w-full text-sm">
+                                    <tbody>
+                                        <SortableContext
+                                            items={children.map((c) => c.id)}
+                                            strategy={
+                                                verticalListSortingStrategy
+                                            }
+                                        >
+                                            {children.map((child) => (
+                                                <SortableChildRow
+                                                    key={child.id}
+                                                    child={child}
+                                                    reorderMode={
+                                                        namespacesReorderMode
+                                                    }
+                                                />
+                                            ))}
+                                        </SortableContext>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </DndContext>
                     </div>
                 )}
 
@@ -166,97 +397,92 @@ export default function Namespace({
                         <div className="mt-4 flex items-center justify-center gap-2">
                             <Button variant="outline" asChild>
                                 <Link href={childNamespaceCreateUrl}>
+                                    <FolderPlus className="size-4" />
                                     Create a child namespace
                                 </Link>
                             </Button>
                             <Button asChild>
                                 <Link href={create.url(namespace.id)}>
+                                    <FilePlus2 className="size-4" />
                                     Create your first post
                                 </Link>
                             </Button>
                         </div>
                     </div>
                 ) : (
-                    <div className="rounded-xl border">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b bg-muted/50">
-                                    <th className="px-4 py-3 text-left font-medium">
-                                        Title
-                                    </th>
-                                    <th className="px-4 py-3 text-left font-medium">
-                                        Slug
-                                    </th>
-                                    <th className="px-4 py-3 text-left font-medium">
-                                        Status
-                                    </th>
-                                    <th className="px-4 py-3 text-left font-medium">
-                                        Created
-                                    </th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {posts.map((post) => (
-                                    <tr
-                                        key={post.id}
-                                        className="border-b last:border-0"
-                                    >
-                                        <td className="px-4 py-3 font-medium">
-                                            <div className="flex items-center gap-2">
-                                                <Link
-                                                    href={post.admin_url}
-                                                    className="hover:underline"
-                                                >
-                                                    {post.title}
-                                                </Link>
-                                                <a
-                                                    href={`/${post.full_path}`}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    className="text-muted-foreground transition-colors hover:text-foreground"
-                                                >
-                                                    <ExternalLink className="size-3.5" />
-                                                </a>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            /{namespace.full_path}/{post.slug}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            {post.is_draft ? (
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                                    <FilePen className="size-3" />
-                                                    Draft
-                                                </span>
-                                            ) : !post.published_at ||
-                                              new Date(post.published_at) >
-                                                  new Date() ? (
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                                    <Clock className="size-3" />
-                                                    Scheduled
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                                    <CheckCircle2 className="size-3" />
-                                                    Published
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-4 py-3 text-muted-foreground">
-                                            {new Date(
-                                                post.created_at,
-                                            ).toLocaleString(undefined, {
-                                                dateStyle: 'medium',
-                                                timeStyle: 'short',
-                                            })}
-                                            <span className="ml-1.5 text-xs opacity-60">
-                                                ({timeAgo(post.created_at)})
-                                            </span>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-sm font-medium text-muted-foreground">
+                                Posts
+                            </h2>
+                            <Button
+                                variant={
+                                    postsReorderMode ? 'secondary' : 'outline'
+                                }
+                                size="sm"
+                                onClick={() => setPostsReorderMode((v) => !v)}
+                            >
+                                {postsReorderMode ? (
+                                    <>
+                                        <Check className="size-4" />
+                                        Done
+                                    </>
+                                ) : (
+                                    <>
+                                        <ArrowUpDown className="size-4" />
+                                        Reorder
+                                    </>
+                                )}
+                            </Button>
+                        </div>
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handlePostDragEnd}
+                        >
+                            <div className="rounded-xl border">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b bg-muted/50">
+                                            <th className="w-8 px-2 py-3" />
+                                            <th className="px-4 py-3 text-left font-medium">
+                                                Title
+                                            </th>
+                                            <th className="px-4 py-3 text-left font-medium">
+                                                Slug
+                                            </th>
+                                            <th className="px-4 py-3 text-left font-medium">
+                                                Status
+                                            </th>
+                                            <th className="px-4 py-3 text-left font-medium">
+                                                Created
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <SortableContext
+                                            items={posts.map((p) => p.id)}
+                                            strategy={
+                                                verticalListSortingStrategy
+                                            }
+                                        >
+                                            {posts.map((post) => (
+                                                <SortablePostRow
+                                                    key={post.id}
+                                                    post={post}
+                                                    namespaceFullPath={
+                                                        namespace.full_path
+                                                    }
+                                                    reorderMode={
+                                                        postsReorderMode
+                                                    }
+                                                />
+                                            ))}
+                                        </SortableContext>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </DndContext>
                     </div>
                 )}
             </div>

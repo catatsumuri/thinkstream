@@ -1,8 +1,9 @@
 import { Form, Link } from '@inertiajs/react';
 import {
+    ArrowRightLeft,
     CheckCircle2,
     Clock,
-    ExternalLink,
+    FileText,
     FilePen,
     History,
     ArrowLeft,
@@ -19,6 +20,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import ViewContextBadge from '@/components/view-context-badge';
 import { destroy, edit, revisions, show } from '@/routes/admin/posts';
 
 type Namespace = {
@@ -65,22 +67,18 @@ export default function PostHeader({
     post: Post;
     mode?: 'show' | 'edit';
 }) {
-    const canonicalUrl =
-        !post.is_draft &&
-        post.published_at &&
-        new Date(post.published_at) <= new Date()
-            ? `/${post.full_path}`
-            : null;
+    const siteUrl = `/${post.full_path}`;
 
     return (
-        <div className="rounded-xl border bg-card p-5">
+        <div className="rounded-xl border border-sky-200/80 bg-sky-50/70 p-5 dark:border-sky-900/80 dark:bg-sky-950/20">
             <div className="flex flex-wrap items-start justify-between gap-4">
                 <div>
-                    <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                    <p className="text-xs font-semibold tracking-wider text-sky-700 uppercase dark:text-sky-300">
                         Manage Post
                     </p>
                     <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                        <h1 className="text-2xl font-semibold">
+                        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+                            <FileText className="size-5 shrink-0 text-sky-700 dark:text-sky-300" />
                             <Link
                                 href={show.url({
                                     namespace: namespace.id,
@@ -92,25 +90,15 @@ export default function PostHeader({
                             </Link>
                         </h1>
                         <div className="flex items-center gap-2">
-                            <p className="text-sm text-muted-foreground">
+                            <p className="text-sm text-sky-800/70 dark:text-sky-200/70">
                                 /{post.full_path}
                             </p>
-                            {canonicalUrl && (
-                                <a
-                                    href={canonicalUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    <ExternalLink className="size-3.5" />
-                                </a>
-                            )}
                             <Link
                                 href={revisions.url({
                                     namespace: namespace.id,
                                     post: post.slug,
                                 })}
-                                className="text-muted-foreground transition-colors hover:text-foreground"
+                                className="text-sky-700/70 transition-colors hover:text-sky-900 dark:text-sky-300/70 dark:hover:text-sky-100"
                             >
                                 <History className="size-3.5" />
                             </Link>
@@ -190,32 +178,43 @@ export default function PostHeader({
                         )}
                     </div>
                 </div>
-                <div className="flex flex-wrap items-center gap-2">
-                    {mode === 'show' ? (
+                <div className="flex flex-col items-start gap-2 sm:items-end">
+                    <div className="flex flex-wrap items-center gap-2">
                         <Button variant="outline" asChild>
-                            <Link
-                                href={edit.url({
-                                    namespace: namespace.id,
-                                    post: post.slug,
-                                })}
-                            >
-                                <Pencil className="size-4" />
-                                Edit
+                            <Link href={siteUrl}>
+                                <ArrowRightLeft className="size-4" />
+                                View Site
                             </Link>
                         </Button>
-                    ) : (
-                        <Button variant="outline" asChild>
-                            <Link
-                                href={show.url({
-                                    namespace: namespace.id,
-                                    post: post.slug,
-                                })}
-                            >
-                                <ArrowLeft className="size-4" />
-                                Back
-                            </Link>
-                        </Button>
-                    )}
+                        <ViewContextBadge label="Admin View" variant="admin" />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                        {mode === 'show' ? (
+                            <Button variant="outline" asChild>
+                                <Link
+                                    href={edit.url({
+                                        namespace: namespace.id,
+                                        post: post.slug,
+                                    })}
+                                >
+                                    <Pencil className="size-4" />
+                                    Edit
+                                </Link>
+                            </Button>
+                        ) : (
+                            <Button variant="outline" asChild>
+                                <Link
+                                    href={show.url({
+                                        namespace: namespace.id,
+                                        post: post.slug,
+                                    })}
+                                >
+                                    <ArrowLeft className="size-4" />
+                                    View Post
+                                </Link>
+                            </Button>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>

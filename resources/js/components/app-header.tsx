@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid, Menu, NotebookPen, Search } from 'lucide-react';
+import { Globe, LayoutGrid, Menu, NotebookPen, Search } from 'lucide-react';
+import { index as adminPostsIndex } from '@/actions/App/Http/Controllers/Admin/PostController';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -32,8 +33,7 @@ import { UserMenuContent } from '@/components/user-menu-content';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn, toUrl } from '@/lib/utils';
-import { index as adminPostsIndex } from '@/actions/App/Http/Controllers/Admin/PostController';
-import { dashboard } from '@/routes';
+import { dashboard, home } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
 
 type Props = {
@@ -51,6 +51,11 @@ const mainNavItems: NavItem[] = [
         href: adminPostsIndex.url(),
         icon: NotebookPen,
     },
+    {
+        title: 'Site',
+        href: home(),
+        icon: Globe,
+    },
 ];
 
 const rightNavItems: NavItem[] = [];
@@ -62,7 +67,15 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const page = usePage();
     const { auth } = page.props;
     const getInitials = useInitials();
-    const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+    const { currentUrl, isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
+    const postsIndexUrl = adminPostsIndex.url();
+    const isPostsActive =
+        currentUrl === postsIndexUrl ||
+        currentUrl.startsWith(`${postsIndexUrl}/`);
+    const resolvedMainNavItems = mainNavItems.map((item) => ({
+        ...item,
+        isActive: item.href === postsIndexUrl ? isPostsActive : item.isActive,
+    }));
 
     return (
         <>
@@ -93,18 +106,26 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                 <div className="flex h-full flex-1 flex-col space-y-4 p-4">
                                     <div className="flex h-full flex-col justify-between text-sm">
                                         <div className="flex flex-col space-y-4">
-                                            {mainNavItems.map((item) => (
-                                                <Link
-                                                    key={item.title}
-                                                    href={item.href}
-                                                    className="flex items-center space-x-2 font-medium"
-                                                >
-                                                    {item.icon && (
-                                                        <item.icon className="h-5 w-5" />
-                                                    )}
-                                                    <span>{item.title}</span>
-                                                </Link>
-                                            ))}
+                                            {resolvedMainNavItems.map(
+                                                (item) => (
+                                                    <Link
+                                                        key={item.title}
+                                                        href={item.href}
+                                                        className={cn(
+                                                            'flex items-center space-x-2 font-medium',
+                                                            item.isActive &&
+                                                                activeItemStyles,
+                                                        )}
+                                                    >
+                                                        {item.icon && (
+                                                            <item.icon className="h-5 w-5" />
+                                                        )}
+                                                        <span>
+                                                            {item.title}
+                                                        </span>
+                                                    </Link>
+                                                ),
+                                            )}
                                         </div>
 
                                         <div className="flex flex-col space-y-4">
@@ -141,7 +162,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     <div className="ml-6 hidden h-full items-center space-x-6 lg:flex">
                         <NavigationMenu className="flex h-full items-stretch">
                             <NavigationMenuList className="flex h-full items-stretch space-x-2">
-                                {mainNavItems.map((item, index) => (
+                                {resolvedMainNavItems.map((item, index) => (
                                     <NavigationMenuItem
                                         key={index}
                                         className="relative flex h-full items-center"
@@ -150,10 +171,12 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             href={item.href}
                                             className={cn(
                                                 navigationMenuTriggerStyle(),
-                                                whenCurrentUrl(
-                                                    item.href,
-                                                    activeItemStyles,
-                                                ),
+                                                item.isActive
+                                                    ? activeItemStyles
+                                                    : whenCurrentUrl(
+                                                          item.href,
+                                                          activeItemStyles,
+                                                      ),
                                                 'h-9 cursor-pointer px-3',
                                             )}
                                         >
@@ -162,7 +185,8 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                             )}
                                             {item.title}
                                         </Link>
-                                        {isCurrentUrl(item.href) && (
+                                        {(item.isActive ??
+                                            isCurrentUrl(item.href)) && (
                                             <div className="absolute bottom-0 left-0 h-0.5 w-full translate-y-px bg-black dark:bg-white"></div>
                                         )}
                                     </NavigationMenuItem>

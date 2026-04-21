@@ -1,5 +1,6 @@
 import { Head, Link } from '@inertiajs/react';
 import { Form } from '@inertiajs/react';
+import { FolderPlus } from 'lucide-react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
@@ -27,7 +28,10 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                         </p>
                     </div>
                     <Button asChild>
-                        <Link href={create.url()}>New Namespace</Link>
+                        <Link href={create.url()}>
+                            <FolderPlus className="size-4" />
+                            New Namespace
+                        </Link>
                     </Button>
                 </div>
 
@@ -38,6 +42,7 @@ export default function Index({ namespaces }: { namespaces: Namespace[] }) {
                         </p>
                         <Button asChild className="mt-4">
                             <Link href={create.url()}>
+                                <FolderPlus className="size-4" />
                                 Create your first namespace
                             </Link>
                         </Button>

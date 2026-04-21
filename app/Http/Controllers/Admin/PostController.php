@@ -12,6 +12,7 @@ use App\Models\PostNamespace;
 use App\Models\PostRevision;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -116,6 +117,44 @@ class PostController extends Controller
         }
 
         return to_route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]);
+    }
+
+    public function reorderPosts(Request $request, PostNamespace $namespace): RedirectResponse
+    {
+        $postSlugs = $namespace->posts()->pluck('slug')->all();
+        $slugs = $request->validate([
+            'slugs' => ['required', 'array'],
+            'slugs.*' => ['string', 'distinct:strict', Rule::in($postSlugs)],
+        ])['slugs'];
+
+        $existingOrder = $namespace->post_order ?? [];
+        $childSlugs = $namespace->children()->pluck('slug')->all();
+        $namespaceSlugsInOrder = array_values(
+            array_filter($existingOrder, fn (string $slug) => in_array($slug, $childSlugs, true))
+        );
+
+        $namespace->update(['post_order' => [...$namespaceSlugsInOrder, ...$slugs]]);
+
+        return back();
+    }
+
+    public function reorderNamespaces(Request $request, PostNamespace $namespace): RedirectResponse
+    {
+        $childSlugs = $namespace->children()->pluck('slug')->all();
+        $slugs = $request->validate([
+            'slugs' => ['required', 'array'],
+            'slugs.*' => ['string', 'distinct:strict', Rule::in($childSlugs)],
+        ])['slugs'];
+
+        $existingOrder = $namespace->post_order ?? [];
+        $postSlugs = $namespace->posts()->pluck('slug')->all();
+        $postSlugsInOrder = array_values(
+            array_filter($existingOrder, fn (string $slug) => in_array($slug, $postSlugs, true))
+        );
+
+        $namespace->update(['post_order' => [...$slugs, ...$postSlugsInOrder]]);
+
+        return back();
     }
 
     public function show(PostNamespace $namespace, Post $post): Response

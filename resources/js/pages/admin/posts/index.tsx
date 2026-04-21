@@ -18,6 +18,8 @@ import { CSS } from '@dnd-kit/utilities';
 import { Form } from '@inertiajs/react';
 import { Head, Link, router } from '@inertiajs/react';
 import {
+    ArrowUpDown,
+    Check,
     CheckCircle2,
     ChevronDown,
     ChevronRight,
@@ -26,10 +28,14 @@ import {
     ExternalLink,
     FilePen,
     Folder,
+    FolderPlus,
     GripVertical,
     Pencil,
     Trash2,
 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
+import { Button } from '@/components/ui/button';
 import {
     Dialog,
     DialogClose,
@@ -39,9 +45,8 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { useEffect, useState } from 'react';
-import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
-import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { matchesDeleteConfirmation } from '@/lib/delete-confirmation';
 import { dashboard } from '@/routes';
 import { create as namespaceCreate } from '@/routes/admin/namespaces';
 import { index, namespace as namespaceRoute } from '@/routes/admin/posts';
@@ -60,6 +65,71 @@ type Sort = {
     column: string;
     direction: 'asc' | 'desc';
 };
+
+function DeleteNamespaceDialog({ namespace }: { namespace: Namespace }) {
+    const [confirmation, setConfirmation] = useState('');
+    const matches = matchesDeleteConfirmation(confirmation, namespace.name);
+
+    return (
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="destructive" size="sm">
+                    <Trash2 className="size-4" />
+                    Delete
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogTitle>
+                    Delete &ldquo;{namespace.name}&rdquo;?
+                </DialogTitle>
+                <DialogDescription className="space-y-3">
+                    <p>
+                        This will permanently delete the namespace, all child
+                        namespaces, and all their posts. This action cannot be
+                        undone.
+                    </p>
+                    <p>
+                        Type{' '}
+                        <span className="font-semibold">{namespace.name}</span>{' '}
+                        to confirm.
+                    </p>
+                </DialogDescription>
+                <Form action={NamespaceController.destroy(namespace.id)}>
+                    {({ processing }) => (
+                        <div className="space-y-4">
+                            <Input
+                                name="confirmation"
+                                value={confirmation}
+                                onChange={(event) =>
+                                    setConfirmation(event.target.value)
+                                }
+                                autoComplete="off"
+                                placeholder={namespace.name}
+                            />
+                            <DialogFooter className="gap-2">
+                                <DialogClose asChild>
+                                    <Button
+                                        variant="secondary"
+                                        onClick={() => setConfirmation('')}
+                                    >
+                                        Cancel
+                                    </Button>
+                                </DialogClose>
+                                <Button
+                                    variant="destructive"
+                                    disabled={processing || !matches}
+                                    asChild
+                                >
+                                    <button type="submit">Delete</button>
+                                </Button>
+                            </DialogFooter>
+                        </div>
+                    )}
+                </Form>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function SortIcon({ column, sort }: { column: string; sort: Sort }) {
     if (sort.column !== column) {
@@ -155,12 +225,15 @@ function SortableRow({
                 ) : null}
             </td>
             <td className="px-4 py-3 font-medium">
-                <Link
-                    href={namespaceRoute.url(namespace.id)}
-                    className="text-primary hover:underline"
-                >
-                    {namespace.name}
-                </Link>
+                <div className="flex items-center gap-1.5">
+                    <Folder className="size-3.5 shrink-0 text-muted-foreground" />
+                    <Link
+                        href={namespaceRoute.url(namespace.id)}
+                        className="text-primary hover:underline"
+                    >
+                        {namespace.name}
+                    </Link>
+                </div>
             </td>
             <td className="px-4 py-3 text-muted-foreground">
                 /{namespace.slug}
@@ -183,66 +256,23 @@ function SortableRow({
             </td>
             <td className="px-4 py-3 text-right">
                 <div className="flex items-center justify-end gap-2">
-                    {namespace.is_published && (
-                        <Button variant="outline" size="sm" asChild>
-                            <a
-                                href={`/${namespace.full_path}`}
-                                target="_blank"
-                                rel="noreferrer"
-                            >
-                                <ExternalLink className="size-4" />
-                                View
-                            </a>
-                        </Button>
-                    )}
+                    <Button variant="outline" size="sm" asChild>
+                        <a
+                            href={`/${namespace.full_path}`}
+                            target="_blank"
+                            rel="noreferrer"
+                        >
+                            <ExternalLink className="size-4" />
+                            View
+                        </a>
+                    </Button>
                     <Button variant="outline" size="sm" asChild>
                         <Link href={NamespaceController.edit.url(namespace.id)}>
                             <Pencil className="size-4" />
                             Edit
                         </Link>
                     </Button>
-                    <Dialog>
-                        <DialogTrigger asChild>
-                            <Button variant="destructive" size="sm">
-                                <Trash2 className="size-4" />
-                                Delete
-                            </Button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogTitle>
-                                Delete &ldquo;{namespace.name}&rdquo;?
-                            </DialogTitle>
-                            <DialogDescription>
-                                This will permanently delete the namespace, all
-                                child namespaces, and all their posts. This
-                                action cannot be undone.
-                            </DialogDescription>
-                            <Form
-                                {...NamespaceController.destroy.form(
-                                    namespace.id,
-                                )}
-                            >
-                                {({ processing }) => (
-                                    <DialogFooter className="gap-2">
-                                        <DialogClose asChild>
-                                            <Button variant="secondary">
-                                                Cancel
-                                            </Button>
-                                        </DialogClose>
-                                        <Button
-                                            variant="destructive"
-                                            disabled={processing}
-                                            asChild
-                                        >
-                                            <button type="submit">
-                                                Delete
-                                            </button>
-                                        </Button>
-                                    </DialogFooter>
-                                )}
-                            </Form>
-                        </DialogContent>
-                    </Dialog>
+                    <DeleteNamespaceDialog namespace={namespace} />
                 </div>
             </td>
         </tr>
@@ -337,48 +367,7 @@ function ChildRow({
                                 Edit
                             </Link>
                         </Button>
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="destructive" size="sm">
-                                    <Trash2 className="size-4" />
-                                    Delete
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogTitle>
-                                    Delete &ldquo;{namespace.name}&rdquo;?
-                                </DialogTitle>
-                                <DialogDescription>
-                                    This will permanently delete the namespace,
-                                    all child namespaces, and all their posts.
-                                    This action cannot be undone.
-                                </DialogDescription>
-                                <Form
-                                    {...NamespaceController.destroy.form(
-                                        namespace.id,
-                                    )}
-                                >
-                                    {({ processing }) => (
-                                        <DialogFooter className="gap-2">
-                                            <DialogClose asChild>
-                                                <Button variant="secondary">
-                                                    Cancel
-                                                </Button>
-                                            </DialogClose>
-                                            <Button
-                                                variant="destructive"
-                                                disabled={processing}
-                                                asChild
-                                            >
-                                                <button type="submit">
-                                                    Delete
-                                                </button>
-                                            </Button>
-                                        </DialogFooter>
-                                    )}
-                                </Form>
-                            </DialogContent>
-                        </Dialog>
+                        <DeleteNamespaceDialog namespace={namespace} />
                     </div>
                 </td>
             </tr>
@@ -488,10 +477,21 @@ export default function Index({
                             variant={reorderMode ? 'secondary' : 'outline'}
                             onClick={handleReorderToggle}
                         >
-                            {reorderMode ? 'Done' : 'Reorder'}
+                            {reorderMode ? (
+                                <>
+                                    <Check className="size-4" />
+                                    Done
+                                </>
+                            ) : (
+                                <>
+                                    <ArrowUpDown className="size-4" />
+                                    Reorder
+                                </>
+                            )}
                         </Button>
                         <Button asChild>
                             <Link href={namespaceCreate.url()}>
+                                <FolderPlus className="size-4" />
                                 New Namespace
                             </Link>
                         </Button>
@@ -508,6 +508,7 @@ export default function Index({
                         </p>
                         <Button asChild className="mt-4">
                             <Link href={namespaceCreate.url()}>
+                                <FolderPlus className="size-4" />
                                 Create your first namespace
                             </Link>
                         </Button>

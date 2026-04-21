@@ -86,19 +86,35 @@ class PostController extends Controller
         $namespace = PostNamespace::query()
             ->where('full_path', $normalizedPath)
             ->where('is_published', true)
-            ->firstOrFail();
+            ->first();
 
-        $ancestors = $this->ancestorChain($namespace);
+        if ($namespace) {
+            $ancestors = $this->ancestorChain($namespace);
 
-        abort_unless($this->namespaceChainIsPublished($namespace, $ancestors), 404);
+            abort_unless($this->namespaceChainIsPublished($namespace, $ancestors), 404);
 
-        return $this->renderNamespace($namespace, $ancestors);
+            return $this->renderNamespace($namespace, $ancestors);
+        }
+
+        if (auth()->check()) {
+            $previewNamespace = PostNamespace::query()
+                ->where('full_path', $normalizedPath)
+                ->first();
+
+            if ($previewNamespace) {
+                $ancestors = $this->ancestorChain($previewNamespace);
+
+                return $this->renderNamespace($previewNamespace, $ancestors, preview: true);
+            }
+        }
+
+        abort(404);
     }
 
     /**
      * @param  Collection<int, PostNamespace>  $ancestors
      */
-    private function renderNamespace(PostNamespace $namespace, Collection $ancestors): Response
+    private function renderNamespace(PostNamespace $namespace, Collection $ancestors, bool $preview = false): Response
     {
         $rootNamespace = $this->rootNamespace($namespace, $ancestors);
         $children = $namespace->children()
@@ -118,6 +134,7 @@ class PostController extends Controller
             'navRoot' => $this->buildNavigationNode($rootNamespace),
             'namespace' => $namespace->only(['id', 'slug', 'full_path', 'name', 'description', 'cover_image_url', 'is_published']),
             'posts' => $namespace->sortPosts($posts),
+            'preview' => $preview,
         ]);
     }
 
