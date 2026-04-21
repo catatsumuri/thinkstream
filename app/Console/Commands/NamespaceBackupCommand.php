@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\PostNamespace;
+use App\Support\NamespaceBackupArchive;
 use Illuminate\Console\Command;
 use Symfony\Component\Yaml\Yaml;
 use ZipArchive;
@@ -10,9 +11,9 @@ use ZipArchive;
 class NamespaceBackupCommand extends Command
 {
     protected $signature = 'namespace:backup
-                            {namespace : Namespace slug or ID}
-                            {--output= : Output zip path (defaults to storage/app/private/backups/slug-timestamp.zip)}
-                            {--with-revisions : Include post revision history in the backup}';
+                             {namespace : Namespace slug or ID}
+                             {--output= : Output zip path (defaults to storage/app/private/backups/namespace-id-path-timestamp.zip)}
+                             {--with-revisions : Include post revision history in the backup}';
 
     protected $description = 'Backup a namespace and its posts as a zip archive';
 
@@ -36,13 +37,13 @@ class NamespaceBackupCommand extends Command
                 mkdir($dir, 0755, true);
             }
         } else {
-            $backupDir = storage_path('app/private/backups');
+            $backupDir = NamespaceBackupArchive::directory();
 
             if (! is_dir($backupDir)) {
                 mkdir($backupDir, 0755, true);
             }
 
-            $zipPath = $backupDir.'/'.$namespace->slug.'-'.now()->format('Ymd-His').'.zip';
+            $zipPath = NamespaceBackupArchive::defaultPath($namespace);
         }
 
         $zip = new ZipArchive;

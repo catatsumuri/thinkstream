@@ -105,7 +105,7 @@ export default function Index({ namespaces }: { namespaces: PostNamespace[] }) {
                                             <div className="mt-3">
                                                 <Button
                                                     asChild
-                                                    variant="outline"
+                                                    variant="default"
                                                     size="sm"
                                                 >
                                                     <Link

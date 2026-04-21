@@ -3,7 +3,9 @@
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\User;
+use App\Support\NamespaceBackupArchive;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
 
 uses(RefreshDatabase::class);
 
@@ -305,6 +307,44 @@ test('namespace navigation toggle removes the empty desktop gutter', function ()
     ]);
 });
 
+test('canonical namespace page preserves multiline descriptions', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'inertiajs-v3',
+        'name' => 'Inertia.js v3',
+        'description' => "Install the server adapter first.\nThen configure the client entrypoint.",
+        'is_published' => true,
+    ]);
+
+    Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'installation',
+        'title' => 'Installation',
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $namespace->full_path]))->resize(1280, 720);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertSee('Inertia.js v3')
+        ->assertSee('Install the server adapter first.')
+        ->assertSee('Then configure the client entrypoint.');
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const descriptions = [...document.querySelectorAll('main p')];
+            const target = descriptions.find((element) =>
+                element.textContent?.includes('Install the server adapter first.') &&
+                element.textContent?.includes('Then configure the client entrypoint.')
+            );
+
+            if (! target) {
+                return null;
+            }
+
+            return window.getComputedStyle(target).whiteSpace;
+        })()
+    JS))->toBe('pre-line');
+});
+
 test('table of contents highlights the active heading and stays scrollable', function () {
     $namespace = PostNamespace::factory()->create([
         'slug' => 'guides',
@@ -374,7 +414,7 @@ test('admin post deep links restore hashed headings and use gutter anchors', fun
     ]);
 
     $namespace = PostNamespace::factory()->create([
-        'slug' => 'guides',
+        'slug' => 'guides-backup-button',
         'name' => 'Guides',
     ]);
 
@@ -483,7 +523,7 @@ test('admin post table of contents stays within the viewport for wide markdown',
     ]);
 
     $namespace = PostNamespace::factory()->create([
-        'slug' => 'guides',
+        'slug' => 'guides-backup-button',
         'name' => 'Guides',
     ]);
 
@@ -647,4 +687,226 @@ test('admin section edit returns to the heading after saving', function () {
     expect($metrics['scrollY'])->toBeGreaterThan(0);
     expect($metrics['top'])->toBeGreaterThanOrEqual(0);
     expect($metrics['top'])->toBeLessThanOrEqual($metrics['innerHeight']);
+});
+
+test('admin namespace page shows the namespace description in the manage header', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+        'description' => "Practical guides for writing and publishing posts.\nIncludes workflows and publishing notes.",
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.namespace', $namespace, absolute: false))->resize(1440, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertSee('Manage Namespace')
+        ->assertSee('Guides')
+        ->assertSee('Practical guides for writing and publishing posts.')
+        ->assertSee('Includes workflows and publishing notes.');
+});
+
+test('admin namespace page shows a cover image thumbnail in the manage header', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+        'cover_image' => 'namespaces/guides-cover.jpg',
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.namespace', $namespace, absolute: false))->resize(1440, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="manage-namespace-cover-image"]')
+        ->assertAttribute(
+            '[data-test="manage-namespace-cover-image"]',
+            'src',
+            '/storage/namespaces/guides-cover.jpg',
+        );
+});
+
+test('admin namespace page shows backup count and backup management button when backups exist', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete([
+        ...File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'),
+        ...File::glob($backupDirectory.'/'.$namespace->slug.'-*.zip'),
+    ]);
+
+    $firstBackup = $backupDirectory.'/'.$backupPrefix.'-20260421-010203.zip';
+    $secondBackup = $backupDirectory.'/'.$backupPrefix.'-20260421-040506.zip';
+
+    File::put($firstBackup, 'backup-1');
+    File::put($secondBackup, 'backup-2');
+
+    try {
+        $this->actingAs($user);
+
+        $page = visit(route('admin.posts.namespace', $namespace, absolute: false))->resize(1440, 900);
+
+        $page
+            ->assertNoJavaScriptErrors()
+            ->assertPresent('[data-test="manage-namespace-backups-link"]')
+            ->assertAttribute(
+                '[data-test="manage-namespace-backups-link"]',
+                'href',
+                route('admin.posts.backups', $namespace, false),
+            );
+
+        expect($page->script(<<<'JS'
+            (() => {
+                const link = document.querySelector('[data-test="manage-namespace-backups-link"]');
+
+                if (! link) {
+                    return null;
+                }
+
+                return link.textContent?.replace(/\s+/g, ' ').trim();
+            })()
+        JS))->toContain('2 backups')
+            ->toContain('Backup Management');
+    } finally {
+        File::delete([
+            ...File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'),
+            ...File::glob($backupDirectory.'/'.$namespace->slug.'-*.zip'),
+        ]);
+    }
+});
+
+test('admin post edit warns before leaving with unsaved changes', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->create([
+        'slug' => 'todo',
+        'title' => 'Todo',
+        'content' => '# Todo',
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.edit', [
+        'namespace' => $namespace->id,
+        'post' => $post->slug,
+    ], absolute: false))->resize(1440, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertMissing('[data-test="manage-post-revisions-link"]')
+        ->assertMissing('[data-test="manage-post-delete-trigger"]')
+        ->fill('title', 'Todo updated');
+
+    expect($page->script(<<<'JS'
+        (() => {
+            let confirmCalls = 0;
+
+            window.confirm = () => {
+                confirmCalls += 1;
+                return false;
+            };
+
+            document
+                .querySelector('[data-test="view-post-link"]')
+                ?.dispatchEvent(new MouseEvent('click', {
+                    bubbles: true,
+                    cancelable: true,
+                    button: 0,
+                }));
+
+            return {
+                confirmCalls,
+                path: window.location.pathname,
+            };
+        })()
+    JS))->toBe([
+        'confirmCalls' => 1,
+        'path' => route('admin.posts.edit', [
+            'namespace' => $namespace->id,
+            'post' => $post->slug,
+        ], false),
+    ]);
+});
+
+test('admin post header shows revisions and delete as labeled actions', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->create([
+        'slug' => 'todo',
+        'title' => 'Todo',
+        'content' => '# Todo',
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.show', [
+        'namespace' => $namespace->id,
+        'post' => $post->slug,
+    ], absolute: false))->resize(1440, 900);
+
+    $page->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="manage-post-edit-link"]')
+        ->assertPresent('[data-test="manage-post-revisions-link"]')
+        ->assertPresent('[data-test="manage-post-delete-trigger"]');
+
+    expect($page->text('[data-test="manage-post-edit-link"]'))
+        ->toContain('Edit');
+
+    expect($page->text('[data-test="manage-post-revisions-link"]'))
+        ->toContain('Revisions');
+
+    expect($page->text('[data-test="manage-post-delete-trigger"]'))
+        ->toContain('Delete');
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const editLink = document.querySelector('[data-test="manage-post-edit-link"]');
+            const adminBadge = [...document.querySelectorAll('span, div, a')].find((element) =>
+                element.textContent?.replace(/\s+/g, ' ').trim() === 'Admin View'
+            );
+
+            if (! editLink || ! adminBadge) {
+                return null;
+            }
+
+            const editRect = editLink.getBoundingClientRect();
+            const adminRect = adminBadge.getBoundingClientRect();
+
+            return editRect.left < adminRect.left;
+        })()
+    JS))->toBeTrue();
 });

@@ -348,7 +348,7 @@ export default function Show({
                             )}
                             {auth.user ? (
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <Button asChild variant="outline" size="sm">
+                                    <Button asChild variant="default" size="sm">
                                         <Link
                                             href={adminPostShow.url({
                                                 namespace: namespace.id,

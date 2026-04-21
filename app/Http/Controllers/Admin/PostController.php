@@ -10,8 +10,11 @@ use App\Http\Requests\Admin\UploadPostImageRequest;
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\PostRevision;
+use App\Support\NamespaceBackupArchive;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\File;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -84,12 +87,105 @@ class PostController extends Controller
             'admin_url' => route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug], absolute: false),
         ]);
 
+        $backupCount = $this->backupCount($namespace);
+
+        $namespace->setAttribute('backup_count', $backupCount);
+        $namespace->setAttribute(
+            'backup_management_url',
+            $backupCount > 0 ? route('admin.posts.backups', ['namespace' => $namespace], absolute: false) : null
+        );
+
         return Inertia::render('admin/posts/namespace', [
             'namespace' => $namespace,
             'ancestors' => $namespace->ancestors()->map(fn (PostNamespace $ns) => ['id' => $ns->id, 'name' => $ns->name]),
             'children' => $namespace->sortNamespaces($namespace->children()->withCount('posts')->get()),
+            'delete_posts_url' => route('admin.posts.destroyMany', $namespace, absolute: false),
             'posts' => $posts,
         ]);
+    }
+
+    public function backups(PostNamespace $namespace): Response
+    {
+        return Inertia::render('admin/posts/backups', [
+            'namespace' => [
+                'id' => $namespace->id,
+                'name' => $namespace->name,
+                'slug' => $namespace->slug,
+                'full_path' => $namespace->full_path,
+                'backup_count' => $this->backupCount($namespace),
+            ],
+            'create_backup_url' => route('admin.posts.backups.store', $namespace, absolute: false),
+            'delete_backups_url' => route('admin.posts.backups.destroyMany', $namespace, absolute: false),
+            'backups' => collect($this->backupsForNamespace($namespace))
+                ->map(fn (array $backup): array => collect($backup)->except('path')->all())
+                ->all(),
+        ]);
+    }
+
+    public function storeBackup(PostNamespace $namespace): RedirectResponse
+    {
+        $exitCode = Artisan::call('namespace:backup', [
+            'namespace' => $namespace->id,
+        ]);
+
+        if ($exitCode !== 0) {
+            return back()->withErrors([
+                'backup' => 'Failed to create a new backup.',
+            ]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Backup created.']);
+
+        return to_route('admin.posts.backups', $namespace);
+    }
+
+    public function destroyManyBackups(Request $request, PostNamespace $namespace): RedirectResponse
+    {
+        $availableFilenames = collect($this->backupsForNamespace($namespace))
+            ->pluck('filename')
+            ->all();
+
+        $data = $request->validate([
+            'filenames' => ['required', 'array', 'min:1'],
+            'filenames.*' => ['string', 'distinct:strict', Rule::in($availableFilenames)],
+        ]);
+
+        foreach ($data['filenames'] as $filename) {
+            $backupRecord = $this->backupRecordFor($namespace, $filename);
+
+            if ($backupRecord !== null && File::exists($backupRecord['path'])) {
+                File::delete($backupRecord['path']);
+            }
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Selected backups deleted.']);
+
+        return to_route('admin.posts.backups', $namespace);
+    }
+
+    public function restoreBackup(Request $request, PostNamespace $namespace, string $backup): RedirectResponse
+    {
+        $request->validate([
+            'confirmation' => ['required', 'string', Rule::in([$namespace->name])],
+        ]);
+
+        $backupRecord = $this->backupRecordFor($namespace, $backup);
+
+        abort_unless($backupRecord !== null, 404);
+
+        $exitCode = Artisan::call('namespace:restore', [
+            'path' => $backupRecord['path'],
+        ]);
+
+        if ($exitCode !== 0) {
+            return back()->withErrors([
+                'backup' => 'Failed to restore the selected backup.',
+            ]);
+        }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Backup restored.']);
+
+        return to_route('admin.posts.backups', $namespace);
     }
 
     public function create(PostNamespace $namespace): Response
@@ -283,6 +379,21 @@ class PostController extends Controller
         return to_route('admin.posts.namespace', $namespace);
     }
 
+    public function destroyMany(Request $request, PostNamespace $namespace): RedirectResponse
+    {
+        $postIds = $namespace->posts()->pluck('id')->all();
+        $ids = $request->validate([
+            'ids' => ['required', 'array', 'min:1'],
+            'ids.*' => ['integer', 'distinct:strict', Rule::in($postIds)],
+        ])['ids'];
+
+        $namespace->posts()->whereIn('id', $ids)->delete();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Selected posts deleted.']);
+
+        return to_route('admin.posts.namespace', $namespace);
+    }
+
     private function safeReturnPath(string $path): ?string
     {
         if ($path === '') {
@@ -299,5 +410,86 @@ class PostController extends Controller
         }
 
         return $path;
+    }
+
+    private function backupCount(PostNamespace $namespace): int
+    {
+        return count($this->backupsForNamespace($namespace));
+    }
+
+    /**
+     * @return array<int, array{
+     *     filename: string,
+     *     path: string,
+     *     created_at: string,
+     *     size_bytes: int,
+     *     size_human: string,
+     *     restore_url: string
+     * }>
+     */
+    private function backupsForNamespace(PostNamespace $namespace): array
+    {
+        $backupDirectory = NamespaceBackupArchive::directory();
+
+        if (! File::isDirectory($backupDirectory)) {
+            return [];
+        }
+
+        $backupPaths = collect(
+            File::glob($backupDirectory.'/'.NamespaceBackupArchive::currentPrefix($namespace).'-*.zip') ?: []
+        );
+
+        if (PostNamespace::query()->where('slug', $namespace->slug)->count() === 1) {
+            $backupPaths = $backupPaths->merge(
+                File::glob($backupDirectory.'/'.$namespace->slug.'-*.zip') ?: []
+            );
+        }
+
+        return $backupPaths
+            ->unique()
+            ->filter(fn (string $path): bool => File::isFile($path))
+            ->sortByDesc(fn (string $path): int => File::lastModified($path))
+            ->values()
+            ->map(fn (string $path): array => [
+                'filename' => basename($path),
+                'path' => $path,
+                'created_at' => date(DATE_ATOM, File::lastModified($path)),
+                'size_bytes' => File::size($path),
+                'size_human' => $this->formatBytes(File::size($path)),
+                'restore_url' => route('admin.posts.backups.restore', [
+                    'namespace' => $namespace,
+                    'backup' => basename($path),
+                ], absolute: false),
+            ])
+            ->all();
+    }
+
+    /**
+     * @return array{
+     *     filename: string,
+     *     path: string,
+     *     created_at: string,
+     *     size_bytes: int,
+     *     size_human: string,
+     *     restore_url: string
+     * }|null
+     */
+    private function backupRecordFor(PostNamespace $namespace, string $filename): ?array
+    {
+        return collect($this->backupsForNamespace($namespace))
+            ->first(fn (array $backup): bool => $backup['filename'] === basename($filename));
+    }
+
+    private function formatBytes(int $bytes): string
+    {
+        if ($bytes < 1024) {
+            return $bytes.' B';
+        }
+
+        if ($bytes < 1024 * 1024) {
+            return round($bytes / 1024, 1).' KB';
+        }
+
+        return round($bytes / (1024 * 1024), 1).' MB';
     }
 }

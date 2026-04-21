@@ -1,6 +1,6 @@
 import { Form, Head, setLayoutProps } from '@inertiajs/react';
 import { Check, Save } from 'lucide-react';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownEditor from '@/components/markdown-editor';
 import PostHeader from '@/components/post-header';
@@ -70,6 +70,7 @@ export default function Edit({
     }, []);
 
     const [saved, setSaved] = useState(false);
+    const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
     const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const [isDraft, setIsDraft] = useState(post.is_draft);
@@ -122,12 +123,34 @@ export default function Edit({
         ],
     });
 
+    useEffect(() => {
+        if (!hasUnsavedChanges) {
+            return;
+        }
+
+        const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+            event.preventDefault();
+            event.returnValue = '';
+        };
+
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+        };
+    }, [hasUnsavedChanges]);
+
     return (
         <>
             <Head title={`Edit: ${post.title}`} />
 
             <div className="space-y-6 p-4">
-                <PostHeader namespace={namespace} post={post} mode="edit" />
+                <PostHeader
+                    namespace={namespace}
+                    post={post}
+                    mode="edit"
+                    hasUnsavedChanges={hasUnsavedChanges}
+                />
 
                 <Form
                     {...update.form({
@@ -136,6 +159,7 @@ export default function Edit({
                     })}
                     options={{ preserveScroll: true }}
                     onSuccess={() => {
+                        setHasUnsavedChanges(false);
                         setSaved(true);
 
                         if (savedTimer.current) {
@@ -148,6 +172,8 @@ export default function Edit({
                         );
                     }}
                     className="space-y-6"
+                    onInputCapture={() => setHasUnsavedChanges(true)}
+                    onChangeCapture={() => setHasUnsavedChanges(true)}
                 >
                     {({ processing, errors }) => (
                         <>
@@ -302,15 +328,24 @@ export default function Edit({
 
                             <div className="fixed right-6 bottom-6 z-50">
                                 <Button
+                                    data-test="save-post-button"
                                     type="submit"
-                                    disabled={processing}
+                                    disabled={
+                                        processing ||
+                                        (!hasUnsavedChanges && !saved)
+                                    }
                                     size="lg"
-                                    className={`gap-2.5 rounded-full px-6 shadow-xl transition-all hover:scale-105 active:scale-95 disabled:shadow-none ${saved ? 'bg-green-600 shadow-green-600/30 hover:bg-green-600' : 'shadow-primary/30'}`}
+                                    className={`gap-2.5 rounded-full px-6 shadow-xl transition-all hover:scale-105 active:scale-95 disabled:scale-100 disabled:shadow-none ${saved ? 'bg-green-600 shadow-green-600/30 hover:bg-green-600' : hasUnsavedChanges ? 'shadow-primary/30' : 'bg-muted text-muted-foreground hover:bg-muted'}`}
                                 >
                                     {saved ? (
                                         <>
                                             <Check className="size-4.5" />
                                             Saved
+                                        </>
+                                    ) : hasUnsavedChanges ? (
+                                        <>
+                                            <Save className="size-4.5" />
+                                            Unsaved · Save Changes
                                         </>
                                     ) : (
                                         <>

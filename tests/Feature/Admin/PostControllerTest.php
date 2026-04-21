@@ -3,11 +3,47 @@
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\User;
+use App\Support\NamespaceBackupArchive;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Symfony\Component\Yaml\Yaml;
 
 uses(RefreshDatabase::class);
+
+function createAdminNamespaceBackupZip(string $zipPath, array $tree): void
+{
+    $zip = new ZipArchive;
+
+    expect($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE))->toBeTrue();
+
+    $zip->addFromString('_namespace.yaml', Yaml::dump([
+        'name' => $tree['name'],
+        'slug' => $tree['slug'],
+        'full_path' => $tree['full_path'] ?? $tree['slug'],
+        'description' => $tree['description'] ?? null,
+        'cover_image' => $tree['cover_image'] ?? null,
+        'is_published' => $tree['is_published'] ?? true,
+        'post_order' => $tree['post_order'] ?? [],
+        'sort_order' => $tree['sort_order'] ?? null,
+    ], 4));
+
+    foreach ($tree['posts'] ?? [] as $post) {
+        $zip->addFromString(
+            $post['slug'].'.md',
+            "---\n".Yaml::dump([
+                'title' => $post['title'],
+                'slug' => $post['slug'],
+                'full_path' => $post['full_path'] ?? (($tree['full_path'] ?? $tree['slug']).'/'.$post['slug']),
+                'is_draft' => $post['is_draft'] ?? false,
+                'published_at' => $post['published_at'] ?? now()->toIso8601String(),
+            ])."---\n\n".rtrim($post['content'])."\n"
+        );
+    }
+
+    $zip->close();
+}
 
 test('guests are redirected from the posts index', function () {
     $this->get(route('admin.posts.index'))->assertRedirect(route('login'));
@@ -168,6 +204,7 @@ test('namespace post list prefers canonical urls for live posts and admin urls f
         ->get(route('admin.posts.namespace', $namespace))
         ->assertInertia(fn ($page) => $page
             ->component('admin/posts/namespace')
+            ->where('delete_posts_url', route('admin.posts.destroyMany', $namespace, false))
             ->where('posts.0.id', $draftPost->id)
             ->where('posts.0.canonical_url', null)
             ->where('posts.0.admin_url', route('admin.posts.show', [$namespace, $draftPost], false))
@@ -175,6 +212,296 @@ test('namespace post list prefers canonical urls for live posts and admin urls f
             ->where('posts.1.canonical_url', '/guides/live-post')
             ->where('posts.1.admin_url', route('admin.posts.show', [$namespace, $livePost], false))
         );
+});
+
+test('namespace post list includes backup management metadata when backups exist', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-backup-meta',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    $firstBackup = $backupDirectory.'/'.$backupPrefix.'-20260421-010203.zip';
+    $secondBackup = $backupDirectory.'/'.$backupPrefix.'-20260421-040506.zip';
+    $foreignBackup = $backupDirectory.'/other-20260421-070809.zip';
+
+    File::put($firstBackup, 'backup-1');
+    File::put($secondBackup, 'backup-2');
+    File::put($foreignBackup, 'backup-3');
+
+    try {
+        $this->actingAs($user)
+            ->get(route('admin.posts.namespace', $namespace))
+            ->assertInertia(fn ($page) => $page
+                ->component('admin/posts/namespace')
+                ->where('namespace.backup_count', 2)
+                ->where('namespace.backup_management_url', route('admin.posts.backups', $namespace, false))
+            );
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+        File::delete([$foreignBackup]);
+    }
+});
+
+test('authenticated users can view the namespace backup management page', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-backup-page',
+        'name' => 'Guides',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    $latestBackup = $backupDirectory.'/'.$backupPrefix.'-20260421-040506.zip';
+    $olderBackup = $backupDirectory.'/'.$backupPrefix.'-20260421-010203.zip';
+
+    File::put($olderBackup, 'older');
+    touch($olderBackup, now()->subHour()->timestamp);
+    File::put($latestBackup, 'latest');
+    touch($latestBackup, now()->timestamp);
+
+    try {
+        $this->actingAs($user)
+            ->get(route('admin.posts.backups', $namespace))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('admin/posts/backups')
+                ->where('namespace.id', $namespace->id)
+                ->where('namespace.name', 'Guides')
+                ->where('namespace.backup_count', 2)
+                ->where('create_backup_url', route('admin.posts.backups.store', $namespace, false))
+                ->has('backups', 2)
+                ->where('backups.0.filename', basename($latestBackup))
+                ->where('backups.1.filename', basename($olderBackup))
+                ->where('backups.0.restore_url', route('admin.posts.backups.restore', [
+                    'namespace' => $namespace,
+                    'backup' => basename($latestBackup),
+                ], false))
+            );
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+    }
+});
+
+test('namespace backup management separates namespaces that share the same slug', function () {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create([
+        'slug' => 'docs',
+        'full_path' => 'docs',
+    ]);
+    $namespace = PostNamespace::factory()->create([
+        'parent_id' => $parent->id,
+        'slug' => 'guides',
+        'full_path' => 'docs/guides',
+        'name' => 'Nested Guides',
+    ]);
+    $otherNamespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+        'name' => 'Root Guides',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $namespacePrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    $otherPrefix = NamespaceBackupArchive::currentPrefix($otherNamespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete([
+        ...File::glob($backupDirectory.'/'.$namespacePrefix.'-*.zip'),
+        ...File::glob($backupDirectory.'/'.$otherPrefix.'-*.zip'),
+    ]);
+
+    $nestedBackup = $backupDirectory.'/'.$namespacePrefix.'-20260421-010203.zip';
+    $rootBackup = $backupDirectory.'/'.$otherPrefix.'-20260421-040506.zip';
+
+    File::put($nestedBackup, 'nested');
+    File::put($rootBackup, 'root');
+
+    try {
+        $this->actingAs($user)
+            ->get(route('admin.posts.backups', $namespace))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('admin/posts/backups')
+                ->where('namespace.id', $namespace->id)
+                ->where('namespace.backup_count', 1)
+                ->has('backups', 1)
+                ->where('backups.0.filename', basename($nestedBackup))
+            );
+    } finally {
+        File::delete([
+            ...File::glob($backupDirectory.'/'.$namespacePrefix.'-*.zip'),
+            ...File::glob($backupDirectory.'/'.$otherPrefix.'-*.zip'),
+        ]);
+    }
+});
+
+test('authenticated users can create a namespace backup from backup management', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-backup-create',
+        'name' => 'Guides',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    try {
+        $this->actingAs($user)
+            ->post(route('admin.posts.backups.store', $namespace))
+            ->assertRedirect(route('admin.posts.backups', $namespace))
+            ->assertSessionHas('inertia.flash_data.toast', [
+                'type' => 'success',
+                'message' => 'Backup created.',
+            ]);
+
+        expect(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'))
+            ->toHaveCount(1);
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+    }
+});
+
+test('authenticated users can delete selected namespace backups from backup management', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-backup-delete',
+        'name' => 'Guides',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    $firstBackup = $backupDirectory.'/'.$backupPrefix.'-20260421-010203.zip';
+    $secondBackup = $backupDirectory.'/'.$backupPrefix.'-20260421-040506.zip';
+    $thirdBackup = $backupDirectory.'/'.$backupPrefix.'-20260421-070809.zip';
+
+    File::put($firstBackup, 'backup-1');
+    File::put($secondBackup, 'backup-2');
+    File::put($thirdBackup, 'backup-3');
+
+    try {
+        $this->actingAs($user)
+            ->post(route('admin.posts.backups.destroyMany', $namespace), [
+                'filenames' => [
+                    basename($firstBackup),
+                    basename($thirdBackup),
+                ],
+            ])
+            ->assertRedirect(route('admin.posts.backups', $namespace))
+            ->assertSessionHas('inertia.flash_data.toast', [
+                'type' => 'success',
+                'message' => 'Selected backups deleted.',
+            ]);
+
+        expect(File::exists($firstBackup))->toBeFalse()
+            ->and(File::exists($thirdBackup))->toBeFalse()
+            ->and(File::exists($secondBackup))->toBeTrue();
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+    }
+});
+
+test('restoring a namespace backup requires matching confirmation text', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-backup-confirmation',
+        'name' => 'Guides',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    $zipPath = $backupDirectory.'/'.$backupPrefix.'-20260421-040506.zip';
+    createAdminNamespaceBackupZip($zipPath, [
+        'slug' => 'guides-backup-confirmation',
+        'name' => 'Guides',
+        'description' => 'Updated from backup.',
+    ]);
+
+    try {
+        $this->actingAs($user)
+            ->from(route('admin.posts.backups', $namespace))
+            ->post(route('admin.posts.backups.restore', [
+                'namespace' => $namespace,
+                'backup' => basename($zipPath),
+            ]), [
+                'confirmation' => 'wrong text',
+            ])
+            ->assertRedirect(route('admin.posts.backups', $namespace))
+            ->assertSessionHasErrors('confirmation');
+
+        expect($namespace->fresh()->description)->not->toBe('Updated from backup.');
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+    }
+});
+
+test('authenticated users can restore a namespace from an existing backup', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-backup-restore',
+        'name' => 'Guides',
+        'description' => 'Old description',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'intro',
+        'title' => 'Old Intro',
+        'content' => 'Old content',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    $zipPath = $backupDirectory.'/'.$backupPrefix.'-20260421-040506.zip';
+    createAdminNamespaceBackupZip($zipPath, [
+        'slug' => 'guides-backup-restore',
+        'name' => 'Guides',
+        'description' => 'Restored description',
+        'posts' => [
+            [
+                'title' => 'Intro',
+                'slug' => 'intro',
+                'content' => 'Restored content',
+            ],
+        ],
+    ]);
+
+    try {
+        $this->actingAs($user)
+            ->post(route('admin.posts.backups.restore', [
+                'namespace' => $namespace,
+                'backup' => basename($zipPath),
+            ]), [
+                'confirmation' => 'Guides',
+            ])
+            ->assertRedirect(route('admin.posts.backups', $namespace))
+            ->assertSessionHas('inertia.flash_data.toast', [
+                'type' => 'success',
+                'message' => 'Backup restored.',
+            ]);
+
+        expect($namespace->fresh()->description)->toBe('Restored description');
+        expect(Post::query()->where('namespace_id', $namespace->id)->where('slug', 'intro')->value('content'))
+            ->toBe('Restored content');
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+    }
 });
 
 test('authenticated users can reorder posts while preserving child namespace order', function () {
@@ -660,6 +987,35 @@ test('authenticated users can delete a post', function () {
         ->assertRedirect(route('admin.posts.namespace', $namespace));
 
     expect($post->fresh())->toBeNull();
+});
+
+test('authenticated users can bulk delete posts from a namespace', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $firstPost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+    ]);
+    $secondPost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+    ]);
+    $thirdPost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.destroyMany', $namespace), [
+            'ids' => [$firstPost->id, $thirdPost->id],
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertSessionHas('inertia.flash_data.toast', [
+            'type' => 'success',
+            'message' => 'Selected posts deleted.',
+        ])
+        ->assertRedirect(route('admin.posts.namespace', $namespace));
+
+    expect($firstPost->fresh())->toBeNull()
+        ->and($thirdPost->fresh())->toBeNull()
+        ->and($secondPost->fresh())->not->toBeNull();
 });
 
 test('authenticated users can upload an image to a post', function () {

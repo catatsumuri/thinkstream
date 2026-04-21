@@ -15,7 +15,7 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Head, Link, router, setLayoutProps } from '@inertiajs/react';
+import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
 import {
     ArrowUpDown,
     Check,
@@ -28,10 +28,21 @@ import {
     FolderPlus,
     FolderOpen,
     GripVertical,
+    Trash2,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import NamespaceHeader from '@/components/namespace-header';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { timeAgo } from '@/lib/time';
 import { dashboard } from '@/routes';
 import { create as namespaceCreate } from '@/routes/admin/namespaces';
@@ -48,6 +59,10 @@ type Namespace = {
     slug: string;
     full_path: string;
     name: string;
+    description?: string | null;
+    cover_image_url?: string | null;
+    backup_count?: number;
+    backup_management_url?: string | null;
     is_published: boolean;
 };
 
@@ -150,10 +165,14 @@ function SortablePostRow({
     post,
     namespaceFullPath,
     reorderMode,
+    selected,
+    onSelectedChange,
 }: {
     post: Post;
     namespaceFullPath: string;
     reorderMode: boolean;
+    selected: boolean;
+    onSelectedChange: (checked: boolean) => void;
 }) {
     const {
         attributes,
@@ -173,7 +192,7 @@ function SortablePostRow({
     return (
         <tr ref={setNodeRef} style={style} className="border-b last:border-0">
             <td className="w-8 px-2 py-3">
-                {reorderMode && (
+                {reorderMode ? (
                     <button
                         {...attributes}
                         {...listeners}
@@ -181,6 +200,14 @@ function SortablePostRow({
                     >
                         <GripVertical className="size-4" />
                     </button>
+                ) : (
+                    <Checkbox
+                        checked={selected}
+                        onCheckedChange={(checked) =>
+                            onSelectedChange(Boolean(checked))
+                        }
+                        aria-label={`Select post ${post.title}`}
+                    />
                 )}
             </td>
             <td className="px-4 py-3 font-medium">
@@ -246,22 +273,31 @@ export default function Namespace({
     ancestors,
     children: initialChildren,
     posts: initialPosts,
+    delete_posts_url,
 }: {
     namespace: Namespace;
     ancestors: Ancestor[];
     children: ChildNamespace[];
     posts: Post[];
+    delete_posts_url: string;
 }) {
     const [children, setChildren] = useState(initialChildren);
     const [posts, setPosts] = useState(initialPosts);
     const [namespacesReorderMode, setNamespacesReorderMode] = useState(false);
     const [postsReorderMode, setPostsReorderMode] = useState(false);
+    const [selectedPostIds, setSelectedPostIds] = useState<number[]>([]);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
     useEffect(() => {
         setChildren(initialChildren);
     }, [initialChildren]);
     useEffect(() => {
         setPosts(initialPosts);
+    }, [initialPosts]);
+    useEffect(() => {
+        setSelectedPostIds((current) =>
+            current.filter((id) => initialPosts.some((post) => post.id === id)),
+        );
     }, [initialPosts]);
 
     const childNamespaceCreateUrl = `${namespaceCreate.url()}?${new URLSearchParams({ parent: String(namespace.id) }).toString()}`;
@@ -307,6 +343,21 @@ export default function Namespace({
             { slugs: reordered.map((p) => p.slug) },
             { preserveScroll: true },
         );
+    }
+
+    const allPostsSelected =
+        posts.length > 0 && selectedPostIds.length === posts.length;
+
+    function togglePostSelection(postId: number, checked: boolean) {
+        setSelectedPostIds((current) =>
+            checked
+                ? [...current, postId]
+                : current.filter((id) => id !== postId),
+        );
+    }
+
+    function toggleAllPosts(checked: boolean) {
+        setSelectedPostIds(checked ? posts.map((post) => post.id) : []);
     }
 
     setLayoutProps({
@@ -412,28 +463,134 @@ export default function Namespace({
                 ) : (
                     <div className="space-y-2">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-sm font-medium text-muted-foreground">
-                                Posts
-                            </h2>
-                            <Button
-                                variant={
-                                    postsReorderMode ? 'secondary' : 'outline'
-                                }
-                                size="sm"
-                                onClick={() => setPostsReorderMode((v) => !v)}
-                            >
-                                {postsReorderMode ? (
-                                    <>
-                                        <Check className="size-4" />
-                                        Done
-                                    </>
-                                ) : (
-                                    <>
-                                        <ArrowUpDown className="size-4" />
-                                        Reorder
-                                    </>
+                            <div className="space-y-1">
+                                <h2 className="text-sm font-medium text-muted-foreground">
+                                    Posts
+                                </h2>
+                                {!postsReorderMode && (
+                                    <p className="text-xs text-muted-foreground">
+                                        {selectedPostIds.length} selected
+                                    </p>
                                 )}
-                            </Button>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                {!postsReorderMode && (
+                                    <Dialog
+                                        open={isDeleteDialogOpen}
+                                        onOpenChange={setIsDeleteDialogOpen}
+                                    >
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                variant="destructive"
+                                                size="sm"
+                                                disabled={
+                                                    selectedPostIds.length === 0
+                                                }
+                                            >
+                                                <Trash2 className="size-4" />
+                                                Delete Selected
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogTitle>
+                                                Delete selected posts?
+                                            </DialogTitle>
+                                            <DialogDescription className="space-y-3">
+                                                <p>
+                                                    This will permanently delete
+                                                    the selected posts.
+                                                </p>
+                                                <p>
+                                                    {selectedPostIds.length}{' '}
+                                                    post
+                                                    {selectedPostIds.length ===
+                                                    1
+                                                        ? ''
+                                                        : 's'}{' '}
+                                                    will be deleted.
+                                                </p>
+                                            </DialogDescription>
+                                            <Form
+                                                action={delete_posts_url}
+                                                method="post"
+                                                onSuccess={() => {
+                                                    setIsDeleteDialogOpen(
+                                                        false,
+                                                    );
+                                                    setSelectedPostIds([]);
+                                                }}
+                                            >
+                                                {({ processing }) => (
+                                                    <div className="space-y-4">
+                                                        {selectedPostIds.map(
+                                                            (id) => (
+                                                                <input
+                                                                    key={id}
+                                                                    type="hidden"
+                                                                    name="ids[]"
+                                                                    value={id}
+                                                                />
+                                                            ),
+                                                        )}
+                                                        <DialogFooter className="gap-2">
+                                                            <DialogClose
+                                                                asChild
+                                                            >
+                                                                <Button variant="secondary">
+                                                                    Cancel
+                                                                </Button>
+                                                            </DialogClose>
+                                                            <Button
+                                                                variant="destructive"
+                                                                disabled={
+                                                                    processing
+                                                                }
+                                                                asChild
+                                                            >
+                                                                <button type="submit">
+                                                                    Delete
+                                                                    Selected
+                                                                </button>
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </div>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                )}
+                                <Button
+                                    variant={
+                                        postsReorderMode
+                                            ? 'secondary'
+                                            : 'outline'
+                                    }
+                                    size="sm"
+                                    onClick={() =>
+                                        setPostsReorderMode((value) => {
+                                            const next = !value;
+
+                                            if (next) {
+                                                setSelectedPostIds([]);
+                                            }
+
+                                            return next;
+                                        })
+                                    }
+                                >
+                                    {postsReorderMode ? (
+                                        <>
+                                            <Check className="size-4" />
+                                            Done
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ArrowUpDown className="size-4" />
+                                            Reorder
+                                        </>
+                                    )}
+                                </Button>
+                            </div>
                         </div>
                         <DndContext
                             sensors={sensors}
@@ -444,7 +601,25 @@ export default function Namespace({
                                 <table className="w-full text-sm">
                                     <thead>
                                         <tr className="border-b bg-muted/50">
-                                            <th className="w-8 px-2 py-3" />
+                                            <th className="w-8 px-2 py-3">
+                                                {!postsReorderMode && (
+                                                    <Checkbox
+                                                        checked={
+                                                            allPostsSelected
+                                                        }
+                                                        onCheckedChange={(
+                                                            checked,
+                                                        ) =>
+                                                            toggleAllPosts(
+                                                                Boolean(
+                                                                    checked,
+                                                                ),
+                                                            )
+                                                        }
+                                                        aria-label="Select all posts"
+                                                    />
+                                                )}
+                                            </th>
                                             <th className="px-4 py-3 text-left font-medium">
                                                 Title
                                             </th>
@@ -475,6 +650,17 @@ export default function Namespace({
                                                     }
                                                     reorderMode={
                                                         postsReorderMode
+                                                    }
+                                                    selected={selectedPostIds.includes(
+                                                        post.id,
+                                                    )}
+                                                    onSelectedChange={(
+                                                        checked,
+                                                    ) =>
+                                                        togglePostSelection(
+                                                            post.id,
+                                                            checked,
+                                                        )
                                                     }
                                                 />
                                             ))}

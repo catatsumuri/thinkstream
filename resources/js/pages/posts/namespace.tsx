@@ -146,7 +146,7 @@ export default function Namespace({
                             </button>
                             {auth.user ? (
                                 <div className="flex flex-wrap items-center gap-2">
-                                    <Button asChild variant="outline" size="sm">
+                                    <Button asChild variant="default" size="sm">
                                         <Link
                                             href={adminNamespaceRoute.url(
                                                 namespace.id,
@@ -206,7 +206,7 @@ export default function Namespace({
                                 /{namespace.full_path}
                             </p>
                             {namespace.description ? (
-                                <p className="max-w-3xl text-base leading-7 text-muted-foreground">
+                                <p className="max-w-3xl text-base leading-7 whitespace-pre-line text-muted-foreground">
                                     {namespace.description}
                                 </p>
                             ) : auth.user ? (

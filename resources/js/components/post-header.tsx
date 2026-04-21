@@ -62,12 +62,24 @@ export default function PostHeader({
     namespace,
     post,
     mode = 'show',
+    hasUnsavedChanges = false,
 }: {
     namespace: Namespace;
     post: Post;
     mode?: 'show' | 'edit';
+    hasUnsavedChanges?: boolean;
 }) {
     const siteUrl = `/${post.full_path}`;
+
+    function confirmNavigation(): boolean {
+        if (!hasUnsavedChanges) {
+            return true;
+        }
+
+        return window.confirm(
+            'You have unsaved changes. Leave this page without saving?',
+        );
+    }
 
     return (
         <div className="rounded-xl border border-sky-200/80 bg-sky-50/70 p-5 dark:border-sky-900/80 dark:bg-sky-950/20">
@@ -89,22 +101,117 @@ export default function PostHeader({
                                 {post.title}
                             </Link>
                         </h1>
-                        <div className="flex items-center gap-2">
-                            <p className="text-sm text-sky-800/70 dark:text-sky-200/70">
-                                /{post.full_path}
-                            </p>
-                            <Link
-                                href={revisions.url({
-                                    namespace: namespace.id,
-                                    post: post.slug,
-                                })}
-                                className="text-sky-700/70 transition-colors hover:text-sky-900 dark:text-sky-300/70 dark:hover:text-sky-100"
-                            >
-                                <History className="size-3.5" />
-                            </Link>
+                        <p className="text-sm text-sky-800/70 dark:text-sky-200/70">
+                            /{post.full_path}
+                        </p>
+                    </div>
+                    <div className="mt-2">
+                        {post.is_draft ? (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                                <FilePen className="size-3" />
+                                Draft
+                            </span>
+                        ) : !post.published_at ||
+                          new Date(post.published_at) > new Date() ? (
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                                    <Clock className="size-3" />
+                                    Scheduled
+                                </span>
+                                {post.published_at && (
+                                    <span className="text-xs text-muted-foreground">
+                                        {new Date(
+                                            post.published_at,
+                                        ).toLocaleString(undefined, {
+                                            dateStyle: 'medium',
+                                            timeStyle: 'short',
+                                        })}
+                                        {' · '}
+                                        {scheduledHint(post.published_at)}
+                                    </span>
+                                )}
+                            </div>
+                        ) : (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                                <CheckCircle2 className="size-3" />
+                                Published
+                            </span>
+                        )}
+                    </div>
+                    {mode === 'edit' && (
+                        <div className="mt-3">
+                            <Button variant="outline" asChild>
+                                <Link
+                                    data-test="view-post-link"
+                                    href={show.url({
+                                        namespace: namespace.id,
+                                        post: post.slug,
+                                    })}
+                                    onClick={(event) => {
+                                        if (!confirmNavigation()) {
+                                            event.preventDefault();
+                                        }
+                                    }}
+                                >
+                                    <ArrowLeft className="size-4" />
+                                    View Post
+                                </Link>
+                            </Button>
+                        </div>
+                    )}
+                    {mode === 'show' && (
+                        <div className="mt-3">
+                            <Button variant="outline" asChild>
+                                <Link
+                                    data-test="manage-post-edit-link"
+                                    href={edit.url({
+                                        namespace: namespace.id,
+                                        post: post.slug,
+                                    })}
+                                >
+                                    <Pencil className="size-4" />
+                                    Edit
+                                </Link>
+                            </Button>
+                        </div>
+                    )}
+                </div>
+                <div className="flex flex-col items-start gap-2 sm:items-end">
+                    <div className="flex flex-wrap items-center gap-2">
+                        {mode === 'show' && (
+                            <Button asChild>
+                                <Link href={siteUrl}>
+                                    <ArrowRightLeft className="size-4" />
+                                    View Site
+                                </Link>
+                            </Button>
+                        )}
+                        <ViewContextBadge label="Admin View" variant="admin" />
+                    </div>
+                    {mode === 'show' && (
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button variant="outline" asChild>
+                                <Link
+                                    data-test="manage-post-revisions-link"
+                                    href={revisions.url({
+                                        namespace: namespace.id,
+                                        post: post.slug,
+                                    })}
+                                >
+                                    <History className="size-4" />
+                                    Revisions
+                                </Link>
+                            </Button>
                             <Dialog>
-                                <DialogTrigger className="text-destructive/60 transition-colors hover:text-destructive">
-                                    <Trash2 className="size-3.5" />
+                                <DialogTrigger asChild>
+                                    <Button
+                                        data-test="manage-post-delete-trigger"
+                                        variant="outline"
+                                        className="border-destructive/30 text-destructive hover:border-destructive/40 hover:bg-destructive/10 hover:text-destructive"
+                                    >
+                                        <Trash2 className="size-4" />
+                                        Delete
+                                    </Button>
                                 </DialogTrigger>
                                 <DialogContent>
                                     <DialogTitle>
@@ -143,78 +250,7 @@ export default function PostHeader({
                                 </DialogContent>
                             </Dialog>
                         </div>
-                    </div>
-                    <div className="mt-2">
-                        {post.is_draft ? (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
-                                <FilePen className="size-3" />
-                                Draft
-                            </span>
-                        ) : !post.published_at ||
-                          new Date(post.published_at) > new Date() ? (
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                                    <Clock className="size-3" />
-                                    Scheduled
-                                </span>
-                                {post.published_at && (
-                                    <span className="text-xs text-muted-foreground">
-                                        {new Date(
-                                            post.published_at,
-                                        ).toLocaleString(undefined, {
-                                            dateStyle: 'medium',
-                                            timeStyle: 'short',
-                                        })}
-                                        {' · '}
-                                        {scheduledHint(post.published_at)}
-                                    </span>
-                                )}
-                            </div>
-                        ) : (
-                            <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                                <CheckCircle2 className="size-3" />
-                                Published
-                            </span>
-                        )}
-                    </div>
-                </div>
-                <div className="flex flex-col items-start gap-2 sm:items-end">
-                    <div className="flex flex-wrap items-center gap-2">
-                        <Button variant="outline" asChild>
-                            <Link href={siteUrl}>
-                                <ArrowRightLeft className="size-4" />
-                                View Site
-                            </Link>
-                        </Button>
-                        <ViewContextBadge label="Admin View" variant="admin" />
-                    </div>
-                    <div className="flex flex-wrap items-center gap-2">
-                        {mode === 'show' ? (
-                            <Button variant="outline" asChild>
-                                <Link
-                                    href={edit.url({
-                                        namespace: namespace.id,
-                                        post: post.slug,
-                                    })}
-                                >
-                                    <Pencil className="size-4" />
-                                    Edit
-                                </Link>
-                            </Button>
-                        ) : (
-                            <Button variant="outline" asChild>
-                                <Link
-                                    href={show.url({
-                                        namespace: namespace.id,
-                                        post: post.slug,
-                                    })}
-                                >
-                                    <ArrowLeft className="size-4" />
-                                    View Post
-                                </Link>
-                            </Button>
-                        )}
-                    </div>
+                    )}
                 </div>
             </div>
         </div>
