@@ -75,6 +75,7 @@ class NamespaceController extends Controller
     public function edit(PostNamespace $namespace): InertiaResponse
     {
         return Inertia::render('admin/namespaces/edit', [
+            'ancestors' => $this->ancestorOptions($namespace),
             'namespace' => $namespace,
         ]);
     }
@@ -92,13 +93,7 @@ class NamespaceController extends Controller
 
         $namespace->update($data);
 
-        $returnTo = $this->safeReturnPath($request->string('return_to')->toString());
-
-        if ($returnTo !== null) {
-            return redirect()->to(route('posts.path', ['path' => $namespace->full_path], absolute: false));
-        }
-
-        return to_route('admin.posts.index');
+        return to_route('admin.posts.namespace', $namespace);
     }
 
     public function destroy(PostNamespace $namespace): RedirectResponse
@@ -108,21 +103,51 @@ class NamespaceController extends Controller
         return to_route('admin.posts.index');
     }
 
-    private function safeReturnPath(string $path): ?string
+    /**
+     * @return array<int, array{id: int, name: string}>
+     */
+    private function ancestorOptions(PostNamespace $namespace): array
     {
-        if ($path === '') {
-            return null;
+        $segments = array_values(array_filter(
+            explode('/', trim($namespace->full_path, '/')),
+            fn (string $segment): bool => $segment !== '',
+        ));
+
+        array_pop($segments);
+
+        if ($segments === []) {
+            return [];
         }
 
-        if (
-            ! str_starts_with($path, '/')
-            || str_starts_with($path, '//')
-            || parse_url($path, PHP_URL_SCHEME) !== null
-            || parse_url($path, PHP_URL_HOST) !== null
-        ) {
-            return null;
+        $paths = [];
+        $currentPath = '';
+
+        foreach ($segments as $segment) {
+            $currentPath = $currentPath === '' ? $segment : "{$currentPath}/{$segment}";
+            $paths[] = $currentPath;
         }
 
-        return $path;
+        $ancestorsByPath = PostNamespace::query()
+            ->whereIn('full_path', $paths)
+            ->get(['id', 'name', 'full_path'])
+            ->keyBy('full_path');
+
+        return collect($paths)
+            ->map(function (string $path) use ($ancestorsByPath): ?array {
+                /** @var ?PostNamespace $ancestor */
+                $ancestor = $ancestorsByPath->get($path);
+
+                if ($ancestor === null) {
+                    return null;
+                }
+
+                return [
+                    'id' => $ancestor->id,
+                    'name' => $ancestor->name,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 }

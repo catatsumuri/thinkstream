@@ -17,7 +17,6 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import ViewContextBadge from '@/components/view-context-badge';
-import { useCurrentUrl } from '@/hooks/use-current-url';
 import {
     create as namespaceCreate,
     edit as editNamespace,
@@ -44,7 +43,6 @@ export default function NamespaceHeader({
 }: {
     namespace: Namespace;
 }) {
-    const { currentUrl } = useCurrentUrl();
     const childNamespaceCreateUrl = `${namespaceCreate.url()}?${new URLSearchParams({ parent: String(namespace.id) }).toString()}`;
     const siteUrl = `/${namespace.full_path}`;
 
@@ -139,11 +137,7 @@ export default function NamespaceHeader({
                             </DropdownMenuContent>
                         </DropdownMenu>
                         <Button variant="outline" asChild>
-                            <Link
-                                href={editNamespace.url(namespace.id, {
-                                    query: { return_to: currentUrl },
-                                })}
-                            >
+                            <Link href={editNamespace.url(namespace.id)}>
                                 <Pencil className="size-4" />
                                 Edit Namespace
                             </Link>

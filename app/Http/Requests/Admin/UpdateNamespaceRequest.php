@@ -8,6 +8,7 @@ use App\Support\ReservedContentPath;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\File;
 use Illuminate\Validation\Validator;
 
 class UpdateNamespaceRequest extends FormRequest
@@ -99,8 +100,22 @@ class UpdateNamespaceRequest extends FormRequest
             ],
             'name' => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'cover_image' => ['nullable', 'image', 'max:2048'],
+            'cover_image' => [
+                'nullable',
+                File::image()->max(2048),
+                Rule::dimensions()->ratio(16 / 9),
+            ],
             'is_published' => ['boolean'],
+        ];
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function messages(): array
+    {
+        return [
+            'cover_image.dimensions' => 'Cover image must use a 16:9 ratio.',
         ];
     }
 

@@ -143,7 +143,7 @@ test('updating a child namespace allows reserved slugs', function (string $slug)
             'slug' => $slug,
             'name' => ucfirst($slug),
         ])
-        ->assertRedirect(route('admin.posts.index'));
+        ->assertRedirect(route('admin.posts.namespace', $namespace));
 
     $this->assertDatabaseHas('namespaces', [
         'id' => $namespace->id,
@@ -228,6 +228,28 @@ test('authenticated users can view the edit form', function () {
     $this->actingAs($user)->get(route('admin.namespaces.edit', $namespace))->assertOk();
 });
 
+test('edit form includes ancestor namespaces', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create([
+        'name' => 'Inertia.js v3',
+        'slug' => 'inertiajs-v3',
+    ]);
+    $namespace = PostNamespace::factory()->create([
+        'parent_id' => $root->id,
+        'name' => 'Introduction',
+        'slug' => 'introduction',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.namespaces.edit', $namespace))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('ancestors.0.id', $root->id)
+            ->where('ancestors.0.name', 'Inertia.js v3')
+            ->where('namespace.id', $namespace->id)
+        );
+});
+
 test('authenticated users can update a namespace', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create([
@@ -242,14 +264,14 @@ test('authenticated users can update a namespace', function () {
             'name' => 'New Name',
             'description' => 'Updated description',
         ])
-        ->assertRedirect(route('admin.posts.index'));
+        ->assertRedirect(route('admin.posts.namespace', $namespace));
 
     expect($namespace->fresh()->slug)->toBe('new-slug');
     expect($namespace->fresh()->name)->toBe('New Name');
     expect($namespace->fresh()->description)->toBe('Updated description');
 });
 
-test('updating a namespace redirects back to the updated canonical section page', function () {
+test('updating a namespace redirects to the admin namespace page', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create([
         'slug' => 'guides',
@@ -261,25 +283,11 @@ test('updating a namespace redirects back to the updated canonical section page'
             'slug' => 'manuals',
             'name' => 'Manuals',
             'description' => 'Updated description',
-            'return_to' => '/guides',
         ])
-        ->assertRedirect('/manuals');
+        ->assertRedirect(route('admin.posts.namespace', $namespace->fresh()));
 
     expect($namespace->fresh()->slug)->toBe('manuals');
     expect($namespace->fresh()->full_path)->toBe('manuals');
-});
-
-test('updating a namespace ignores unsafe return paths', function () {
-    $user = User::factory()->create();
-    $namespace = PostNamespace::factory()->create(['slug' => 'guides']);
-
-    $this->actingAs($user)
-        ->put(route('admin.namespaces.update', $namespace), [
-            'slug' => 'guides',
-            'name' => 'Guides',
-            'return_to' => 'https://example.com/phish',
-        ])
-        ->assertRedirect(route('admin.posts.index'));
 });
 
 test('updating a namespace allows keeping the same slug', function () {
@@ -291,7 +299,7 @@ test('updating a namespace allows keeping the same slug', function () {
             'slug' => 'my-ns',
             'name' => 'Updated Name',
         ])
-        ->assertRedirect(route('admin.posts.index'));
+        ->assertRedirect(route('admin.posts.namespace', $namespace));
 
     expect($namespace->fresh()->slug)->toBe('my-ns');
 });
@@ -307,7 +315,7 @@ test('updating a namespace accepts a valid parent namespace', function () {
             'slug' => $namespace->slug,
             'name' => $namespace->name,
         ])
-        ->assertRedirect(route('admin.posts.index'));
+        ->assertRedirect(route('admin.posts.namespace', $namespace));
 
     expect($namespace->fresh()->parent_id)->toBe($parent->id);
     expect($namespace->fresh()->full_path)->toBe('parent/child');
@@ -472,7 +480,7 @@ test('updating a namespace can toggle is_published', function () {
             'name' => $namespace->name,
             'is_published' => '0',
         ])
-        ->assertRedirect(route('admin.posts.index'));
+        ->assertRedirect(route('admin.posts.namespace', $namespace));
 
     expect($namespace->fresh()->is_published)->toBeFalse();
 });
@@ -480,7 +488,7 @@ test('updating a namespace can toggle is_published', function () {
 test('storing a namespace with a cover image saves the file', function () {
     Storage::fake('public');
     $user = User::factory()->create();
-    $image = UploadedFile::fake()->image('cover.jpg', 800, 400);
+    $image = UploadedFile::fake()->image('cover.jpg', 1600, 900);
 
     $this->actingAs($user)
         ->post(route('admin.namespaces.store'), [
@@ -503,7 +511,7 @@ test('updating a namespace with a new cover image replaces the old file', functi
     $oldPath = $oldImage->store('namespaces', 'public');
     $namespace = PostNamespace::factory()->create(['cover_image' => $oldPath]);
 
-    $newImage = UploadedFile::fake()->image('new.jpg');
+    $newImage = UploadedFile::fake()->image('new.jpg', 1600, 900);
 
     $this->actingAs($user)
         ->put(route('admin.namespaces.update', $namespace), [
@@ -511,12 +519,39 @@ test('updating a namespace with a new cover image replaces the old file', functi
             'name' => $namespace->name,
             'cover_image' => $newImage,
         ])
-        ->assertRedirect(route('admin.posts.index'));
+        ->assertRedirect(route('admin.posts.namespace', $namespace));
 
     Storage::disk('public')->assertMissing($oldPath);
     $newPath = $namespace->fresh()->cover_image;
     expect($newPath)->not->toBe($oldPath);
     Storage::disk('public')->assertExists($newPath);
+});
+
+test('storing a namespace rejects a cover image that is not 16 by 9', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.namespaces.store'), [
+            'slug' => 'guides',
+            'name' => 'Guides',
+            'cover_image' => UploadedFile::fake()->image('cover.jpg', 1200, 1200),
+        ])
+        ->assertSessionHasErrors(['cover_image' => 'Cover image must use a 16:9 ratio.']);
+});
+
+test('updating a namespace rejects a cover image that is not 16 by 9', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->put(route('admin.namespaces.update', $namespace), [
+            'slug' => $namespace->slug,
+            'name' => $namespace->name,
+            'cover_image' => UploadedFile::fake()->image('cover.jpg', 1200, 1200),
+        ])
+        ->assertSessionHasErrors(['cover_image' => 'Cover image must use a 16:9 ratio.']);
 });
 
 test('deleting a namespace removes the cover image file', function () {

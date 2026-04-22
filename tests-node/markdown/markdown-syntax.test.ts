@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { MARKDOWN_SYNTAX_MANIFEST } from '../../resources/js/lib/markdown-syntax-manifest.ts';
 import {
     parseMarkdownImageMetadata,
     preprocessMarkdownContent,
     preprocessMarkdownSyntax,
 } from '../../resources/js/lib/markdown-syntax.ts';
-import { MARKDOWN_SYNTAX_MANIFEST } from '../../resources/js/lib/markdown-syntax-manifest.ts';
 
 test('preprocessMarkdownSyntax normalizes Zenn shorthand and Mintlify tabs', () => {
     const output = preprocessMarkdownSyntax(`:::message alert
