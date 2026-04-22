@@ -107,11 +107,19 @@ export default function ContentNavTree({
         const active = navRef.current?.querySelector(
             '[data-active="true"]',
         ) as HTMLElement | null;
-        if (!active || !navRef.current) return;
+
+        if (!active || !navRef.current) {
+            return;
+        }
+
         const container = navRef.current.closest(
             '.overflow-y-auto',
         ) as HTMLElement | null;
-        if (!container) return;
+
+        if (!container) {
+            return;
+        }
+
         const containerRect = container.getBoundingClientRect();
         const activeRect = active.getBoundingClientRect();
         container.scrollTop += activeRect.top - containerRect.top - 16;

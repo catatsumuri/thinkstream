@@ -4,6 +4,7 @@ use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\User;
 use App\Support\NamespaceBackupArchive;
+use App\Support\NamespaceRestoreArchive;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
@@ -18,7 +19,14 @@ function createAdminNamespaceBackupZip(string $zipPath, array $tree): void
 
     expect($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE))->toBeTrue();
 
-    $zip->addFromString('_namespace.yaml', Yaml::dump([
+    addAdminNamespaceBackupTreeToZip($zip, $tree);
+
+    $zip->close();
+}
+
+function addAdminNamespaceBackupTreeToZip(ZipArchive $zip, array $tree, string $prefix = ''): void
+{
+    $zip->addFromString($prefix.'_namespace.yaml', Yaml::dump([
         'name' => $tree['name'],
         'slug' => $tree['slug'],
         'full_path' => $tree['full_path'] ?? $tree['slug'],
@@ -31,7 +39,7 @@ function createAdminNamespaceBackupZip(string $zipPath, array $tree): void
 
     foreach ($tree['posts'] ?? [] as $post) {
         $zip->addFromString(
-            $post['slug'].'.md',
+            $prefix.$post['slug'].'.md',
             "---\n".Yaml::dump([
                 'title' => $post['title'],
                 'slug' => $post['slug'],
@@ -42,7 +50,13 @@ function createAdminNamespaceBackupZip(string $zipPath, array $tree): void
         );
     }
 
-    $zip->close();
+    foreach ($tree['children'] ?? [] as $child) {
+        addAdminNamespaceBackupTreeToZip($zip, $child, $prefix.$child['slug'].'/');
+    }
+
+    foreach ($tree['files'] ?? [] as $path => $content) {
+        $zip->addFromString('_files/'.ltrim($path, '/'), $content);
+    }
 }
 
 test('guests are redirected from the posts index', function () {
@@ -91,6 +105,18 @@ test('posts index defaults to namespace sort order', function () {
         );
 });
 
+test('posts index exposes root restore upload metadata', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.index'))
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/index')
+            ->where('restore_upload_url', route('admin.posts.restore.upload', absolute: false))
+            ->where('restore_preview', null)
+        );
+});
+
 test('posts index uses url sort params when provided', function () {
     $user = User::factory()->create();
     $topNamespace = PostNamespace::factory()->create();
@@ -116,6 +142,88 @@ test('authenticated users can view the namespace post list', function () {
     $namespace = PostNamespace::factory()->create();
 
     $this->actingAs($user)->get(route('admin.posts.namespace', $namespace))->assertOk();
+});
+
+test('uploading a restore zip from the posts index returns a restore preview', function () {
+    $user = User::factory()->create();
+    $existingNamespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+        'name' => 'Guides',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $existingNamespace->id,
+        'slug' => 'intro',
+        'title' => 'Intro',
+        'content' => 'Existing intro',
+    ]);
+
+    $zipPath = storage_path('framework/testing/'.str()->uuid().'.zip');
+    createAdminNamespaceBackupZip($zipPath, [
+        'slug' => 'guides',
+        'name' => 'Guides',
+        'full_path' => 'guides',
+        'posts' => [
+            [
+                'title' => 'Intro',
+                'slug' => 'intro',
+                'full_path' => 'guides/intro',
+                'content' => 'Restored intro',
+            ],
+            [
+                'title' => 'Fresh',
+                'slug' => 'fresh',
+                'full_path' => 'guides/fresh',
+                'content' => 'Fresh content',
+            ],
+        ],
+        'children' => [
+            [
+                'slug' => 'api',
+                'name' => 'API',
+                'full_path' => 'guides/api',
+                'posts' => [
+                    [
+                        'title' => 'Endpoints',
+                        'slug' => 'endpoints',
+                        'full_path' => 'guides/api/endpoints',
+                        'content' => 'API docs',
+                    ],
+                ],
+            ],
+        ],
+    ]);
+
+    try {
+        $upload = new UploadedFile($zipPath, 'restore.zip', 'application/zip', null, true);
+
+        $response = $this->actingAs($user)
+            ->post(route('admin.posts.restore.upload'), [
+                'backup' => $upload,
+            ]);
+
+        $location = $response->headers->get('Location');
+
+        expect($location)->not->toBeNull()->and($location)->toContain('/admin/posts?restore=');
+
+        $this->actingAs($user)
+            ->get($location)
+            ->assertInertia(fn ($page) => $page
+                ->component('admin/posts/index')
+                ->where('restore_preview.root.full_path', 'guides')
+                ->where('restore_preview.root.status', 'existing')
+                ->where('restore_preview.totals.namespace_count', 2)
+                ->where('restore_preview.totals.existing_namespace_count', 1)
+                ->where('restore_preview.totals.new_namespace_count', 1)
+                ->where('restore_preview.totals.post_count', 3)
+                ->where('restore_preview.totals.existing_post_count', 1)
+                ->where('restore_preview.totals.new_post_count', 2)
+                ->where('restore_preview.namespaces.0.full_path', 'guides')
+                ->where('restore_preview.namespaces.1.full_path', 'guides/api')
+            );
+    } finally {
+        File::delete($zipPath);
+    }
 });
 
 test('namespace post list exposes ancestors for breadcrumb', function () {
@@ -280,6 +388,10 @@ test('authenticated users can view the namespace backup management page', functi
                 ->has('backups', 2)
                 ->where('backups.0.filename', basename($latestBackup))
                 ->where('backups.1.filename', basename($olderBackup))
+                ->where('backups.0.download_url', route('admin.posts.backups.download', [
+                    'namespace' => $namespace,
+                    'backup' => basename($latestBackup),
+                ], false))
                 ->where('backups.0.restore_url', route('admin.posts.backups.restore', [
                     'namespace' => $namespace,
                     'backup' => basename($latestBackup),
@@ -499,6 +611,125 @@ test('authenticated users can restore a namespace from an existing backup', func
         expect($namespace->fresh()->description)->toBe('Restored description');
         expect(Post::query()->where('namespace_id', $namespace->id)->where('slug', 'intro')->value('content'))
             ->toBe('Restored content');
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+    }
+});
+
+test('root namespace restore stream applies the uploaded backup and emits progress updates', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-stream',
+        'full_path' => 'guides-stream',
+        'name' => 'Guides Stream',
+        'description' => 'Old description',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'intro',
+        'title' => 'Old Intro',
+        'content' => 'Old content',
+    ]);
+
+    $restoreArchive = app(NamespaceRestoreArchive::class);
+    $token = 'restore-stream-test';
+    $zipPath = $restoreArchive->tokenPath($token);
+
+    File::ensureDirectoryExists(dirname($zipPath));
+    File::delete($zipPath);
+
+    createAdminNamespaceBackupZip($zipPath, [
+        'slug' => 'guides-stream',
+        'name' => 'Guides Stream',
+        'full_path' => 'guides-stream',
+        'description' => 'Restored description',
+        'posts' => [
+            [
+                'title' => 'Intro',
+                'slug' => 'intro',
+                'full_path' => 'guides-stream/intro',
+                'content' => 'Restored content',
+            ],
+            [
+                'title' => 'Fresh Post',
+                'slug' => 'fresh-post',
+                'full_path' => 'guides-stream/fresh-post',
+                'content' => 'Fresh content',
+            ],
+        ],
+    ]);
+
+    try {
+        $response = $this->actingAs($user)
+            ->get(route('admin.posts.restore.stream', ['token' => $token]));
+
+        $response->assertOk()->assertStreamed();
+
+        $streamedContent = $response->streamedContent();
+
+        expect($streamedContent)->toContain('Starting namespace restore.')
+            ->toContain('Updating namespace guides-stream')
+            ->toContain('Updating post guides-stream\\/intro')
+            ->toContain('Creating post guides-stream\\/fresh-post')
+            ->toContain('Restored 2 posts.');
+
+        expect($namespace->fresh()->description)->toBe('Restored description');
+        expect(Post::query()->where('namespace_id', $namespace->id)->where('slug', 'intro')->value('content'))
+            ->toBe('Restored content');
+        expect(Post::query()->where('namespace_id', $namespace->id)->where('slug', 'fresh-post')->exists())
+            ->toBeTrue();
+        expect(File::exists($zipPath))->toBeFalse();
+    } finally {
+        File::delete($zipPath);
+    }
+});
+
+test('root namespace restore stream deletes uploaded archive tokens after restore errors', function () {
+    $user = User::factory()->create();
+    $restoreArchive = app(NamespaceRestoreArchive::class);
+    $token = 'restore-stream-error';
+    $zipPath = $restoreArchive->tokenPath($token);
+
+    File::ensureDirectoryExists(dirname($zipPath));
+    File::put($zipPath, 'not-a-valid-zip');
+
+    try {
+        $response = $this->actingAs($user)
+            ->get(route('admin.posts.restore.stream', ['token' => $token]));
+
+        $response->assertOk()->assertStreamed();
+
+        expect($response->streamedContent())->toContain('Failed to open zip:')
+            ->and(File::exists($zipPath))->toBeFalse();
+    } finally {
+        File::delete($zipPath);
+    }
+});
+
+test('authenticated users can download an existing namespace backup zip', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-backup-download',
+        'name' => 'Guides',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    $zipPath = $backupDirectory.'/'.$backupPrefix.'-20260421-040506.zip';
+    File::put($zipPath, 'backup-download-payload');
+
+    try {
+        $this->actingAs($user)
+            ->get(route('admin.posts.backups.download', [
+                'namespace' => $namespace,
+                'backup' => basename($zipPath),
+            ]))
+            ->assertOk()
+            ->assertDownload(basename($zipPath))
+            ->assertHeader('content-disposition', 'attachment; filename='.basename($zipPath));
     } finally {
         File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
     }

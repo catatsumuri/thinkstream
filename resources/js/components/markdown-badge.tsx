@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import { Badge } from '@/components/ui/badge';
 import { getLucideIcon, SimpleIconSvg } from '@/components/markdown-card-group';
+import { Badge } from '@/components/ui/badge';
 import { Icon } from '@/components/ui/icon';
 import { getSimpleIcon } from '@/lib/simple-icon-lookup';
 import { cn } from '@/lib/utils';

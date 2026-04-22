@@ -1,12 +1,12 @@
+import { router, usePage } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownContent from '@/components/markdown-content';
 import { Label } from '@/components/ui/label';
-import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
 import { createMarkdownComponents } from '@/lib/markdown-components';
+import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
 import { slugify } from '@/lib/slugify';
 import { cn } from '@/lib/utils';
-import { router, usePage } from '@inertiajs/react';
 
 type Props = {
     name: string;

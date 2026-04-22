@@ -122,7 +122,7 @@ test('routing check seeder creates wildcard routing lookalike namespaces', funct
     expect($administratorPost->content)->toContain('/admin/*');
 });
 
-test('syntax seeder creates the meta namespace article for content url unification handoff', function () {
+test('syntax seeder keeps the meta namespace without the content url handoff article', function () {
     $this->seed(SyntaxSeeder::class);
 
     $namespace = PostNamespace::query()
@@ -131,19 +131,13 @@ test('syntax seeder creates the meta namespace article for content url unificati
 
     expect($namespace)->not->toBeNull();
     expect($namespace->name)->toBe('Meta');
-    expect($namespace->post_order)->toContain('content-url-unification-handoff');
+    expect($namespace->description)->toBe('Internal notes about Thinkstream architecture, implementation status, and operational decisions.');
+    expect($namespace->post_order)->toBe([]);
 
     $post = Post::query()
         ->where('namespace_id', $namespace->id)
         ->where('slug', 'content-url-unification-handoff')
         ->first();
 
-    expect($post)->not->toBeNull();
-    expect($post->title)->toBe('Content URL 統一ハンドオフ');
-    expect($post->content)->toContain('# Content URL 統一ハンドオフ');
-    expect($post->content)->toContain('## 現在の評価');
-    expect($post->content)->toContain('canonical post page から直接 edit に入れる');
-    expect($post->content)->toContain('いまの主問題は、「同じコンテンツに URL が 2 つあること」そのものではありません。');
-    expect($post->content)->toContain('admin namespace post table が `canonical_url` を尊重するように揃える');
-    expect($post->published_at)->not->toBeNull();
+    expect($post)->toBeNull();
 });
