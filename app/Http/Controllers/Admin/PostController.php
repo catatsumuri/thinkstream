@@ -11,17 +11,22 @@ use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\PostRevision;
 use App\Support\NamespaceBackupArchive;
+use App\Support\NamespaceRestoreArchive;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\StreamedEvent;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PostController extends Controller
 {
-    public function index(Request $request): Response
+    public function index(Request $request, NamespaceRestoreArchive $restoreArchive): Response
     {
         $allowedColumns = ['name', 'posts_count', 'is_published'];
         $allowedDirections = ['asc', 'desc'];
@@ -46,9 +51,22 @@ class PostController extends Controller
                 ->get();
         }
 
+        $restoreToken = $request->string('restore')->toString();
+        $restorePreview = null;
+
+        if ($restoreToken !== '' && $restoreArchive->hasToken($restoreToken)) {
+            $restorePreview = [
+                'token' => $restoreToken,
+                ...$restoreArchive->preview($restoreArchive->tokenPath($restoreToken)),
+                'stream_url' => route('admin.posts.restore.stream', ['token' => $restoreToken], absolute: false),
+            ];
+        }
+
         return Inertia::render('admin/posts/index', [
             'namespaces' => $namespaces,
             'sort' => ['column' => $column, 'direction' => $direction],
+            'restore_upload_url' => route('admin.posts.restore.upload', absolute: false),
+            'restore_preview' => $restorePreview,
         ]);
     }
 
@@ -186,6 +204,70 @@ class PostController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Backup restored.']);
 
         return to_route('admin.posts.backups', $namespace);
+    }
+
+    public function downloadBackup(PostNamespace $namespace, string $backup): BinaryFileResponse
+    {
+        $backupRecord = $this->backupRecordFor($namespace, $backup);
+
+        abort_unless($backupRecord !== null && File::exists($backupRecord['path']), 404);
+
+        return response()->download($backupRecord['path'], $backupRecord['filename']);
+    }
+
+    public function uploadRestoreArchive(Request $request, NamespaceRestoreArchive $restoreArchive): RedirectResponse
+    {
+        $data = $request->validate([
+            'backup' => ['required', 'file', 'extensions:zip'],
+        ]);
+
+        $token = $restoreArchive->storeUpload($data['backup']);
+
+        try {
+            $restoreArchive->preview($restoreArchive->tokenPath($token));
+        } catch (\RuntimeException $exception) {
+            $restoreArchive->deleteToken($token);
+
+            return back()->withErrors([
+                'backup' => $exception->getMessage(),
+            ]);
+        }
+
+        return to_route('admin.posts.index', ['restore' => $token]);
+    }
+
+    public function streamRestoreArchive(string $token, NamespaceRestoreArchive $restoreArchive): StreamedResponse
+    {
+        abort_unless($restoreArchive->hasToken($token), 404);
+
+        $path = $restoreArchive->tokenPath($token);
+
+        return response()->eventStream(function () use ($restoreArchive, $path, $token) {
+            try {
+                foreach ($restoreArchive->restore($path) as $event) {
+                    yield new StreamedEvent(
+                        event: 'update',
+                        data: json_encode([
+                            'id' => (string) Str::uuid(),
+                            ...$event,
+                        ], JSON_THROW_ON_ERROR),
+                    );
+                }
+
+                $restoreArchive->deleteToken($token);
+            } catch (\RuntimeException $exception) {
+                yield new StreamedEvent(
+                    event: 'update',
+                    data: json_encode([
+                        'id' => (string) Str::uuid(),
+                        'type' => 'error',
+                        'message' => $exception->getMessage(),
+                    ], JSON_THROW_ON_ERROR),
+                );
+            } finally {
+                $restoreArchive->deleteToken($token);
+            }
+        });
     }
 
     public function create(PostNamespace $namespace): Response
@@ -424,6 +506,7 @@ class PostController extends Controller
      *     created_at: string,
      *     size_bytes: int,
      *     size_human: string,
+     *     download_url: string,
      *     restore_url: string
      * }>
      */
@@ -456,6 +539,10 @@ class PostController extends Controller
                 'created_at' => date(DATE_ATOM, File::lastModified($path)),
                 'size_bytes' => File::size($path),
                 'size_human' => $this->formatBytes(File::size($path)),
+                'download_url' => route('admin.posts.backups.download', [
+                    'namespace' => $namespace,
+                    'backup' => basename($path),
+                ], absolute: false),
                 'restore_url' => route('admin.posts.backups.restore', [
                     'namespace' => $namespace,
                     'backup' => basename($path),
@@ -471,6 +558,7 @@ class PostController extends Controller
      *     created_at: string,
      *     size_bytes: int,
      *     size_human: string,
+     *     download_url: string,
      *     restore_url: string
      * }|null
      */

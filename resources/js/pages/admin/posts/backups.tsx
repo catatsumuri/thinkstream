@@ -1,5 +1,5 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
-import { Archive, RotateCcw, Trash2 } from 'lucide-react';
+import { Archive, Download, RotateCcw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -34,6 +34,7 @@ type Backup = {
     created_at: string;
     size_bytes: number;
     size_human: string;
+    download_url: string;
     restore_url: string;
 };
 
@@ -354,12 +355,28 @@ export default function Backups({
                                                 {backup.size_human}
                                             </td>
                                             <td className="px-4 py-3 text-right">
-                                                <RestoreBackupDialog
-                                                    backup={backup}
-                                                    namespaceName={
-                                                        namespace.name
-                                                    }
-                                                />
+                                                <div className="flex justify-end gap-2">
+                                                    <Button
+                                                        size="sm"
+                                                        variant="outline"
+                                                        asChild
+                                                    >
+                                                        <a
+                                                            href={
+                                                                backup.download_url
+                                                            }
+                                                        >
+                                                            <Download className="size-4" />
+                                                            Download
+                                                        </a>
+                                                    </Button>
+                                                    <RestoreBackupDialog
+                                                        backup={backup}
+                                                        namespaceName={
+                                                            namespace.name
+                                                        }
+                                                    />
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}

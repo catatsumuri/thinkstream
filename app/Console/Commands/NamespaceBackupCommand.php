@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\PostNamespace;
 use App\Support\NamespaceBackupArchive;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Storage;
 use Symfony\Component\Yaml\Yaml;
 use ZipArchive;
 
@@ -80,6 +81,10 @@ class NamespaceBackupCommand extends Command
 
         $zip->addFromString($prefix.'_namespace.yaml', Yaml::dump($namespaceData, 4));
 
+        foreach ($this->imagePathsForNamespace($namespace) as $imagePath) {
+            $this->addPublicFileToZip($zip, $imagePath);
+        }
+
         $posts = $withRevisions
             ? $namespace->posts()->with('revisions.user')->get()
             : $namespace->posts()->get();
@@ -96,6 +101,10 @@ class NamespaceBackupCommand extends Command
             $content = "---\n".Yaml::dump($frontmatter)."---\n\n".$post->content."\n";
 
             $zip->addFromString($prefix.$post->slug.'.md', $content);
+
+            foreach ($this->imagePathsFromContent($post->content) as $imagePath) {
+                $this->addPublicFileToZip($zip, $imagePath);
+            }
 
             if ($withRevisions && $post->revisions->isNotEmpty()) {
                 $revisionsData = $post->revisions
@@ -123,5 +132,43 @@ class NamespaceBackupCommand extends Command
         }
 
         return $postCount;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function imagePathsForNamespace(PostNamespace $namespace): array
+    {
+        return collect([$namespace->cover_image])
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function imagePathsFromContent(string $content): array
+    {
+        preg_match_all('/\/(?:images|storage)\/([^"\'\s)\]>?#]+)/', $content, $matches);
+
+        return collect($matches[1] ?? [])
+            ->map(fn (string $path): string => ltrim(urldecode($path), '/'))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private function addPublicFileToZip(ZipArchive $zip, string $path): void
+    {
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($path)) {
+            return;
+        }
+
+        $zip->addFromString('_files/'.$path, $disk->get($path));
     }
 }

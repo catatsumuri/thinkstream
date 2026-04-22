@@ -6,6 +6,7 @@ use App\Models\PostRevision;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\Yaml\Yaml;
 
@@ -61,17 +62,27 @@ function addNamespaceBackupTreeToZip(ZipArchive $zip, array $tree, string $prefi
     foreach ($tree['children'] ?? [] as $child) {
         addNamespaceBackupTreeToZip($zip, $child, $prefix.$child['slug'].'/');
     }
+
+    foreach ($tree['files'] ?? [] as $path => $content) {
+        $zip->addFromString('_files/'.ltrim($path, '/'), $content);
+    }
 }
 
 test('namespace backup command exports namespace metadata and markdown posts', function () {
+    Storage::fake('public');
+
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create([
         'slug' => 'guides',
         'name' => 'Guides',
         'full_path' => 'guides',
         'description' => 'Step-by-step guides.',
+        'cover_image' => 'namespaces/guides-cover.jpg',
         'post_order' => ['routing'],
     ]);
+
+    Storage::disk('public')->put('namespaces/guides-cover.jpg', 'cover-image-bytes');
+    Storage::disk('public')->put('posts/123/diagram.png', 'diagram-image-bytes');
 
     $namespace->forceFill(['sort_order' => 3])->save();
 
@@ -79,7 +90,7 @@ test('namespace backup command exports namespace metadata and markdown posts', f
         'title' => 'Routing',
         'slug' => 'routing',
         'full_path' => 'guides/routing',
-        'content' => "# Routing\n\nBackup me.",
+        'content' => "# Routing\n\n![Diagram](/images/posts/123/diagram.png)\n\nBackup me.",
     ]);
 
     $zipPath = storage_path('framework/testing/'.Str::uuid().'.zip');
@@ -96,6 +107,8 @@ test('namespace backup command exports namespace metadata and markdown posts', f
 
     $namespaceData = Yaml::parse($zip->getFromName('_namespace.yaml'));
     $postMarkdown = $zip->getFromName('routing.md');
+    $coverImage = $zip->getFromName('_files/namespaces/guides-cover.jpg');
+    $postImage = $zip->getFromName('_files/posts/123/diagram.png');
     $zip->close();
 
     expect($namespaceData)->toMatchArray([
@@ -103,6 +116,7 @@ test('namespace backup command exports namespace metadata and markdown posts', f
         'name' => 'Guides',
         'full_path' => 'guides',
         'description' => 'Step-by-step guides.',
+        'cover_image' => 'namespaces/guides-cover.jpg',
         'post_order' => ['routing'],
         'sort_order' => 3,
     ]);
@@ -110,24 +124,30 @@ test('namespace backup command exports namespace metadata and markdown posts', f
     expect($postMarkdown)->toContain('title: Routing')
         ->toContain('slug: routing')
         ->toContain('full_path: guides/routing')
-        ->toContain("# Routing\n\nBackup me.");
+        ->toContain('![Diagram](/images/posts/123/diagram.png)')
+        ->toContain("# Routing\n\n![Diagram](/images/posts/123/diagram.png)\n\nBackup me.")
+        ->and($coverImage)->toBe('cover-image-bytes')
+        ->and($postImage)->toBe('diagram-image-bytes');
 
     File::delete($zipPath);
 });
 
 test('namespace restore command imports a namespace backup zip', function () {
+    Storage::fake('public');
+
     $user = User::factory()->create();
     $zipPath = createNamespaceBackupZip([
         'slug' => 'laravel-13',
         'name' => 'Laravel 13',
         'full_path' => 'laravel-13',
         'description' => 'Laravel 13 upgrade guides.',
+        'cover_image' => 'namespaces/laravel-13-cover.jpg',
         'post_order' => ['laravel-ai-sdk', 'upgrade-12-to-13'],
         'posts' => [
             [
                 'title' => 'Laravel AI SDK',
                 'slug' => 'laravel-ai-sdk',
-                'content' => "# Laravel AI SDK\n\nIntro.",
+                'content' => "# Laravel AI SDK\n\n![Diagram](/images/posts/legacy-id/ai-sdk.png)\n\nIntro.",
             ],
             [
                 'title' => 'Upgrade 12 to 13',
@@ -135,9 +155,16 @@ test('namespace restore command imports a namespace backup zip', function () {
                 'content' => "# Upgrade 12 to 13\n\nChecklist.",
             ],
         ],
+        'files' => [
+            'namespaces/laravel-13-cover.jpg' => 'cover-from-backup',
+            'posts/legacy-id/ai-sdk.png' => 'post-image-from-backup',
+        ],
     ]);
 
     try {
+        Storage::disk('public')->put('namespaces/laravel-13-cover.jpg', 'stale-cover');
+        Storage::disk('public')->put('posts/legacy-id/ai-sdk.png', 'stale-post-image');
+
         $this->artisan('namespace:restore', [
             'path' => $zipPath,
         ])->assertSuccessful();
@@ -146,7 +173,8 @@ test('namespace restore command imports a namespace backup zip', function () {
 
         expect($namespace)->not->toBeNull()
             ->and($namespace->name)->toBe('Laravel 13')
-            ->and($namespace->full_path)->toBe('laravel-13');
+            ->and($namespace->full_path)->toBe('laravel-13')
+            ->and($namespace->cover_image)->toBe('namespaces/laravel-13-cover.jpg');
 
         $posts = Post::query()
             ->where('namespace_id', $namespace->id)
@@ -159,6 +187,11 @@ test('namespace restore command imports a namespace backup zip', function () {
                 'upgrade-12-to-13',
             ])
             ->and($posts->pluck('user_id')->unique()->all())->toBe([$user->id]);
+
+        Storage::disk('public')->assertExists('namespaces/laravel-13-cover.jpg');
+        Storage::disk('public')->assertExists('posts/legacy-id/ai-sdk.png');
+        expect(Storage::disk('public')->get('namespaces/laravel-13-cover.jpg'))->toBe('cover-from-backup')
+            ->and(Storage::disk('public')->get('posts/legacy-id/ai-sdk.png'))->toBe('post-image-from-backup');
     } finally {
         File::delete($zipPath);
     }
@@ -399,6 +432,41 @@ test('namespace restore without --with-revisions skips revision files', function
 
         $post = Post::query()->where('slug', 'guide')->firstOrFail();
         expect($post->revisions()->count())->toBe(0);
+    } finally {
+        File::delete($zipPath);
+    }
+});
+
+test('namespace restore command rejects zip entries with path traversal segments', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $zipPath = storage_path('framework/testing/'.Str::uuid().'.zip');
+    $zip = new ZipArchive;
+
+    expect($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE))->toBeTrue();
+    $zip->addFromString('_namespace.yaml', Yaml::dump([
+        'name' => 'Unsafe',
+        'slug' => 'unsafe',
+        'full_path' => 'unsafe',
+    ], 4));
+    $zip->addFromString('intro.md', "---\n".Yaml::dump([
+        'title' => 'Intro',
+        'slug' => 'intro',
+        'full_path' => 'unsafe/intro',
+    ])."---\n\nUnsafe content\n");
+    $zip->addFromString('_files/../escape.txt', 'bad');
+    $zip->close();
+
+    try {
+        $this->artisan('namespace:restore', [
+            'path' => $zipPath,
+        ])->expectsOutput('The restore archive contains an invalid file path.')
+            ->assertFailed();
+
+        expect(PostNamespace::query()->where('slug', 'unsafe')->exists())->toBeFalse()
+            ->and(Post::query()->count())->toBe(0);
+        Storage::disk('public')->assertMissing('escape.txt');
     } finally {
         File::delete($zipPath);
     }
