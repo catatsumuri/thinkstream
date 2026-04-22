@@ -143,23 +143,22 @@ export default function NamespaceHeader({
                             </Link>
                         </Button>
                     </div>
-                    {namespace.backup_count &&
-                        namespace.backup_management_url && (
-                            <div className="flex flex-wrap items-center gap-2">
-                                <Button variant="outline" asChild>
-                                    <Link
-                                        href={namespace.backup_management_url}
-                                        data-test="manage-namespace-backups-link"
-                                    >
-                                        <Archive className="size-4" />
-                                        {namespace.backup_count} backups
-                                        <span className="hidden sm:inline">
-                                            · Backup Management
-                                        </span>
-                                    </Link>
-                                </Button>
-                            </div>
-                        )}
+                    {namespace.backup_management_url && (
+                        <div className="flex flex-wrap items-center gap-2">
+                            <Button variant="outline" asChild>
+                                <Link
+                                    href={namespace.backup_management_url}
+                                    data-test="manage-namespace-backups-link"
+                                >
+                                    <Archive className="size-4" />
+                                    {namespace.backup_count ?? 0} backups
+                                    <span className="hidden sm:inline">
+                                        · Backup Management
+                                    </span>
+                                </Link>
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

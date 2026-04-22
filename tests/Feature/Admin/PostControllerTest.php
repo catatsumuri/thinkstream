@@ -355,6 +355,30 @@ test('namespace post list includes backup management metadata when backups exist
     }
 });
 
+test('namespace post list includes backup management metadata when backups do not exist', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-backup-empty-meta',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    try {
+        $this->actingAs($user)
+            ->get(route('admin.posts.namespace', $namespace))
+            ->assertInertia(fn ($page) => $page
+                ->component('admin/posts/namespace')
+                ->where('namespace.backup_count', 0)
+                ->where('namespace.backup_management_url', route('admin.posts.backups', $namespace, false))
+            );
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+    }
+});
+
 test('authenticated users can view the namespace backup management page', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create([

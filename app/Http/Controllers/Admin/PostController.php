@@ -110,7 +110,7 @@ class PostController extends Controller
         $namespace->setAttribute('backup_count', $backupCount);
         $namespace->setAttribute(
             'backup_management_url',
-            $backupCount > 0 ? route('admin.posts.backups', ['namespace' => $namespace], absolute: false) : null
+            route('admin.posts.backups', ['namespace' => $namespace], absolute: false)
         );
 
         return Inertia::render('admin/posts/namespace', [
