@@ -595,7 +595,9 @@ export default function CoverImageDropzone({
                     <DialogHeader className="px-6 pt-6">
                         <DialogTitle>Adjust cover image</DialogTitle>
                         <DialogDescription>
-                            The area inside the light frame is what will actually be used. Recommended size is at least 1600x900.
+                            The area inside the light frame is what will
+                            actually be used. Recommended size is at least
+                            1600x900.
                         </DialogDescription>
                     </DialogHeader>
 
@@ -774,10 +776,13 @@ export default function CoverImageDropzone({
                                         </div>
                                         <div className="mt-3 grid gap-2 text-xs text-muted-foreground sm:grid-cols-2">
                                             <p>
-                                                This preview matches the header frame on the public page.
+                                                This preview matches the header
+                                                frame on the public page.
                                             </p>
                                             <p>
-                                                It is meant to check the visible area, not the raw exported image.
+                                                It is meant to check the visible
+                                                area, not the raw exported
+                                                image.
                                             </p>
                                         </div>
                                     </div>

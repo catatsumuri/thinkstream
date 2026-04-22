@@ -197,7 +197,8 @@ export default function Create({
                                     error={errors.cover_image}
                                 />
                                 <p className="text-xs text-muted-foreground">
-                                    Saved with 16:9 cropping. Recommended size is at least 1600x900.
+                                    Saved with 16:9 cropping. Recommended size
+                                    is at least 1600x900.
                                 </p>
                             </div>
 

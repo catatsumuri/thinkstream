@@ -137,9 +137,7 @@ export default function NamespaceHeader({
                             </DropdownMenuContent>
                         </DropdownMenu>
                         <Button variant="outline" asChild>
-                            <Link
-                                href={editNamespace.url(namespace.id)}
-                            >
+                            <Link href={editNamespace.url(namespace.id)}>
                                 <Pencil className="size-4" />
                                 Edit Namespace
                             </Link>

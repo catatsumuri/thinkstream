@@ -134,7 +134,8 @@ export default function Edit({
                             error={errors.cover_image}
                         />
                         <p className="text-xs text-muted-foreground">
-                            Saved with 16:9 cropping. Recommended size is at least 1600x900.
+                            Saved with 16:9 cropping. Recommended size is at
+                            least 1600x900.
                         </p>
                     </div>
 
@@ -156,7 +157,9 @@ export default function Edit({
                             Save Changes
                         </Button>
                         <Button type="button" variant="outline" asChild>
-                            <a href={namespaceRoute.url(namespace.id)}>Cancel</a>
+                            <a href={namespaceRoute.url(namespace.id)}>
+                                Cancel
+                            </a>
                         </Button>
                     </div>
                 </form>
