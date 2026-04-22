@@ -107,6 +107,13 @@ export default [
     },
     {
         ignores: [
+            '.worktrees/**',
+            '.tmp/**',
+            'docs/**',
+            'knowledge-base-inertia/**',
+            'mdx/**',
+            'output/**',
+            'storage/**',
             'vendor',
             'node_modules',
             'public',
@@ -117,6 +124,7 @@ export default [
             'resources/js/components/ui/*',
             'resources/js/routes/**',
             'resources/js/wayfinder/**',
+            'zenn-exported/**',
         ],
     },
     prettier, // Turn off all rules that might conflict with Prettier
