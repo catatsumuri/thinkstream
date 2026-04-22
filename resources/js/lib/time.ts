@@ -9,10 +9,25 @@ export function timeAgo(dateStr: string): string {
     const months = Math.round(diff / 2592000000);
     const years = Math.round(diff / 31536000000);
 
-    if (Math.abs(seconds) < 60) return rtf.format(seconds, 'second');
-    if (Math.abs(minutes) < 60) return rtf.format(minutes, 'minute');
-    if (Math.abs(hours) < 24) return rtf.format(hours, 'hour');
-    if (Math.abs(days) < 30) return rtf.format(days, 'day');
-    if (Math.abs(months) < 12) return rtf.format(months, 'month');
+    if (Math.abs(seconds) < 60) {
+        return rtf.format(seconds, 'second');
+    }
+
+    if (Math.abs(minutes) < 60) {
+        return rtf.format(minutes, 'minute');
+    }
+
+    if (Math.abs(hours) < 24) {
+        return rtf.format(hours, 'hour');
+    }
+
+    if (Math.abs(days) < 30) {
+        return rtf.format(days, 'day');
+    }
+
+    if (Math.abs(months) < 12) {
+        return rtf.format(months, 'month');
+    }
+
     return rtf.format(years, 'year');
 }

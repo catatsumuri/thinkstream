@@ -264,7 +264,9 @@ function RestorePreviewPanel({
                     </span>
                 </div>
                 <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-                    <div>{restorePreview.totals.namespace_count} namespaces</div>
+                    <div>
+                        {restorePreview.totals.namespace_count} namespaces
+                    </div>
                     <div>
                         {restorePreview.totals.new_namespace_count} new /{' '}
                         {restorePreview.totals.existing_namespace_count}{' '}
@@ -363,7 +365,10 @@ function RestorePreviewPanel({
                 >
                     {isComplete ? 'Close' : 'Cancel'}
                 </Button>
-                <Button onClick={startRestore} disabled={isRestoring || isComplete}>
+                <Button
+                    onClick={startRestore}
+                    disabled={isRestoring || isComplete}
+                >
                     <Upload className="size-4" />
                     {isRestoring
                         ? 'Restoring...'

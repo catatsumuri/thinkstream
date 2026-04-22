@@ -131,9 +131,11 @@ export default function TableOfContents({
         (id: string) => (e: React.MouseEvent<HTMLAnchorElement>) => {
             e.preventDefault();
             const target = document.getElementById(id);
+
             if (target) {
                 target.scrollIntoView({ block: 'start' });
             }
+
             window.history.pushState(null, '', `#${encodeURIComponent(id)}`);
             setActiveId(id);
         };
