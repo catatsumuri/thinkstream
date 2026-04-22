@@ -168,31 +168,19 @@ function DeleteNamespaceDialog({ namespace }: { namespace: Namespace }) {
     );
 }
 
-function RestoreNamespacesDialog({
-    restoreUploadUrl,
+function RestorePreviewPanel({
     restorePreview,
+    hasOverwriteTargets,
+    clearPreview,
 }: {
-    restoreUploadUrl: string;
-    restorePreview: RestorePreview | null;
+    restorePreview: RestorePreview;
+    hasOverwriteTargets: boolean;
+    clearPreview: () => void;
 }) {
-    const [open, setOpen] = useState(false);
     const [logs, setLogs] = useState<RestoreLog[]>([]);
     const [isRestoring, setIsRestoring] = useState(false);
     const [isComplete, setIsComplete] = useState(false);
-    const [isDraggingBackup, setIsDraggingBackup] = useState(false);
     const eventSourceRef = useRef<EventSource | null>(null);
-    const backupInputRef = useRef<HTMLInputElement | null>(null);
-    const dragCounterRef = useRef(0);
-    const uploadForm = useForm<{ backup: File | null }>({ backup: null });
-
-    useEffect(() => {
-        if (restorePreview) {
-            setOpen(true);
-            setLogs([]);
-            setIsRestoring(false);
-            setIsComplete(false);
-        }
-    }, [restorePreview?.token]);
 
     useEffect(() => {
         return () => {
@@ -200,82 +188,8 @@ function RestoreNamespacesDialog({
         };
     }, []);
 
-    const hasOverwriteTargets =
-        (restorePreview?.totals.existing_namespace_count ?? 0) > 0 ||
-        (restorePreview?.totals.existing_post_count ?? 0) > 0;
-
-    function clearPreview() {
-        router.get(index.url(), undefined, {
-            preserveScroll: true,
-            replace: true,
-        });
-    }
-
-    function handleOpenChange(nextOpen: boolean) {
-        if (isRestoring) {
-            return;
-        }
-
-        setOpen(nextOpen);
-
-        if (!nextOpen && restorePreview) {
-            clearPreview();
-        }
-    }
-
-    function uploadBackup() {
-        uploadForm.post(restoreUploadUrl, {
-            forceFormData: true,
-            preserveScroll: true,
-            onSuccess: () => uploadForm.reset('backup'),
-        });
-    }
-
-    function handleBackupFile(file: File | null) {
-        if (!file) {
-            return;
-        }
-
-        const isZipFile =
-            file.type === 'application/zip' || file.name.endsWith('.zip');
-
-        if (!isZipFile) {
-            return;
-        }
-
-        uploadForm.setData('backup', file);
-
-        if (backupInputRef.current) {
-            const transfer = new DataTransfer();
-            transfer.items.add(file);
-            backupInputRef.current.files = transfer.files;
-        }
-    }
-
-    function handleDragEnter(event: React.DragEvent<HTMLDivElement>) {
-        event.preventDefault();
-        dragCounterRef.current++;
-        setIsDraggingBackup(true);
-    }
-
-    function handleDragLeave() {
-        dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
-
-        if (dragCounterRef.current === 0) {
-            setIsDraggingBackup(false);
-        }
-    }
-
-    function handleDrop(event: React.DragEvent<HTMLDivElement>) {
-        event.preventDefault();
-        dragCounterRef.current = 0;
-        setIsDraggingBackup(false);
-
-        handleBackupFile(event.dataTransfer.files[0] ?? null);
-    }
-
     function startRestore() {
-        if (!restorePreview || isRestoring) {
+        if (isRestoring) {
             return;
         }
 
@@ -336,7 +250,219 @@ function RestoreNamespacesDialog({
         };
     }
 
+    return (
+        <div className="space-y-5">
+            <div className="rounded-lg border bg-muted/30 p-4">
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                    <span className="font-medium">Root namespace:</span>
+                    <span>{restorePreview.root.name}</span>
+                    <span className="text-muted-foreground">
+                        /{restorePreview.root.full_path}
+                    </span>
+                    <span className="rounded-full bg-background px-2 py-0.5 text-xs">
+                        {restorePreview.root.status}
+                    </span>
+                </div>
+                <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
+                    <div>{restorePreview.totals.namespace_count} namespaces</div>
+                    <div>
+                        {restorePreview.totals.new_namespace_count} new /{' '}
+                        {restorePreview.totals.existing_namespace_count}{' '}
+                        existing
+                    </div>
+                    <div>
+                        {restorePreview.totals.post_count} posts (
+                        {restorePreview.totals.new_post_count} new /{' '}
+                        {restorePreview.totals.existing_post_count} existing)
+                    </div>
+                </div>
+            </div>
+
+            <div className="rounded-lg border bg-black p-3 font-mono text-xs text-green-400">
+                {logs.length === 0 ? (
+                    <div className="text-muted">
+                        {isRestoring
+                            ? 'Waiting for restore output...'
+                            : 'No restore output yet.'}
+                    </div>
+                ) : (
+                    <div className="max-h-56 space-y-1 overflow-auto">
+                        {logs.map((log) => (
+                            <div key={log.id}>
+                                [{log.type}] {log.message}
+                            </div>
+                        ))}
+                    </div>
+                )}
+            </div>
+
+            <div className="max-h-56 overflow-auto rounded-lg border">
+                <table className="w-full text-sm">
+                    <thead>
+                        <tr className="border-b bg-muted/50">
+                            <th className="px-4 py-2 text-left font-medium">
+                                Namespace
+                            </th>
+                            <th className="px-4 py-2 text-left font-medium">
+                                Status
+                            </th>
+                            <th className="px-4 py-2 text-left font-medium">
+                                Posts
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {restorePreview.namespaces.map((item) => (
+                            <tr
+                                key={item.full_path}
+                                className="border-b last:border-0"
+                            >
+                                <td className="px-4 py-2">
+                                    <div className="font-medium">
+                                        {item.name}
+                                    </div>
+                                    <div className="text-xs text-muted-foreground">
+                                        /{item.full_path}
+                                    </div>
+                                </td>
+                                <td className="px-4 py-2">
+                                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground capitalize">
+                                        {item.status}
+                                    </span>
+                                </td>
+                                <td className="px-4 py-2 text-muted-foreground">
+                                    {item.post_count} total /{' '}
+                                    {item.new_post_count} new /{' '}
+                                    {item.existing_post_count} existing
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <DialogDescription className="space-y-2">
+                {hasOverwriteTargets ? (
+                    <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                        Existing namespaces and posts matched by backup path
+                        will be overwritten by this restore.
+                    </div>
+                ) : (
+                    <p>
+                        Existing namespaces and posts will be overwritten when
+                        their backup paths match.
+                    </p>
+                )}
+            </DialogDescription>
+
+            <DialogFooter className="gap-2">
+                <Button
+                    variant="secondary"
+                    onClick={clearPreview}
+                    disabled={isRestoring}
+                >
+                    {isComplete ? 'Close' : 'Cancel'}
+                </Button>
+                <Button onClick={startRestore} disabled={isRestoring || isComplete}>
+                    <Upload className="size-4" />
+                    {isRestoring
+                        ? 'Restoring...'
+                        : isComplete
+                          ? 'Restore Complete'
+                          : 'Run Restore'}
+                </Button>
+            </DialogFooter>
+        </div>
+    );
+}
+
+function RestoreNamespacesDialog({
+    restoreUploadUrl,
+    restorePreview,
+}: {
+    restoreUploadUrl: string;
+    restorePreview: RestorePreview | null;
+}) {
+    const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
+    const [isDraggingBackup, setIsDraggingBackup] = useState(false);
+    const backupInputRef = useRef<HTMLInputElement | null>(null);
+    const dragCounterRef = useRef(0);
+    const uploadForm = useForm<{ backup: File | null }>({ backup: null });
+
+    const hasOverwriteTargets =
+        (restorePreview?.totals.existing_namespace_count ?? 0) > 0 ||
+        (restorePreview?.totals.existing_post_count ?? 0) > 0;
+    const open = restorePreview !== null || isUploadDialogOpen;
+
+    function clearPreview() {
+        router.get(index.url(), undefined, {
+            preserveScroll: true,
+            replace: true,
+        });
+    }
+
+    function handleOpenChange(nextOpen: boolean) {
+        if (!nextOpen && restorePreview) {
+            clearPreview();
+
+            return;
+        }
+
+        setIsUploadDialogOpen(nextOpen);
+    }
+
     const hasErrors = Object.keys(uploadForm.errors).length > 0;
+
+    function uploadBackup() {
+        uploadForm.post(restoreUploadUrl, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => uploadForm.reset('backup'),
+        });
+    }
+
+    function handleBackupFile(file: File | null) {
+        if (!file) {
+            return;
+        }
+
+        const isZipFile =
+            file.type === 'application/zip' || file.name.endsWith('.zip');
+
+        if (!isZipFile) {
+            return;
+        }
+
+        uploadForm.setData('backup', file);
+
+        if (backupInputRef.current) {
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            backupInputRef.current.files = transfer.files;
+        }
+    }
+
+    function handleDragEnter(event: React.DragEvent<HTMLDivElement>) {
+        event.preventDefault();
+        dragCounterRef.current++;
+        setIsDraggingBackup(true);
+    }
+
+    function handleDragLeave() {
+        dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+
+        if (dragCounterRef.current === 0) {
+            setIsDraggingBackup(false);
+        }
+    }
+
+    function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+        event.preventDefault();
+        dragCounterRef.current = 0;
+        setIsDraggingBackup(false);
+
+        handleBackupFile(event.dataTransfer.files[0] ?? null);
+    }
 
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -353,145 +479,15 @@ function RestoreNamespacesDialog({
                         Upload a namespace backup zip from the root namespace
                         dashboard.
                     </p>
-                    {hasOverwriteTargets ? (
-                        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-                            Existing namespaces and posts matched by backup path
-                            will be overwritten by this restore.
-                        </div>
-                    ) : (
-                        <p>
-                            Existing namespaces and posts will be overwritten
-                            when their backup paths match.
-                        </p>
-                    )}
                 </DialogDescription>
 
                 {restorePreview ? (
-                    <div className="space-y-5">
-                        <div className="rounded-lg border bg-muted/30 p-4">
-                            <div className="flex flex-wrap items-center gap-2 text-sm">
-                                <span className="font-medium">
-                                    Root namespace:
-                                </span>
-                                <span>{restorePreview.root.name}</span>
-                                <span className="text-muted-foreground">
-                                    /{restorePreview.root.full_path}
-                                </span>
-                                <span className="rounded-full bg-background px-2 py-0.5 text-xs">
-                                    {restorePreview.root.status}
-                                </span>
-                            </div>
-                            <div className="mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-3">
-                                <div>
-                                    {restorePreview.totals.namespace_count}{' '}
-                                    namespaces
-                                </div>
-                                <div>
-                                    {restorePreview.totals.new_namespace_count}{' '}
-                                    new /{' '}
-                                    {
-                                        restorePreview.totals
-                                            .existing_namespace_count
-                                    }{' '}
-                                    existing
-                                </div>
-                                <div>
-                                    {restorePreview.totals.post_count} posts (
-                                    {restorePreview.totals.new_post_count} new /{' '}
-                                    {restorePreview.totals.existing_post_count}{' '}
-                                    existing)
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="max-h-56 overflow-auto rounded-lg border">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b bg-muted/50">
-                                        <th className="px-4 py-2 text-left font-medium">
-                                            Namespace
-                                        </th>
-                                        <th className="px-4 py-2 text-left font-medium">
-                                            Status
-                                        </th>
-                                        <th className="px-4 py-2 text-left font-medium">
-                                            Posts
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {restorePreview.namespaces.map((item) => (
-                                        <tr
-                                            key={item.full_path}
-                                            className="border-b last:border-0"
-                                        >
-                                            <td className="px-4 py-2">
-                                                <div className="font-medium">
-                                                    {item.name}
-                                                </div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    /{item.full_path}
-                                                </div>
-                                            </td>
-                                            <td className="px-4 py-2">
-                                                <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground capitalize">
-                                                    {item.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-4 py-2 text-muted-foreground">
-                                                {item.post_count} total /{' '}
-                                                {item.new_post_count} new /{' '}
-                                                {item.existing_post_count}{' '}
-                                                existing
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div className="rounded-lg border bg-black p-3 font-mono text-xs text-green-400">
-                            {logs.length === 0 ? (
-                                <div className="text-muted">
-                                    {isRestoring
-                                        ? 'Waiting for restore output...'
-                                        : 'No restore output yet.'}
-                                </div>
-                            ) : (
-                                <div className="max-h-56 space-y-1 overflow-auto">
-                                    {logs.map((log) => (
-                                        <div key={log.id}>
-                                            [{log.type}] {log.message}
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        <DialogFooter className="gap-2">
-                            <Button
-                                variant="secondary"
-                                onClick={() => {
-                                    setOpen(false);
-                                    clearPreview();
-                                }}
-                                disabled={isRestoring}
-                            >
-                                {isComplete ? 'Close' : 'Cancel'}
-                            </Button>
-                            <Button
-                                onClick={startRestore}
-                                disabled={isRestoring || isComplete}
-                            >
-                                <Upload className="size-4" />
-                                {isRestoring
-                                    ? 'Restoring...'
-                                    : isComplete
-                                      ? 'Restore Complete'
-                                      : 'Run Restore'}
-                            </Button>
-                        </DialogFooter>
-                    </div>
+                    <RestorePreviewPanel
+                        key={restorePreview.token}
+                        restorePreview={restorePreview}
+                        hasOverwriteTargets={hasOverwriteTargets}
+                        clearPreview={clearPreview}
+                    />
                 ) : (
                     <form
                         onSubmit={(event) => {
