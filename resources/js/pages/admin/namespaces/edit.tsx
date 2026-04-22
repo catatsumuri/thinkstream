@@ -1,5 +1,4 @@
 import { Head, setLayoutProps, useForm } from '@inertiajs/react';
-import { useMemo } from 'react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import CoverImageDropzone from '@/components/cover-image-dropzone';
 import InputError from '@/components/input-error';
@@ -7,8 +6,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes';
-import { edit } from '@/routes/admin/namespaces';
-import { index as postsIndex } from '@/routes/admin/posts';
+import {
+    index as namespacesIndex,
+    namespace as namespaceRoute,
+} from '@/routes/admin/posts';
+
+type Ancestor = {
+    id: number;
+    name: string;
+};
 
 type Namespace = {
     id: number;
@@ -19,20 +25,23 @@ type Namespace = {
     cover_image_url: string | null;
 };
 
-export default function Edit({ namespace }: { namespace: Namespace }) {
-    const returnTo = useMemo(() => {
-        if (typeof window === 'undefined') {
-            return null;
-        }
-
-        return new URLSearchParams(window.location.search).get('return_to');
-    }, []);
-
+export default function Edit({
+    ancestors,
+    namespace,
+}: {
+    ancestors: Ancestor[];
+    namespace: Namespace;
+}) {
     setLayoutProps({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
-            { title: 'Posts', href: postsIndex.url() },
-            { title: namespace.name, href: edit.url(namespace.id) },
+            { title: 'Namespaces', href: namespacesIndex.url() },
+            ...ancestors.map((ancestor) => ({
+                title: ancestor.name,
+                href: namespaceRoute.url(ancestor.id),
+            })),
+            { title: namespace.name, href: namespaceRoute.url(namespace.id) },
+            { title: 'Edit' },
         ],
     });
 
@@ -43,7 +52,6 @@ export default function Edit({ namespace }: { namespace: Namespace }) {
         description: string;
         is_published: boolean;
         cover_image: File | null;
-        return_to: string;
     }>({
         _method: 'put',
         name: namespace.name,
@@ -51,7 +59,6 @@ export default function Edit({ namespace }: { namespace: Namespace }) {
         description: namespace.description ?? '',
         is_published: namespace.is_published,
         cover_image: null,
-        return_to: returnTo ?? '',
     });
 
     function submit(e: React.FormEvent) {
@@ -126,6 +133,9 @@ export default function Edit({ namespace }: { namespace: Namespace }) {
                             onChange={(file) => setData('cover_image', file)}
                             error={errors.cover_image}
                         />
+                        <p className="text-xs text-muted-foreground">
+                            Saved with 16:9 cropping. Recommended size is at least 1600x900.
+                        </p>
                     </div>
 
                     <div className="flex items-center gap-2">
@@ -146,7 +156,7 @@ export default function Edit({ namespace }: { namespace: Namespace }) {
                             Save Changes
                         </Button>
                         <Button type="button" variant="outline" asChild>
-                            <a href={returnTo ?? postsIndex.url()}>Cancel</a>
+                            <a href={namespaceRoute.url(namespace.id)}>Cancel</a>
                         </Button>
                     </div>
                 </form>
