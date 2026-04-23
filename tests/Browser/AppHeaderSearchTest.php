@@ -41,7 +41,7 @@ test('app header search submits to the work in progress results page', function 
         ->click('[data-test="app-header-search-toggle"]')
         ->assertPresent('[data-test="search-popover-panel"]')
         ->assertPresent('[data-test="search-popover-input"]')
-        ->assertSee('Open a quick search window from the current page.');
+        ->assertSee('Search posts');
 
     expect($page->script(<<<'JS'
         (() => {
@@ -67,4 +67,28 @@ test('app header search submits to the work in progress results page', function 
         ->assertPresent('[data-test="search-results-list"]')
         ->assertPresent('[data-test="search-result-1"]')
         ->assertValue('[data-test="search-page-input"]', 'markdown');
+});
+
+test('app header search opens with keyboard shortcut', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    $page = visit(route('dashboard', absolute: false))->resize(1440, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertNotPresent('[data-test="search-popover-panel"]');
+
+    $page->script(<<<'JS'
+        document.dispatchEvent(new KeyboardEvent('keydown', {
+            key: 'k',
+            ctrlKey: true,
+            bubbles: true,
+        }));
+    JS);
+
+    $page
+        ->assertPresent('[data-test="search-popover-panel"]')
+        ->assertPresent('[data-test="search-popover-input"]');
 });

@@ -11,6 +11,26 @@ The current product axis is:
 
 Markdown rendering matters here, but it is supporting infrastructure for the content and publishing model, not the product's main story.
 
+## Search status
+
+Search is currently in a provisional state.
+
+- the public search UI exists
+- `laravel/scout` is installed and configured with the built-in `database` engine
+- `teamtnt/laravel-scout-tntsearch-driver` was evaluated but is not being adopted for now
+
+Why TNTSearch is paused:
+
+- as of 2026-04-23, the published Scout TNTSearch driver does not support Laravel 13 / Illuminate 13 in this app
+- a possible upstream PR exists on the TNTSearch side, but that alone does not remove the Laravel 13 compatibility gap in the Scout driver
+- the project is intentionally avoiding a temporary fork or patch-only dependency path for now
+
+If search work resumes later, the preferred order is:
+
+1. use Scout's database engine for simple search with minimal operational cost
+2. revisit TNTSearch only if Laravel 13-compatible Scout support is released or maintained locally on purpose
+3. move to Meilisearch only if the product needs typo tolerance and higher-end search UX badly enough to justify another service
+
 ## Core content model
 
 ThinkStream currently revolves around two models:

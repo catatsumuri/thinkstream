@@ -135,7 +135,7 @@ test('search page can be narrowed to guides namespace', function () {
         );
 });
 
-test('non guides namespace returns no dummy results', function () {
+test('search page can return recent results from another namespace', function () {
     $user = User::factory()->create();
     PostNamespace::factory()->create([
         'name' => 'Guides',
@@ -152,12 +152,91 @@ test('non guides namespace returns no dummy results', function () {
         'parent_id' => null,
     ]);
 
+    $post = Post::factory()->published()->create([
+        'namespace_id' => PostNamespace::query()->where('full_path', 'operations')->value('id'),
+        'title' => 'Operations Guide',
+        'slug' => 'operations-guide',
+        'full_path' => 'operations/guide',
+        'content' => 'Operations content.',
+    ]);
+
     $this->actingAs($user)
         ->get(route('search', ['namespace' => 'operations']))
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page
             ->component('search/index')
             ->where('namespace', 'operations')
+            ->has('results', 1)
+            ->where('results.0.id', $post->id)
+            ->where('results.0.path', '/operations/operations-guide')
+        );
+});
+
+test('search page treats namespace wildcards as literal characters', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'name' => 'Guides One',
+        'slug' => 'guides1',
+        'full_path' => 'guides1',
+        'is_published' => true,
+        'parent_id' => null,
+    ]);
+
+    Post::factory()->for($namespace, 'namespace')->published()->create([
+        'title' => 'Guides One Post',
+        'slug' => 'intro',
+        'full_path' => 'guides1/intro',
+        'content' => 'Guides one content.',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('search', ['namespace' => 'guides_']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('search/index')
+            ->where('namespace', 'guides_')
             ->has('results', 0)
+        );
+});
+
+test('search page excludes draft and scheduled posts from scout results', function () {
+    $user = User::factory()->create();
+    $guides = PostNamespace::factory()->create([
+        'name' => 'Guides',
+        'slug' => 'guides',
+        'full_path' => 'guides',
+        'is_published' => true,
+        'parent_id' => null,
+    ]);
+
+    Post::factory()->for($guides, 'namespace')->published()->create([
+        'title' => 'Published Markdown Guide',
+        'slug' => 'published-markdown-guide',
+        'full_path' => 'guides/published-markdown-guide',
+        'content' => 'Published markdown content.',
+    ]);
+
+    Post::factory()->for($guides, 'namespace')->draft()->create([
+        'title' => 'Draft Markdown Guide',
+        'slug' => 'draft-markdown-guide',
+        'full_path' => 'guides/draft-markdown-guide',
+        'content' => 'Draft markdown content.',
+    ]);
+
+    Post::factory()->for($guides, 'namespace')->scheduled()->create([
+        'title' => 'Scheduled Markdown Guide',
+        'slug' => 'scheduled-markdown-guide',
+        'full_path' => 'guides/scheduled-markdown-guide',
+        'content' => 'Scheduled markdown content.',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('search', ['q' => 'markdown']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('search/index')
+            ->where('query', 'markdown')
+            ->has('results', 1)
+            ->where('results.0.page', 'Published Markdown Guide')
         );
 });

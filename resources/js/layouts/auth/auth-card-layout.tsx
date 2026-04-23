@@ -25,9 +25,13 @@ export default function AuthCardLayout({
                 <Link
                     href={home()}
                     className="flex items-center gap-2 self-center font-medium"
+                    aria-label="Go to home"
                 >
-                    <div className="flex h-9 w-9 items-center justify-center">
-                        <AppLogoIcon className="size-9 fill-current text-black dark:text-white" />
+                    <div className="flex size-12 items-center justify-center rounded-2xl bg-white p-1.5 shadow-sm ring-1 ring-black/5">
+                        <AppLogoIcon
+                            className="h-full w-full object-contain"
+                            alt="ThinkStream logo"
+                        />
                     </div>
                 </Link>
 
