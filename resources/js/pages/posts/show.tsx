@@ -1,34 +1,51 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     AlertTriangle,
-    ArrowRightLeft,
+    BookOpen,
     ChevronRight,
+    List,
     PanelLeftClose,
     PanelLeftOpen,
-    PanelRightClose,
-    PanelRightOpen,
-    Search,
+    X,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { siX } from 'simple-icons';
 import type { ContentNavNode } from '@/components/content-nav-tree';
 import ContentNavTree from '@/components/content-nav-tree';
+import DocsHeaderActions from '@/components/docs-header-actions';
 import MarkdownContent from '@/components/markdown-content';
 import MarkdownPageActions from '@/components/markdown-page-actions';
-import SearchPopover from '@/components/search-popover';
 import TableOfContents from '@/components/table-of-contents';
 import { Button } from '@/components/ui/button';
-import ViewContextBadge from '@/components/view-context-badge';
+import {
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import { useBelowDesktop } from '@/hooks/use-below-desktop';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
-import { useIsMobile } from '@/hooks/use-mobile';
-import { login } from '@/routes';
 import {
     edit as adminPostEdit,
     show as adminPostShow,
 } from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
 import { markdown as contentPathMarkdown } from '@/routes/posts/path';
+
+const postDateFormatter = new Intl.DateTimeFormat('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
+});
+
+const postDateTimeFormatter = new Intl.DateTimeFormat('en-US', {
+    dateStyle: 'long',
+    timeStyle: 'short',
+    timeZone: 'UTC',
+});
 
 type PostNamespace = {
     id: number;
@@ -142,7 +159,13 @@ export default function Show({
         thinkstream: { markdown_pages: { enabled: boolean } };
     }>().props;
     const { currentUrl } = useCurrentUrl();
+    const isBelowDesktop = useBelowDesktop();
     const markdownPagesEnabled = thinkstream.markdown_pages.enabled;
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
+    const [mobileTocOpen, setMobileTocOpen] = useState(false);
+    const [tocOverride, setTocOverride] = useState<boolean | null>(null);
+    const [navOverride, setNavOverride] = useState<boolean | null>(null);
+
     const handleEditHeading = ({
         level,
         text,
@@ -170,10 +193,12 @@ export default function Show({
             ),
         );
     };
+
     const tocPosts = useMemo(
         () => [{ slug: post.slug, content: post.content }],
         [post.content, post.slug],
     );
+
     const toc = useMarkdownToc(
         tocPosts,
         auth.user
@@ -183,27 +208,28 @@ export default function Show({
               }
             : {},
     );
+
     const entry = toc.get(post.slug);
-    const isMobile = useIsMobile();
-    const [tocOverride, setTocOverride] = useState<boolean | null>(null);
-    const [navOverride, setNavOverride] = useState<boolean | null>(null);
     const markdownUrl = contentPathMarkdown.url({ path: post.full_path });
-    const tocVisible = tocOverride ?? !isMobile;
     const hasNav = navRoot.children.length > 0 || navRoot.posts.length > 0;
     const hasHeadings = (entry?.headings.length ?? 0) > 0;
-    const navVisible = navOverride ?? !isMobile;
+    const navVisible = navOverride ?? true;
+    const tocVisible = tocOverride ?? true;
+    const showDesktopSidebars = !isBelowDesktop;
+    const showDesktopNav = showDesktopSidebars && hasNav;
+    const showDesktopToc = showDesktopSidebars && tocVisible && hasHeadings;
 
     let gridCols = '';
 
-    if (hasNav && navVisible && tocVisible && hasHeadings) {
-        gridCols = 'lg:grid-cols-[220px_1fr_240px]';
-    } else if (hasNav && navVisible) {
-        gridCols = 'lg:grid-cols-[220px_1fr]';
-    } else if (hasNav && !navVisible && tocVisible && hasHeadings) {
+    if (showDesktopNav && navVisible && showDesktopToc) {
+        gridCols = 'lg:grid-cols-[240px_1fr_240px]';
+    } else if (showDesktopNav && navVisible) {
+        gridCols = 'lg:grid-cols-[240px_1fr]';
+    } else if (showDesktopNav && !navVisible && showDesktopToc) {
         gridCols = 'lg:grid-cols-[40px_1fr_240px]';
-    } else if (hasNav && !navVisible) {
+    } else if (showDesktopNav && !navVisible) {
         gridCols = 'lg:grid-cols-[40px_1fr]';
-    } else if (tocVisible && hasHeadings) {
+    } else if (showDesktopToc) {
         gridCols = 'lg:grid-cols-[1fr_240px]';
     }
 
@@ -258,12 +284,11 @@ export default function Show({
                                         <span className="font-normal opacity-80">
                                             Publishes on{' '}
                                             {preview.published_at &&
-                                                new Date(
-                                                    preview.published_at,
-                                                ).toLocaleString(undefined, {
-                                                    dateStyle: 'long',
-                                                    timeStyle: 'short',
-                                                })}
+                                                postDateTimeFormatter.format(
+                                                    new Date(
+                                                        preview.published_at,
+                                                    ),
+                                                )}
                                             . Only logged-in users can see this
                                             preview.
                                         </span>
@@ -273,6 +298,7 @@ export default function Show({
                         </div>
                     </div>
                 )}
+
                 {namespace.cover_image_url && (
                     <div className="h-48 w-full overflow-hidden md:h-64">
                         <img
@@ -282,147 +308,180 @@ export default function Show({
                         />
                     </div>
                 )}
-                <header className="sticky top-0 z-50 border-b bg-background">
-                    <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6">
-                        <div className="flex flex-wrap items-center gap-2">
+
+                <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur">
+                    <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 lg:py-6">
+                        <div className="flex min-w-0 items-center gap-2">
                             <Link
                                 href="/"
-                                className="text-2xl font-bold hover:underline"
+                                className="shrink-0 text-2xl font-bold hover:underline"
                             >
                                 ThinkStream
                             </Link>
-                            {breadcrumbs.map((breadcrumb) => (
-                                <div
-                                    key={breadcrumb.full_path}
-                                    className="flex items-center gap-2 text-sm text-muted-foreground"
-                                >
-                                    <ChevronRight className="size-4" />
+                            <div className="hidden min-w-0 items-center gap-2 lg:flex">
+                                {breadcrumbs.map((breadcrumb) => (
+                                    <div
+                                        key={breadcrumb.full_path}
+                                        className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground"
+                                    >
+                                        <ChevronRight className="size-4 shrink-0" />
+                                        <Link
+                                            href={contentPath.url(
+                                                breadcrumb.full_path,
+                                            )}
+                                            className="truncate hover:text-foreground hover:underline"
+                                        >
+                                            {breadcrumb.name}
+                                        </Link>
+                                    </div>
+                                ))}
+                                <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                                    <ChevronRight className="size-4 shrink-0" />
                                     <Link
                                         href={contentPath.url(
-                                            breadcrumb.full_path,
+                                            namespace.full_path,
                                         )}
-                                        className="hover:text-foreground hover:underline"
+                                        className="truncate hover:text-foreground hover:underline"
                                     >
-                                        {breadcrumb.name}
+                                        {namespace.name}
                                     </Link>
                                 </div>
-                            ))}
-                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                <ChevronRight className="size-4" />
-                                <Link
-                                    href={contentPath.url(namespace.full_path)}
-                                    className="hover:text-foreground hover:underline"
-                                >
-                                    {namespace.name}
-                                </Link>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                            {hasHeadings && (
-                                <button
-                                    onClick={() =>
-                                        setTocOverride(
-                                            (prev) => !(prev ?? !isMobile),
-                                        )
-                                    }
-                                    className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    {tocVisible ? (
-                                        <PanelRightClose size={16} />
-                                    ) : (
-                                        <PanelRightOpen size={16} />
-                                    )}
-                                    Toggle TOC
-                                </button>
-                            )}
-                            {hasNav && (
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setNavOverride(
-                                            (prev) => !(prev ?? !isMobile),
-                                        )
-                                    }
-                                    className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    {navVisible ? (
-                                        <PanelLeftClose size={16} />
-                                    ) : (
-                                        <PanelLeftOpen size={16} />
-                                    )}
-                                    Toggle Nav
-                                </button>
-                            )}
-                            <SearchPopover
-                                align="right"
-                                defaultNamespace={navRoot.full_path}
-                                trigger={
-                                    <Button variant="outline" size="sm">
-                                        <Search className="size-4" />
-                                        Search
-                                    </Button>
-                                }
-                            />
-                            {auth.user ? (
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <Button asChild variant="default" size="sm">
-                                        <Link
-                                            href={adminPostShow.url({
-                                                namespace: namespace.id,
-                                                post: post.slug,
-                                            })}
-                                            className="inline-flex items-center gap-1.5"
-                                        >
-                                            <ArrowRightLeft className="size-4" />
-                                            Manage
-                                        </Link>
-                                    </Button>
-                                    <ViewContextBadge
-                                        label="Site View"
-                                        variant="site"
-                                    />
-                                </div>
-                            ) : (
-                                <Button asChild variant="outline" size="sm">
-                                    <Link
-                                        href={login.url({
-                                            query: { intended: currentUrl },
-                                        })}
-                                    >
-                                        Login
-                                    </Link>
-                                </Button>
-                            )}
+
+                        <DocsHeaderActions
+                            authUser={auth.user}
+                            currentUrl={currentUrl}
+                            defaultNamespace={navRoot.full_path}
+                            manageHref={adminPostShow.url({
+                                namespace: namespace.id,
+                                post: post.slug,
+                            })}
+                            hasNav={hasNav}
+                            navVisible={navVisible}
+                            onToggleNav={() =>
+                                setNavOverride((prev) => !(prev ?? true))
+                            }
+                            hasHeadings={hasHeadings}
+                            tocVisible={tocVisible}
+                            onToggleToc={() =>
+                                setTocOverride((prev) => !(prev ?? true))
+                            }
+                            onOpenMobileNav={() => setMobileNavOpen(true)}
+                            onOpenMobileToc={() => setMobileTocOpen(true)}
+                        />
+                    </div>
+
+                    <div className="border-t px-4 py-3 lg:hidden">
+                        <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                            <ChevronRight className="size-4 shrink-0" />
+                            <span className="truncate">{navRoot.name}</span>
+                            <ChevronRight className="size-4 shrink-0" />
+                            <span className="truncate">{post.title}</span>
                         </div>
                     </div>
                 </header>
+
+                <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+                    <SheetContent side="left" className="w-[280px] p-0">
+                        <SheetHeader className="border-b border-border/60 px-4 py-3">
+                            <SheetTitle className="flex items-center gap-2 text-base">
+                                <BookOpen className="size-4 text-primary" />
+                                {navRoot.name}
+                            </SheetTitle>
+                        </SheetHeader>
+                        <div className="flex-1 overflow-y-auto overscroll-contain p-4">
+                            <ContentNavTree
+                                currentPath={post.full_path}
+                                root={navRoot}
+                                onNavigate={() => setMobileNavOpen(false)}
+                            />
+                        </div>
+                        <div className="border-t border-border/60 p-3">
+                            <SheetClose asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-start gap-2 text-muted-foreground"
+                                >
+                                    <X className="size-3.5" />
+                                    Close
+                                </Button>
+                            </SheetClose>
+                        </div>
+                    </SheetContent>
+                </Sheet>
+
+                <Sheet open={mobileTocOpen} onOpenChange={setMobileTocOpen}>
+                    <SheetContent side="right" className="w-[280px] p-0">
+                        <SheetHeader className="border-b border-border/60 px-4 py-3">
+                            <SheetTitle className="flex items-center gap-2 text-base">
+                                <List className="size-4 text-primary" />
+                                On this page
+                            </SheetTitle>
+                        </SheetHeader>
+                        <div className="flex-1 overflow-y-auto overscroll-contain p-4">
+                            {hasHeadings && entry && (
+                                <TableOfContents
+                                    posts={[
+                                        {
+                                            id: post.id,
+                                            title: post.title,
+                                            slug: post.slug,
+                                            headings: entry.headings,
+                                        },
+                                    ]}
+                                    onNavigate={() => setMobileTocOpen(false)}
+                                />
+                            )}
+                        </div>
+                        <div className="border-t border-border/60 p-3">
+                            <SheetClose asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-start gap-2 text-muted-foreground"
+                                >
+                                    <X className="size-3.5" />
+                                    Close
+                                </Button>
+                            </SheetClose>
+                        </div>
+                    </SheetContent>
+                </Sheet>
 
                 <div
                     className={`mx-auto max-w-7xl px-4 py-10 ${gridCols ? `lg:grid lg:gap-12 ${gridCols}` : ''}`}
                 >
                     {hasNav && (
-                        <aside className="self-start lg:sticky lg:top-24">
+                        <aside className="hidden self-start lg:sticky lg:top-20 lg:block">
                             {navVisible ? (
-                                <div className="flex max-h-[calc(100vh-7rem)] flex-col text-sm">
-                                    <div className="mb-3 shrink-0">
+                                <div
+                                    data-test="content-nav-shell"
+                                    className="flex max-h-[calc(100vh-6rem)] flex-col text-sm"
+                                >
+                                    <div className="shrink-0 pb-4">
                                         <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                                             {navRoot.name}
                                         </p>
                                     </div>
-                                    <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+                                    <div
+                                        data-test="content-nav-scroll"
+                                        className="min-h-0 flex-1 overflow-y-auto overscroll-contain pr-3"
+                                    >
                                         <ContentNavTree
                                             currentPath={post.full_path}
                                             root={navRoot}
                                         />
                                     </div>
-                                    <div className="mt-4 shrink-0 border-t pt-3">
+                                    <div className="mt-6 shrink-0 border-t border-border/60 pt-4">
                                         <button
                                             type="button"
                                             data-test="posts-nav-close"
                                             onClick={() =>
                                                 setNavOverride(false)
                                             }
-                                            className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground"
+                                            className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                                         >
                                             <PanelLeftClose size={14} />
                                             Close
@@ -430,12 +489,12 @@ export default function Show({
                                     </div>
                                 </div>
                             ) : (
-                                <div>
+                                <div className="flex justify-center">
                                     <button
                                         type="button"
                                         data-test="posts-nav-open"
                                         onClick={() => setNavOverride(true)}
-                                        className="rounded p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                        className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                                         title="Open nav"
                                     >
                                         <PanelLeftOpen size={16} />
@@ -446,83 +505,80 @@ export default function Show({
                     )}
 
                     <main className="min-w-0">
-                        {tocVisible && hasHeadings && (
-                            <div className="mb-8 block lg:hidden">
-                                <TableOfContents
-                                    posts={[
-                                        {
-                                            id: post.id,
-                                            title: post.title,
-                                            slug: post.slug,
-                                            headings: entry!.headings,
-                                        },
-                                    ]}
-                                />
-                            </div>
-                        )}
                         <article className="space-y-4">
                             <header
                                 id={`post-${post.slug}`}
-                                className="scroll-mt-24 space-y-3"
+                                className="scroll-mt-24 space-y-4"
                             >
-                                <h1 className="text-3xl font-bold">
-                                    {post.title}
-                                </h1>
-                                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                                    <span>/{post.full_path}</span>
-                                    {markdownPagesEnabled && (
-                                        <MarkdownPageActions
-                                            markdownUrl={markdownUrl}
-                                        />
-                                    )}
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-muted-foreground">
-                                        Share:
-                                    </span>
-                                    <a
-                                        href={`https://x.com/intent/tweet?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(`${post.title} | ${navRoot.name}`)}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="rounded p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
-                                        title="Share on X"
+                                <div
+                                    data-test="post-title-row"
+                                    className="flex flex-wrap items-baseline gap-x-3 gap-y-2"
+                                >
+                                    <h1 className="text-3xl font-bold text-balance sm:text-4xl">
+                                        {post.title}
+                                    </h1>
+                                    <div
+                                        data-test="post-path-inline"
+                                        className="max-w-full text-sm text-muted-foreground"
                                     >
-                                        <svg
-                                            viewBox="0 0 24 24"
-                                            className="size-4 fill-current"
-                                            aria-hidden="true"
+                                        <span className="min-w-0 break-all sm:break-normal">
+                                            /{post.full_path}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="flex flex-col gap-3">
+                                    <div
+                                        data-test="post-header-actions"
+                                        className="flex flex-wrap items-center gap-2"
+                                    >
+                                        {markdownPagesEnabled && (
+                                            <MarkdownPageActions
+                                                markdownUrl={markdownUrl}
+                                            />
+                                        )}
+                                        <a
+                                            href={`https://x.com/intent/tweet?url=${encodeURIComponent(postUrl)}&text=${encodeURIComponent(`${post.title} | ${navRoot.name}`)}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border/60 px-2.5 text-xs text-muted-foreground shadow-none transition-colors hover:bg-accent hover:text-foreground"
+                                            title="Share on X"
                                         >
-                                            <path d={siX.path} />
-                                        </svg>
-                                    </a>
+                                            <svg
+                                                viewBox="0 0 24 24"
+                                                className="size-3.5 fill-current"
+                                                aria-hidden="true"
+                                            >
+                                                <path d={siX.path} />
+                                            </svg>
+                                            Share
+                                        </a>
+                                    </div>
                                 </div>
                             </header>
+
                             <div className="prose max-w-none prose-neutral dark:prose-invert">
                                 <MarkdownContent
                                     content={post.content}
                                     components={entry?.components}
                                 />
                             </div>
+
                             <footer className="border-t pt-4">
                                 <time
                                     dateTime={post.updated_at}
                                     className="text-sm text-muted-foreground"
                                 >
                                     Last updated:{' '}
-                                    {new Date(
-                                        post.updated_at,
-                                    ).toLocaleDateString('en-US', {
-                                        year: 'numeric',
-                                        month: 'long',
-                                        day: 'numeric',
-                                    })}
+                                    {postDateFormatter.format(
+                                        new Date(post.updated_at),
+                                    )}
                                 </time>
                             </footer>
                         </article>
                     </main>
 
                     {tocVisible && hasHeadings && (
-                        <aside className="hidden lg:block">
+                        <aside className="hidden self-start lg:sticky lg:top-20 lg:block">
                             <TableOfContents
                                 sticky
                                 posts={[

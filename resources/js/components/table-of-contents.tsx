@@ -18,9 +18,11 @@ type TocItem = {
 const ACTIVE_HEADING_OFFSET = 160;
 
 export default function TableOfContents({
+    onNavigate,
     posts,
     sticky = false,
 }: {
+    onNavigate?: () => void;
     posts: TocPost[];
     sticky?: boolean;
 }) {
@@ -138,6 +140,7 @@ export default function TableOfContents({
 
             window.history.pushState(null, '', `#${encodeURIComponent(id)}`);
             setActiveId(id);
+            onNavigate?.();
         };
 
     return (

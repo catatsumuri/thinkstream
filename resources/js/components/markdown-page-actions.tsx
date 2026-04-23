@@ -52,31 +52,37 @@ export default function MarkdownPageActions({ markdownUrl }: Props) {
 
     return (
         <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" asChild>
+            <Button
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5 border-border/60 px-2.5 text-xs text-muted-foreground shadow-none hover:text-foreground"
+                asChild
+            >
                 <a
                     href={markdownUrl}
                     target="_blank"
                     rel="noreferrer"
                     data-test="view-as-markdown"
                 >
-                    <FileText className="size-4" />
-                    View as Markdown
+                    <FileText className="size-3.5" />
+                    Markdown
                 </a>
             </Button>
             <Button
                 type="button"
                 variant="outline"
                 size="sm"
+                className="h-8 gap-1.5 border-border/60 px-2.5 text-xs text-muted-foreground shadow-none hover:text-foreground"
                 onClick={() => void handleCopy()}
                 disabled={copying}
                 data-test="copy-page-markdown"
             >
                 {copied ? (
-                    <Check className="size-4" />
+                    <Check className="size-3.5" />
                 ) : (
-                    <Copy className="size-4" />
+                    <Copy className="size-3.5" />
                 )}
-                Copy Page
+                {copied ? 'Copied' : 'Copy'}
             </Button>
         </div>
     );

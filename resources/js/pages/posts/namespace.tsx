@@ -1,24 +1,13 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import {
-    AlertTriangle,
-    ArrowRightLeft,
-    ChevronRight,
-    ImageOff,
-    PanelLeftClose,
-    PanelLeftOpen,
-    Search,
-} from 'lucide-react';
+import { AlertTriangle, ChevronRight, ImageOff } from 'lucide-react';
 import { useState } from 'react';
 import type { ContentNavNode } from '@/components/content-nav-tree';
 import ContentNavTree from '@/components/content-nav-tree';
+import DocsHeaderActions from '@/components/docs-header-actions';
 import MarkdownPageActions from '@/components/markdown-page-actions';
-import SearchPopover from '@/components/search-popover';
-import { Button } from '@/components/ui/button';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
-import ViewContextBadge from '@/components/view-context-badge';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useIsMobile } from '@/hooks/use-mobile';
-import { login } from '@/routes';
 import { namespace as adminNamespaceRoute } from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
 import { markdown as contentPathMarkdown } from '@/routes/posts/path';
@@ -101,95 +90,59 @@ export default function Namespace({
                         />
                     </div>
                 )}
-                <header className="sticky top-0 z-50 border-b bg-background">
-                    <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-4 py-6">
-                        <div className="space-y-2">
+                <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur">
+                    <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 lg:py-6">
+                        <div className="flex min-w-0 items-center gap-2">
                             <Link
                                 href="/"
-                                className="text-2xl font-bold hover:underline"
+                                className="shrink-0 text-2xl font-bold hover:underline"
                             >
                                 ThinkStream
                             </Link>
-                            <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+                            <div className="hidden min-w-0 items-center gap-2 lg:flex">
                                 {breadcrumbs.map((breadcrumb) => (
                                     <div
                                         key={breadcrumb.full_path}
-                                        className="flex items-center gap-2"
+                                        className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground"
                                     >
-                                        <ChevronRight className="size-4" />
+                                        <ChevronRight className="size-4 shrink-0" />
                                         <Link
                                             href={contentPath.url(
                                                 breadcrumb.full_path,
                                             )}
-                                            className="hover:text-foreground hover:underline"
+                                            className="truncate hover:text-foreground hover:underline"
                                         >
                                             {breadcrumb.name}
                                         </Link>
                                     </div>
                                 ))}
-                                <div className="flex items-center gap-2">
-                                    <ChevronRight className="size-4" />
-                                    <span className="font-medium text-foreground">
+                                <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                                    <ChevronRight className="size-4 shrink-0" />
+                                    <span className="truncate font-medium text-foreground">
                                         {namespace.name}
                                     </span>
                                 </div>
                             </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <button
-                                onClick={() =>
-                                    setNavOverride(
-                                        (prev) => !(prev ?? !isMobile),
-                                    )
-                                }
-                                className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                            >
-                                {navVisible ? (
-                                    <PanelLeftClose size={16} />
-                                ) : (
-                                    <PanelLeftOpen size={16} />
-                                )}
-                                Toggle Nav
-                            </button>
-                            <SearchPopover
-                                align="right"
-                                defaultNamespace={navRoot.full_path}
-                                trigger={
-                                    <Button variant="outline" size="sm">
-                                        <Search className="size-4" />
-                                        Search
-                                    </Button>
-                                }
-                            />
-                            {auth.user ? (
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <Button asChild variant="default" size="sm">
-                                        <Link
-                                            href={adminNamespaceRoute.url(
-                                                namespace.id,
-                                            )}
-                                            className="inline-flex items-center gap-1.5"
-                                        >
-                                            <ArrowRightLeft className="size-4" />
-                                            Manage
-                                        </Link>
-                                    </Button>
-                                    <ViewContextBadge
-                                        label="Site View"
-                                        variant="site"
-                                    />
-                                </div>
-                            ) : (
-                                <Button asChild variant="outline" size="sm">
-                                    <Link
-                                        href={login.url({
-                                            query: { intended: currentUrl },
-                                        })}
-                                    >
-                                        Login
-                                    </Link>
-                                </Button>
-                            )}
+                        <DocsHeaderActions
+                            authUser={auth.user}
+                            currentUrl={currentUrl}
+                            defaultNamespace={navRoot.full_path}
+                            manageHref={adminNamespaceRoute.url(namespace.id)}
+                            hasNav
+                            navVisible={navVisible}
+                            onToggleNav={() =>
+                                setNavOverride((prev) => !(prev ?? !isMobile))
+                            }
+                        />
+                    </div>
+
+                    <div className="border-t px-4 py-3 lg:hidden">
+                        <div className="flex min-w-0 items-center gap-2 text-sm text-muted-foreground">
+                            <ChevronRight className="size-4 shrink-0" />
+                            <span className="truncate">{navRoot.name}</span>
+                            <ChevronRight className="size-4 shrink-0" />
+                            <span className="truncate">{namespace.name}</span>
                         </div>
                     </div>
                 </header>
@@ -203,11 +156,19 @@ export default function Namespace({
                             data-test="namespace-nav"
                             className="mb-8 lg:mb-0 lg:block"
                         >
-                            <div className="lg:sticky lg:top-24">
-                                <p className="mb-3 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                    {navRoot.name}
-                                </p>
-                                <div className="max-h-[calc(100vh-7rem)] overflow-y-auto pr-1">
+                            <div
+                                data-test="content-nav-shell"
+                                className="lg:sticky lg:top-24"
+                            >
+                                <div className="pb-4">
+                                    <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                        {navRoot.name}
+                                    </p>
+                                </div>
+                                <div
+                                    data-test="content-nav-scroll"
+                                    className="max-h-[calc(100vh-7rem)] overflow-y-auto overscroll-contain pr-3"
+                                >
                                     <ContentNavTree
                                         currentPath={namespace.full_path}
                                         root={navRoot}
