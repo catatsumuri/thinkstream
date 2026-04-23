@@ -49,3 +49,6 @@ jobs:
 
       - name: Build frontend assets
         run: npm run build
+
+      - name: Type Check frontend
+        run: npm run types:check

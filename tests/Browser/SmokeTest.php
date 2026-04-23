@@ -12,7 +12,9 @@ uses(RefreshDatabase::class);
 test('top page loads', function () {
     $page = visit('/');
 
-    $page->assertSee('ThinkStream');
+    $page
+        ->assertSee('ThinkStream')
+        ->assertPresent('[data-test="docs-search-shortcut"]');
 });
 
 test('published post headings expose copyable anchor links', function () {
@@ -43,6 +45,37 @@ MARKDOWN,
             'href',
             '#anchor-post-section-title',
         );
+});
+
+test('post title row keeps the path inline without the path badge label', function () {
+    $post = Post::factory()->published()->create([
+        'slug' => 'inline-path-post',
+        'title' => 'Inline Path Post',
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const titleRow = document.querySelector('[data-test="post-title-row"]');
+            const inlinePath = document.querySelector('[data-test="post-path-inline"]');
+            const pathBadge = document.querySelector('[data-test="post-path-badge"]');
+
+            return {
+                hasTitleRow: !! titleRow,
+                hasInlinePath: !! inlinePath,
+                hasPathBadge: !! pathBadge,
+                titleRowText: titleRow?.textContent ?? null,
+                inlinePathText: inlinePath?.textContent?.trim() ?? null,
+            };
+        })()
+    JS))->toBe([
+        'hasTitleRow' => true,
+        'hasInlinePath' => true,
+        'hasPathBadge' => false,
+        'titleRowText' => "Inline Path Post/{$post->full_path}",
+        'inlinePathText' => '/'.$post->full_path,
+    ]);
 });
 
 test('formatted headings keep anchor ids and toc links in sync', function () {
@@ -172,7 +205,7 @@ test('table of contents supports encoded hashes for japanese headings', function
     JS))->toBeTrue();
 });
 
-test('post navigation toggle stays within the viewport after page scroll', function () {
+test('desktop sidebars stay sticky while the article scrolls', function () {
     $namespace = PostNamespace::factory()->create([
         'slug' => 'guides',
         'name' => 'Guides',
@@ -194,23 +227,55 @@ test('post navigation toggle stays within the viewport after page scroll', funct
 
     $page = visit(route('posts.path', ['path' => $currentPost->full_path]))->resize(1440, 1200);
 
-    $page
-        ->assertVisible('[data-test="posts-nav-close"]')
-        ->script('window.scrollTo(0, document.body.scrollHeight)');
+    $page->assertVisible('[data-test="posts-nav-close"]')
+        ->assertPresent('[data-test="content-nav-shell"]')
+        ->assertPresent('[data-test="table-of-contents"][data-sticky="true"]')
+        ->script('window.scrollTo(0, 1400)');
 
     expect($page->script(<<<'JS'
         (() => {
-            const button = document.querySelector('[data-test="posts-nav-close"]');
+            const shell = document.querySelector('[data-test="content-nav-shell"]');
+            const scroll = document.querySelector('[data-test="content-nav-scroll"]');
 
-            if (! button) {
+            if (! shell || ! scroll) {
                 return null;
             }
 
-            const rect = button.getBoundingClientRect();
+            const shellStyle = window.getComputedStyle(shell);
+            const scrollStyle = window.getComputedStyle(scroll);
 
-            return rect.top >= 0 && rect.bottom <= window.innerHeight;
+            return {
+                borderTopLeftRadius: shellStyle.borderTopLeftRadius,
+                borderTopWidth: shellStyle.borderTopWidth,
+                shellBackground: shellStyle.backgroundColor,
+                scrollOverflowY: scrollStyle.overflowY,
+            };
         })()
-    JS))->toBeTrue();
+    JS))->toBe([
+        'borderTopLeftRadius' => '0px',
+        'borderTopWidth' => '0px',
+        'shellBackground' => 'rgba(0, 0, 0, 0)',
+        'scrollOverflowY' => 'auto',
+    ]);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const leftSidebar = document.querySelector('[data-test="content-nav-shell"]');
+            const rightSidebar = document.querySelector('[data-test="table-of-contents"][data-sticky="true"]');
+
+            if (! leftSidebar || ! rightSidebar) {
+                return null;
+            }
+
+            return {
+                leftTop: Math.round(leftSidebar.getBoundingClientRect().top),
+                rightTop: Math.round(rightSidebar.getBoundingClientRect().top),
+            };
+        })()
+    JS))->toBe([
+        'leftTop' => 80,
+        'rightTop' => 80,
+    ]);
 
     $page
         ->click('Close')
@@ -224,11 +289,129 @@ test('post navigation toggle stays within the viewport after page scroll', funct
                 return null;
             }
 
-            const rect = button.getBoundingClientRect();
-
-            return rect.top >= 0 && rect.bottom <= window.innerHeight;
+            return button.offsetParent !== null;
         })()
     JS))->toBeTrue();
+});
+
+test('post navigation folders can be expanded from the sidebar', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'docs',
+        'name' => 'Docs',
+        'description' => 'Documentation root.',
+        'is_published' => true,
+    ]);
+
+    $childNamespace = PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'installation',
+        'name' => 'Installation',
+        'description' => 'Installation guides.',
+        'is_published' => true,
+    ]);
+
+    $currentPost = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'overview',
+        'title' => 'Overview',
+    ]);
+
+    Post::factory()->for($childNamespace, 'namespace')->published()->create([
+        'slug' => 'nested-post-title',
+        'title' => 'Nested Post Title',
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $currentPost->full_path]))->resize(1440, 1200);
+
+    $page->assertDontSee('Nested Post Title');
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const button = document.querySelector('[aria-label="Expand Installation"]');
+
+            if (! button) {
+                return false;
+            }
+
+            button.click();
+
+            return true;
+        })()
+    JS))->toBeTrue();
+
+    $page->assertSee('Nested Post Title');
+});
+
+test('post page hides inline navigation and toc below desktop width', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+        'is_published' => true,
+    ]);
+
+    $currentPost = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'index',
+        'title' => 'Index',
+        'content' => "## Section One\n\nBody\n\n## Section Two\n\nMore body",
+    ]);
+
+    Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'advanced',
+        'title' => 'Advanced',
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $currentPost->full_path]))
+        ->resize(768, 1000)
+        ->wait(0.3);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const inlineNav = document.querySelector('[data-test="content-nav-shell"]');
+            const inlineToc = document.querySelector('[data-test="table-of-contents"][data-sticky="true"]');
+
+            return {
+                inlineNavVisible: !! inlineNav && inlineNav.offsetParent !== null,
+                inlineTocVisible: !! inlineToc && inlineToc.offsetParent !== null,
+            };
+        })()
+    JS))->toBe([
+        'inlineNavVisible' => false,
+        'inlineTocVisible' => false,
+    ]);
+});
+
+test('post page avoids horizontal overflow on narrow mobile widths', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+        'is_published' => true,
+    ]);
+
+    $currentPost = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'index',
+        'title' => 'Index',
+        'content' => "## Section One\n\nBody",
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $currentPost->full_path]))->resize(480, 1000);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const toggleNavButton = Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.includes('Toggle Nav'));
+            const toggleTocButton = Array.from(document.querySelectorAll('button')).find((el) => el.textContent?.includes('Toggle TOC'));
+
+            return {
+                compactHeader: (document.querySelector('header')?.getBoundingClientRect().height ?? 0) < 120,
+                hasHorizontalOverflow: document.documentElement.scrollWidth > window.innerWidth,
+                toggleNavTextVisible: !! toggleNavButton && toggleNavButton.offsetParent !== null,
+                toggleTocTextVisible: !! toggleTocButton && toggleTocButton.offsetParent !== null,
+            };
+        })()
+    JS))->toBe([
+        'compactHeader' => true,
+        'hasHorizontalOverflow' => false,
+        'toggleNavTextVisible' => false,
+        'toggleTocTextVisible' => false,
+    ]);
 });
 
 test('namespace navigation toggle removes the empty desktop gutter', function () {
@@ -253,7 +436,8 @@ test('namespace navigation toggle removes the empty desktop gutter', function ()
 
     $page
         ->assertSee('Guides')
-        ->assertSee('Toggle Nav');
+        ->assertPresent('[data-test="docs-search-shortcut"]')
+        ->assertDontSee('Toggle Nav');
 
     $before = $page->script(<<<'JS'
         (() => {
@@ -273,7 +457,7 @@ test('namespace navigation toggle removes the empty desktop gutter', function ()
     JS);
 
     $page
-        ->click('Toggle Nav')
+        ->click('[data-test="docs-nav-toggle"]')
         ->wait(0.3);
 
     $after = $page->script(<<<'JS'
@@ -623,23 +807,11 @@ test('admin section edit returns to the heading after saving', function () {
         ->assertNoJavaScriptErrors()
         ->wait(0.5);
 
-    expect($page->script(<<<'JS'
-        (() => {
-            const button = document.querySelector('button[aria-label="Edit section: Line Breaks"]');
-
-            if (! button) {
-                return null;
-            }
-
-            button.click();
-
-            return true;
-        })()
-    JS))->toBeTrue();
+    $page->click('button[aria-label="Edit section: Line Breaks"]');
 
     $page
         ->wait(0.8)
-        ->assertSee('Edit Post');
+        ->assertPresent('[data-test="view-post-link"]');
 
     expect($page->script(<<<'JS'
         (() => {
@@ -659,10 +831,24 @@ test('admin section edit returns to the heading after saving', function () {
         'selectedText' => '## Line Breaks',
     ]);
 
+    $page->fill('content', $post->content."\n");
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const button = document.querySelector('[data-test="save-post-button"]');
+
+            if (! button) {
+                return null;
+            }
+
+            return button.hasAttribute('disabled');
+        })()
+    JS))->toBeFalse();
+
     $page
-        ->click('Save Changes')
+        ->click('[data-test="save-post-button"]')
         ->wait(0.8)
-        ->assertSee('Index');
+        ->assertPresent('[data-test="manage-post-edit-link"]');
 
     $metrics = $page->script(<<<JS
         (() => {
@@ -833,13 +1019,7 @@ test('admin post edit warns before leaving with unsaved changes', function () {
                 return false;
             };
 
-            document
-                .querySelector('[data-test="view-post-link"]')
-                ?.dispatchEvent(new MouseEvent('click', {
-                    bubbles: true,
-                    cancelable: true,
-                    button: 0,
-                }));
+            document.querySelector('[data-test="view-post-link"]')?.click();
 
             return {
                 confirmCalls,

@@ -1,6 +1,7 @@
 import { Link } from '@inertiajs/react';
-import { ChevronDown, ChevronRight, FileText } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { ChevronDown, ChevronRight, FileText, FolderOpen } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { cn } from '@/lib/utils';
 import { path as contentPath } from '@/routes/posts';
 
 export type ContentNavNode = {
@@ -20,51 +21,96 @@ function isCurrentBranch(currentPath: string, fullPath: string): boolean {
 function TreeNode({
     currentPath,
     node,
-    depth = 0,
+    onNavigate,
+    renderSelf = true,
 }: {
     currentPath: string;
     node: ContentNavNode;
-    depth?: number;
+    onNavigate?: () => void;
+    renderSelf?: boolean;
 }) {
     const inCurrentBranch = isCurrentBranch(currentPath, node.full_path);
     const hasChildren = node.children.length > 0 || node.posts.length > 0;
+    const [isExpanded, setIsExpanded] = useState(inCurrentBranch);
+    const expanded = isExpanded || inCurrentBranch;
 
     return (
-        <div className="space-y-1">
-            <Link
-                href={contentPath.url(node.full_path)}
-                data-active={
-                    currentPath === node.full_path ? 'true' : undefined
-                }
-                className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors ${
-                    currentPath === node.full_path
-                        ? 'bg-accent font-medium text-accent-foreground'
-                        : inCurrentBranch
-                          ? 'text-foreground'
-                          : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-                }`}
-                style={{ paddingLeft: `${depth * 12 + 8}px` }}
-            >
-                {hasChildren ? (
-                    inCurrentBranch ? (
-                        <ChevronDown className="size-4 shrink-0" />
+        <div className="space-y-1.5">
+            {renderSelf && (
+                <div
+                    className={cn(
+                        'group flex items-center gap-1.5 rounded-md text-sm leading-5 transition-colors',
+                        currentPath === node.full_path
+                            ? 'bg-primary/10 text-primary'
+                            : inCurrentBranch
+                              ? 'text-foreground hover:bg-accent'
+                              : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                    )}
+                >
+                    {hasChildren ? (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setIsExpanded((value) => !value);
+                            }}
+                            className="flex size-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:text-foreground"
+                            aria-label={
+                                expanded
+                                    ? `Collapse ${node.name}`
+                                    : `Expand ${node.name}`
+                            }
+                        >
+                            {expanded ? (
+                                <ChevronDown className="size-3.5" />
+                            ) : (
+                                <ChevronRight className="size-3.5" />
+                            )}
+                        </button>
                     ) : (
-                        <ChevronRight className="size-4 shrink-0" />
-                    )
-                ) : (
-                    <span className="size-4 shrink-0" />
-                )}
-                <span className="truncate">{node.name}</span>
-            </Link>
+                        <span
+                            aria-hidden="true"
+                            className="flex size-6 shrink-0 items-center justify-center"
+                        >
+                            <span className="size-3.5" />
+                        </span>
+                    )}
+                    <Link
+                        href={contentPath.url(node.full_path)}
+                        onClick={() => onNavigate?.()}
+                        data-active={
+                            currentPath === node.full_path ? 'true' : undefined
+                        }
+                        title={node.name}
+                        className="flex min-w-0 flex-1 items-center gap-2 rounded-md py-1.5 pr-2"
+                    >
+                        <FolderOpen
+                            className={cn(
+                                'size-4 shrink-0 transition-colors',
+                                currentPath === node.full_path
+                                    ? 'text-primary'
+                                    : inCurrentBranch
+                                      ? 'text-primary/80'
+                                      : 'text-muted-foreground/70 group-hover:text-foreground/80',
+                            )}
+                        />
+                        <span className="truncate">{node.name}</span>
+                    </Link>
+                </div>
+            )}
 
-            {hasChildren && (
-                <div className="space-y-1">
+            {hasChildren && expanded && (
+                <div
+                    className={cn(
+                        'space-y-1.5',
+                        renderSelf && 'ml-2 border-l border-border/60 pl-2',
+                    )}
+                >
                     {node.children.map((child) => (
                         <TreeNode
                             key={child.full_path}
                             currentPath={currentPath}
                             node={child}
-                            depth={depth + 1}
+                            onNavigate={onNavigate}
                         />
                     ))}
 
@@ -72,19 +118,28 @@ function TreeNode({
                         <Link
                             key={post.full_path}
                             href={contentPath.url(post.full_path)}
+                            onClick={() => onNavigate?.()}
                             data-active={
                                 currentPath === post.full_path
                                     ? 'true'
                                     : undefined
                             }
-                            className={`flex items-center gap-2 rounded px-2 py-1.5 text-sm transition-colors ${
+                            className={cn(
+                                'group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm leading-5 transition-colors',
                                 currentPath === post.full_path
-                                    ? 'bg-accent font-medium text-accent-foreground'
-                                    : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'
-                            }`}
-                            style={{ paddingLeft: `${(depth + 1) * 12 + 8}px` }}
+                                    ? 'bg-primary/10 font-medium text-primary'
+                                    : 'text-muted-foreground hover:bg-accent hover:text-foreground',
+                            )}
+                            title={post.title}
                         >
-                            <FileText className="size-4 shrink-0" />
+                            <FileText
+                                className={cn(
+                                    'size-4 shrink-0 transition-colors',
+                                    currentPath === post.full_path
+                                        ? 'text-primary'
+                                        : 'text-muted-foreground/60 group-hover:text-foreground/70',
+                                )}
+                            />
                             <span className="truncate">{post.title}</span>
                         </Link>
                     ))}
@@ -97,9 +152,13 @@ function TreeNode({
 export default function ContentNavTree({
     currentPath,
     root,
+    onNavigate,
+    showRoot = false,
 }: {
     currentPath: string;
     root: ContentNavNode;
+    onNavigate?: () => void;
+    showRoot?: boolean;
 }) {
     const navRef = useRef<HTMLElement>(null);
 
@@ -126,8 +185,13 @@ export default function ContentNavTree({
     }, [currentPath]);
 
     return (
-        <nav ref={navRef} className="space-y-1 text-sm">
-            <TreeNode currentPath={currentPath} node={root} />
+        <nav ref={navRef} className="space-y-1.5 text-sm">
+            <TreeNode
+                currentPath={currentPath}
+                node={root}
+                onNavigate={onNavigate}
+                renderSelf={showRoot}
+            />
         </nav>
     );
 }

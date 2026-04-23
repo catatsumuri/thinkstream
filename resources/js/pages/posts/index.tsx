@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ImageOff, Search, Settings2 } from 'lucide-react';
+import { ImageOff, Settings2 } from 'lucide-react';
+import DocsSearchTrigger from '@/components/docs-search-trigger';
 import SearchPopover from '@/components/search-popover';
 import { Button } from '@/components/ui/button';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
@@ -35,12 +36,7 @@ export default function Index({ namespaces }: { namespaces: PostNamespace[] }) {
                         <div className="flex items-center gap-2">
                             <SearchPopover
                                 align="right"
-                                trigger={
-                                    <Button variant="outline" size="sm">
-                                        <Search className="size-4" />
-                                        Search
-                                    </Button>
-                                }
+                                trigger={<DocsSearchTrigger />}
                             />
                             {!auth.user && (
                                 <Button asChild variant="outline" size="sm">

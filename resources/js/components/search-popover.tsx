@@ -122,14 +122,7 @@ export default function SearchPopover({
                             Search posts
                         </DialogTitle>
                         <DialogDescription>
-                            Jump to any published page with{' '}
-                            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-xs">
-                                Cmd/Ctrl
-                            </kbd>
-                            <span className="px-1 text-xs">+</span>
-                            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-xs">
-                                K
-                            </kbd>
+                            Jump to any published page.
                         </DialogDescription>
                     </DialogHeader>
                     <form
