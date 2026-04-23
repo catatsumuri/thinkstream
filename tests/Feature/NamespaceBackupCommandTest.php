@@ -40,15 +40,21 @@ function addNamespaceBackupTreeToZip(ZipArchive $zip, array $tree, string $prefi
     ], 4));
 
     foreach ($tree['posts'] ?? [] as $post) {
+        $frontmatter = [
+            'title' => $post['title'],
+            'slug' => $post['slug'],
+            'full_path' => $post['full_path'] ?? (($tree['full_path'] ?? $tree['slug']).'/'.$post['slug']),
+            'is_draft' => $post['is_draft'] ?? false,
+            'published_at' => $post['published_at'] ?? now()->toIso8601String(),
+        ];
+
+        if (array_key_exists('page_views', $post)) {
+            $frontmatter['page_views'] = $post['page_views'];
+        }
+
         $zip->addFromString(
             $prefix.$post['slug'].'.md',
-            "---\n".Yaml::dump([
-                'title' => $post['title'],
-                'slug' => $post['slug'],
-                'full_path' => $post['full_path'] ?? (($tree['full_path'] ?? $tree['slug']).'/'.$post['slug']),
-                'is_draft' => $post['is_draft'] ?? false,
-                'published_at' => $post['published_at'] ?? now()->toIso8601String(),
-            ])."---\n\n".rtrim($post['content'])."\n"
+            "---\n".Yaml::dump($frontmatter)."---\n\n".rtrim($post['content'])."\n"
         );
 
         if (! empty($post['revisions'])) {
@@ -90,6 +96,7 @@ test('namespace backup command exports namespace metadata and markdown posts', f
         'title' => 'Routing',
         'slug' => 'routing',
         'full_path' => 'guides/routing',
+        'page_views' => 42,
         'content' => "# Routing\n\n![Diagram](/images/posts/123/diagram.png)\n\nBackup me.",
     ]);
 
@@ -124,6 +131,7 @@ test('namespace backup command exports namespace metadata and markdown posts', f
     expect($postMarkdown)->toContain('title: Routing')
         ->toContain('slug: routing')
         ->toContain('full_path: guides/routing')
+        ->toContain('page_views: 42')
         ->toContain('![Diagram](/images/posts/123/diagram.png)')
         ->toContain("# Routing\n\n![Diagram](/images/posts/123/diagram.png)\n\nBackup me.")
         ->and($coverImage)->toBe('cover-image-bytes')
@@ -147,6 +155,7 @@ test('namespace restore command imports a namespace backup zip', function () {
             [
                 'title' => 'Laravel AI SDK',
                 'slug' => 'laravel-ai-sdk',
+                'page_views' => 11,
                 'content' => "# Laravel AI SDK\n\n![Diagram](/images/posts/legacy-id/ai-sdk.png)\n\nIntro.",
             ],
             [
@@ -186,6 +195,8 @@ test('namespace restore command imports a namespace backup zip', function () {
                 'laravel-ai-sdk',
                 'upgrade-12-to-13',
             ])
+            ->and($posts->firstWhere('slug', 'laravel-ai-sdk')?->page_views)->toBe(11)
+            ->and($posts->firstWhere('slug', 'upgrade-12-to-13')?->page_views)->toBe(0)
             ->and($posts->pluck('user_id')->unique()->all())->toBe([$user->id]);
 
         Storage::disk('public')->assertExists('namespaces/laravel-13-cover.jpg');
@@ -273,6 +284,36 @@ test('namespace backup and restore commands preserve nested namespaces and posts
         ->and($restoredChildPost->full_path)->toBe('inertiajs-v3/childspace/page');
 
     File::delete($zipPath);
+});
+
+test('namespace restore command defaults page views to zero for older backups', function () {
+    $user = User::factory()->create();
+    $zipPath = createNamespaceBackupZip([
+        'slug' => 'legacy',
+        'name' => 'Legacy',
+        'full_path' => 'legacy',
+        'posts' => [
+            [
+                'title' => 'Old Post',
+                'slug' => 'old-post',
+                'content' => 'Legacy content',
+            ],
+        ],
+    ]);
+
+    try {
+        $this->artisan('namespace:restore', [
+            'path' => $zipPath,
+        ])->assertSuccessful();
+
+        $post = Post::query()->where('full_path', 'legacy/old-post')->first();
+
+        expect($post)->not->toBeNull()
+            ->and($post->user_id)->toBe($user->id)
+            ->and($post->page_views)->toBe(0);
+    } finally {
+        File::delete($zipPath);
+    }
 });
 
 test('namespace restore command fails when no user exists', function () {

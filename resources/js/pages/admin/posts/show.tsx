@@ -101,6 +101,7 @@ type Post = {
     slug: string;
     full_path: string;
     content: string;
+    page_views: number;
     is_draft: boolean;
     published_at: string | null;
     created_at: string;

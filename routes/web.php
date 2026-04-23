@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\OgpController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImageController;
 use App\Http\Controllers\PostController;
 use App\Http\Controllers\SearchController;
@@ -25,7 +26,7 @@ Route::get('/api/ogp', [OgpController::class, 'fetch'])
     ->name('api.ogp');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', DashboardController::class)->name('dashboard');
 });
 
 require __DIR__.'/settings.php';

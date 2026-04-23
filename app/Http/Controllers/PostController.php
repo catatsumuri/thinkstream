@@ -6,14 +6,36 @@ use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Support\ReservedContentPath;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Cookie;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class PostController extends Controller
 {
+    private const PAGE_VIEW_COOKIE_TTL_MINUTES = 60;
+
+    /**
+     * @var array<int, string>
+     */
+    private const BOT_USER_AGENT_FRAGMENTS = [
+        'bot',
+        'crawler',
+        'spider',
+        'slurp',
+        'facebookexternalhit',
+        'twitterbot',
+        'slackbot',
+        'discordbot',
+        'linkedinbot',
+        'embedly',
+        'curl',
+        'wget',
+    ];
+
     public function index(): Response
     {
         $namespaces = PostNamespace::published()
@@ -52,7 +74,7 @@ class PostController extends Controller
         );
     }
 
-    public function resolve(string $path): Response
+    public function resolve(Request $request, string $path): Response
     {
         $normalizedPath = trim($path, '/');
 
@@ -62,6 +84,7 @@ class PostController extends Controller
 
         if ($resolvedPost !== null) {
             return $this->renderPost(
+                $request,
                 $resolvedPost['post'],
                 $resolvedPost['ancestors'],
                 $resolvedPost['preview'],
@@ -144,15 +167,27 @@ class PostController extends Controller
     /**
      * @param  Collection<int, PostNamespace>  $ancestors
      */
-    private function renderPost(Post $post, Collection $ancestors, bool $preview = false): Response
+    private function renderPost(Request $request, Post $post, Collection $ancestors, bool $preview = false): Response
     {
         $namespace = $post->namespace;
         $rootNamespace = $this->rootNamespace($namespace, $ancestors);
+        $pageViews = $post->page_views;
         $posts = $namespace->posts()
             ->tap(fn (Builder $query) => $this->applyPublishedPostScope($query))
             ->orderBy('published_at')
             ->orderBy('id')
             ->get(['id', 'slug', 'full_path', 'title', 'published_at']);
+
+        if (
+            ! $preview
+            && ! $this->isBotRequest($request)
+            && ! $request->hasCookie($this->pageViewCookieName($post))
+        ) {
+            $post->increment('page_views');
+            $pageViews++;
+
+            Cookie::queue($this->pageViewCookieName($post), '1', self::PAGE_VIEW_COOKIE_TTL_MINUTES);
+        }
 
         return Inertia::render('posts/show', [
             'breadcrumbs' => $this->breadcrumbs($ancestors),
@@ -160,13 +195,38 @@ class PostController extends Controller
             'navRoot' => $this->buildNavigationNode($rootNamespace),
             'namespace' => $namespace->only(['id', 'slug', 'full_path', 'name', 'cover_image_url']),
             'postUrl' => route('posts.path', ['path' => $post->full_path]),
-            'post' => $post->only(['id', 'slug', 'full_path', 'title', 'content', 'published_at', 'updated_at']),
+            'post' => [
+                ...$post->only(['id', 'slug', 'full_path', 'title', 'content', 'published_at', 'updated_at']),
+                'page_views' => $pageViews,
+            ],
             'posts' => $namespace->sortPosts($posts),
             'preview' => $preview ? [
                 'status' => $post->is_draft ? 'draft' : 'scheduled',
                 'published_at' => $post->published_at?->toISOString(),
             ] : null,
         ]);
+    }
+
+    private function pageViewCookieName(Post $post): string
+    {
+        return 'post_viewed_'.$post->id;
+    }
+
+    private function isBotRequest(Request $request): bool
+    {
+        $userAgent = strtolower($request->userAgent() ?? '');
+
+        if ($userAgent === '') {
+            return false;
+        }
+
+        foreach (self::BOT_USER_AGENT_FRAGMENTS as $fragment) {
+            if (str_contains($userAgent, $fragment)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function resolveCardImage(Post $post, PostNamespace $namespace): ?string

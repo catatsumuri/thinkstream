@@ -19,6 +19,7 @@ class Post extends Model
         'slug',
         'full_path',
         'content',
+        'page_views',
         'user_id',
         'is_draft',
         'published_at',
@@ -28,6 +29,7 @@ class Post extends Model
     {
         return [
             'is_draft' => 'boolean',
+            'page_views' => 'integer',
             'published_at' => 'datetime',
         ];
     }
