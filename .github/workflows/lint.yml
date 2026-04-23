@@ -39,6 +39,9 @@ jobs:
       - name: Check Frontend Formatting
         run: npm run format:check
 
+      - name: Generate Wayfinder Types
+        run: php artisan wayfinder:generate --with-form --no-interaction
+
       - name: Type Check Frontend
         run: npm run types:check
 
