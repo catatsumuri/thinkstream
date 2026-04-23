@@ -7,12 +7,14 @@ import {
     PanelLeftOpen,
     PanelRightClose,
     PanelRightOpen,
+    Search,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { siX } from 'simple-icons';
 import type { ContentNavNode } from '@/components/content-nav-tree';
 import ContentNavTree from '@/components/content-nav-tree';
 import MarkdownContent from '@/components/markdown-content';
+import SearchPopover from '@/components/search-popover';
 import TableOfContents from '@/components/table-of-contents';
 import { Button } from '@/components/ui/button';
 import ViewContextBadge from '@/components/view-context-badge';
@@ -346,6 +348,16 @@ export default function Show({
                                     Toggle Nav
                                 </button>
                             )}
+                            <SearchPopover
+                                align="right"
+                                defaultNamespace={navRoot.full_path}
+                                trigger={
+                                    <Button variant="outline" size="sm">
+                                        <Search className="size-4" />
+                                        Search
+                                    </Button>
+                                }
+                            />
                             {auth.user ? (
                                 <div className="flex flex-wrap items-center gap-2">
                                     <Button asChild variant="default" size="sm">
