@@ -146,24 +146,24 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
     if (loading) {
         return (
             <div
-                className="not-prose my-4 overflow-hidden rounded-lg border border-gray-700 bg-[#282c34]"
+                className="not-prose my-4 overflow-hidden rounded-lg border border-border bg-card"
                 data-test="embed-github"
             >
-                <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 px-4 py-2">
+                <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-2">
                     <div className="flex min-w-0 items-center gap-2">
                         <FileCode
                             size={14}
-                            className="shrink-0 text-gray-400"
+                            className="shrink-0 text-muted-foreground"
                         />
-                        <div className="h-3.5 w-48 animate-pulse rounded bg-gray-600" />
+                        <div className="h-3.5 w-48 animate-pulse rounded bg-muted" />
                     </div>
-                    <div className="h-3.5 w-24 animate-pulse rounded bg-gray-600" />
+                    <div className="h-3.5 w-24 animate-pulse rounded bg-muted" />
                 </div>
                 <div className="space-y-2 px-4 py-3">
                     {Array.from({ length: 4 }).map((_, i) => (
                         <div
                             key={i}
-                            className="h-3 animate-pulse rounded bg-gray-700"
+                            className="h-3 animate-pulse rounded bg-muted"
                             style={{ width: `${60 + (i % 3) * 15}%` }}
                         />
                     ))}
@@ -175,14 +175,14 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
     if (error || lines === null) {
         return (
             <div
-                className="not-prose my-4 overflow-hidden rounded-lg border border-gray-700 bg-[#282c34]"
+                className="not-prose my-4 overflow-hidden rounded-lg border border-border bg-card"
                 data-test="embed-github"
             >
-                <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 px-4 py-2">
-                    <div className="flex min-w-0 items-center gap-2 truncate font-mono text-xs text-gray-300">
+                <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-2">
+                    <div className="flex min-w-0 items-center gap-2 truncate font-mono text-xs text-foreground">
                         <FileCode
                             size={14}
-                            className="shrink-0 text-gray-400"
+                            className="shrink-0 text-muted-foreground"
                         />
                         <span className="truncate">{headerLabel}</span>
                     </div>
@@ -190,13 +190,14 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="ml-3 flex shrink-0 items-center gap-1 text-xs text-gray-400 hover:text-gray-200"
+                        data-test="embed-github-open-link"
+                        className="ml-3 flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                     >
                         <ExternalLink size={12} />
                         View
                     </a>
                 </div>
-                <div className="px-4 py-3 font-mono text-xs text-gray-400">
+                <div className="px-4 py-3 font-mono text-xs text-muted-foreground">
                     Failed to load file content.
                 </div>
             </div>
@@ -221,37 +222,43 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
 
     return (
         <div
-            className="not-prose my-4 overflow-hidden rounded-lg border border-gray-700 bg-[#282c34]"
+            className="not-prose my-4 overflow-hidden rounded-lg border border-border bg-card"
             data-test="embed-github"
         >
-            <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 px-4 py-2">
-                <div className="flex min-w-0 items-center gap-2 font-mono text-xs text-gray-300">
-                    <FileCode size={14} className="shrink-0 text-gray-400" />
+            <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-2">
+                <div className="flex min-w-0 items-center gap-2 font-mono text-xs text-foreground">
+                    <FileCode
+                        size={14}
+                        className="shrink-0 text-muted-foreground"
+                    />
                     <a
                         href={url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="truncate hover:text-white hover:underline"
+                        className="truncate hover:text-foreground hover:underline"
                         title={headerLabel}
                     >
                         {filename}
                     </a>
                     {lineLabel && (
-                        <span className="text-gray-500">{lineLabel}</span>
+                        <span className="text-muted-foreground">
+                            {lineLabel}
+                        </span>
                     )}
                 </div>
                 <a
                     href={url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ml-3 flex shrink-0 items-center gap-1 text-xs text-gray-400 hover:text-gray-200"
+                    data-test="embed-github-repo-link"
+                    className="ml-3 flex shrink-0 items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
                 >
                     <ExternalLink size={12} />
                     {info.owner}/{info.repo}
                 </a>
             </div>
-            <div className="overflow-x-auto">
-                <pre className="my-0 font-mono text-sm">
+            <div className="overflow-x-auto bg-[#282c34]">
+                <pre className="my-0 font-mono text-sm text-gray-200">
                     <code>
                         {highlightedLines.map((html, index) => (
                             <div

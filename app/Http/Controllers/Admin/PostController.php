@@ -369,10 +369,14 @@ class PostController extends Controller
         $post->update($data);
 
         $fragment = $request->string('return_heading')->toString();
-        $hash = $fragment !== '' ? '#'.ltrim($fragment, '#') : '';
+        $hash = $fragment !== '' ? '#'.rawurlencode(ltrim($fragment, '#')) : '';
         $returnTo = $this->safeReturnPath($request->string('return_to')->toString());
 
         if ($returnTo !== null) {
+            if (str_starts_with($returnTo, '/admin/posts/')) {
+                return redirect()->to(route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug], absolute: false).$hash);
+            }
+
             return redirect()->to(route('posts.path', ['path' => $post->full_path], absolute: false).$hash);
         }
 

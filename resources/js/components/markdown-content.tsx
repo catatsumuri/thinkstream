@@ -52,7 +52,7 @@ function DetailsBox({
 }: React.ComponentPropsWithoutRef<'details'>) {
     return (
         <details
-            className="details-block not-prose my-4 rounded-md border border-border text-sm"
+            className="details-block my-6 rounded-md border border-border"
             data-test="details-block"
             {...props}
         >
@@ -67,7 +67,7 @@ function SummaryEl({
 }: React.ComponentPropsWithoutRef<'summary'>) {
     return (
         <summary
-            className="cursor-pointer rounded-md bg-muted px-4 py-2 leading-relaxed font-medium select-none"
+            className="not-prose cursor-pointer rounded-md bg-muted px-4 py-2 text-sm leading-relaxed font-medium select-none"
             {...props}
         >
             {children}

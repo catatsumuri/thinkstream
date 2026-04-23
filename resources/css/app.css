@@ -155,3 +155,11 @@ details.details-block > summary + div {
     border-top: none;
     border-radius: 0 0 var(--radius) var(--radius);
 }
+
+details.details-block > summary + div > :first-child {
+    margin-top: 0;
+}
+
+details.details-block > summary + div > :last-child {
+    margin-bottom: 0;
+}
