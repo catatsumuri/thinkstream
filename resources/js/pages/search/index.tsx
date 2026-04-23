@@ -58,7 +58,7 @@ export default function SearchIndex({
                                     type="search"
                                     name="q"
                                     defaultValue={query}
-                                    placeholder="Search guides pages"
+                                    placeholder="Search published posts"
                                     data-test="search-page-input"
                                     className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
                                 />
@@ -104,7 +104,8 @@ export default function SearchIndex({
                     </form>
 
                     <p className="text-sm text-muted-foreground">
-                        Dummy results are currently picked from `/guides`.
+                        Search across published posts and filter by namespace
+                        when needed.
                     </p>
                 </div>
 
@@ -149,7 +150,7 @@ export default function SearchIndex({
                         className="rounded-2xl border border-dashed border-sidebar-border/80 bg-muted/20 p-10 text-center text-sm text-muted-foreground"
                         data-test="search-empty-state"
                     >
-                        No dummy guide results found.
+                        No matching posts found.
                     </div>
                 )}
             </div>

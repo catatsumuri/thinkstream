@@ -2,6 +2,13 @@ import { router, usePage } from '@inertiajs/react';
 import { Search } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import {
     Select,
@@ -25,7 +32,6 @@ type Props = {
 };
 
 export default function SearchPopover({
-    align = 'right',
     defaultNamespace = '',
     trigger,
 }: Props) {
@@ -35,7 +41,6 @@ export default function SearchPopover({
     const [isOpen, setIsOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
     const [searchNamespace, setSearchNamespace] = useState(defaultNamespace);
-    const containerRef = useRef<HTMLDivElement | null>(null);
     const inputRef = useRef<HTMLInputElement | null>(null);
     const panelId = useId();
 
@@ -53,40 +58,27 @@ export default function SearchPopover({
     }, [isOpen]);
 
     useEffect(() => {
-        if (!isOpen) {
-            return;
-        }
-
-        function handlePointerDown(event: MouseEvent) {
-            if (
-                event.target instanceof Element &&
-                event.target.closest('[data-slot="select-content"]')
-            ) {
-                return;
-            }
-
-            if (
-                containerRef.current &&
-                !containerRef.current.contains(event.target as Node)
-            ) {
-                setIsOpen(false);
-            }
-        }
-
         function handleKeyDown(event: KeyboardEvent) {
+            const pressedShortcut =
+                (event.metaKey || event.ctrlKey) &&
+                event.key.toLowerCase() === 'k';
+
+            if (pressedShortcut) {
+                event.preventDefault();
+                setIsOpen(true);
+            }
+
             if (event.key === 'Escape') {
                 setIsOpen(false);
             }
         }
 
-        document.addEventListener('mousedown', handlePointerDown);
         document.addEventListener('keydown', handleKeyDown);
 
         return () => {
-            document.removeEventListener('mousedown', handlePointerDown);
             document.removeEventListener('keydown', handleKeyDown);
         };
-    }, [isOpen]);
+    }, []);
 
     function submitSearch(): void {
         const query = searchQuery.trim();
@@ -110,7 +102,7 @@ export default function SearchPopover({
     }
 
     return (
-        <div ref={containerRef} className="relative">
+        <>
             <div
                 aria-expanded={isOpen}
                 aria-controls={panelId}
@@ -118,23 +110,37 @@ export default function SearchPopover({
             >
                 {trigger}
             </div>
-            {isOpen && (
-                <div
+            <Dialog open={isOpen} onOpenChange={setIsOpen}>
+                <DialogContent
                     id={panelId}
                     data-test="search-popover-panel"
-                    className={`absolute top-full z-40 mt-3 w-[min(26rem,calc(100vw-2rem))] rounded-2xl border border-sidebar-border/80 bg-background/95 p-3 shadow-lg backdrop-blur ${
-                        align === 'left' ? 'left-0' : 'right-0'
-                    }`}
+                    className="top-[18%] max-w-2xl translate-y-0 gap-0 overflow-hidden rounded-3xl border border-sidebar-border/80 bg-background p-0 shadow-2xl"
                 >
+                    <DialogHeader className="border-b border-sidebar-border/80 px-6 pt-6 pb-4">
+                        <DialogTitle className="flex items-center gap-3 text-xl">
+                            <Search className="size-5 text-muted-foreground" />
+                            Search posts
+                        </DialogTitle>
+                        <DialogDescription>
+                            Jump to any published page with{' '}
+                            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-xs">
+                                Cmd/Ctrl
+                            </kbd>
+                            <span className="px-1 text-xs">+</span>
+                            <kbd className="rounded border bg-muted px-1.5 py-0.5 font-mono text-xs">
+                                K
+                            </kbd>
+                        </DialogDescription>
+                    </DialogHeader>
                     <form
                         role="search"
-                        className="flex flex-col gap-3"
+                        className="flex flex-col gap-4 p-6"
                         onSubmit={(event) => {
                             event.preventDefault();
                             submitSearch();
                         }}
                     >
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-3 rounded-2xl border border-sidebar-border/80 bg-muted/30 px-4 py-3">
                             <Search className="size-4 shrink-0 text-muted-foreground" />
                             <Input
                                 ref={inputRef}
@@ -143,7 +149,7 @@ export default function SearchPopover({
                                 onChange={(event) =>
                                     setSearchQuery(event.target.value)
                                 }
-                                placeholder="Search guides pages"
+                                placeholder="Search published posts"
                                 autoComplete="off"
                                 data-test="search-popover-input"
                                 className="border-0 bg-transparent px-0 shadow-none focus-visible:ring-0"
@@ -156,7 +162,7 @@ export default function SearchPopover({
                             }
                         >
                             <SelectTrigger
-                                className="w-full"
+                                className="w-full bg-background"
                                 data-test="search-popover-scope"
                             >
                                 <SelectValue placeholder="Choose search target" />
@@ -174,10 +180,7 @@ export default function SearchPopover({
                             </SelectContent>
                         </Select>
                         <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
-                            <p>
-                                Open a quick search window from the current
-                                page.
-                            </p>
+                            <p>Search by title, path, and content excerpt.</p>
                             <div className="flex items-center gap-1">
                                 <Button
                                     variant="ghost"
@@ -201,8 +204,8 @@ export default function SearchPopover({
                             </div>
                         </div>
                     </form>
-                </div>
-            )}
-        </div>
+                </DialogContent>
+            </Dialog>
+        </>
     );
 }

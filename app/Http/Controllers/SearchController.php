@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Post;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
@@ -33,55 +34,54 @@ class SearchController extends Controller
      */
     private function results(string $query, string $namespace): array
     {
-        if ($namespace !== '' && $namespace !== 'guides') {
-            return [];
-        }
+        $posts = $query === ''
+            ? Post::query()
+                ->with('namespace:id,full_path')
+                ->published()
+                ->withinNamespace($namespace)
+                ->orderByDesc('published_at')
+                ->orderByDesc('id')
+                ->limit(6)
+                ->get(['id', 'namespace_id', 'title', 'full_path', 'content', 'published_at'])
+            : Post::search($query)
+                ->query(fn (Builder $builder) => $builder
+                    ->with('namespace:id,full_path')
+                    ->published()
+                    ->withinNamespace($namespace)
+                )
+                ->take(10)
+                ->get();
 
-        $posts = Post::query()
-            ->where('is_draft', false)
-            ->where('published_at', '<=', now())
-            ->whereHas('namespace', function ($builder): void {
-                $builder
-                    ->where('full_path', 'guides')
-                    ->orWhere('full_path', 'like', 'guides/%');
-            })
-            ->orderByDesc('published_at')
-            ->orderByDesc('id')
-            ->limit(6)
-            ->get(['id', 'title', 'full_path', 'content']);
-
-        $results = $posts->map(function (Post $post): array {
-            $excerpt = Str::of($post->content)
-                ->replaceMatches('/[`#>*_\-\[\]\(\)!]/', ' ')
-                ->replaceMatches('/\s+/', ' ')
-                ->trim()
-                ->substr(0, 140)
-                ->toString();
-
-            return [
-                'id' => $post->id,
-                'page' => $post->title,
-                'path' => '/'.$post->full_path,
-                'href' => route('posts.path', ['path' => $post->full_path]),
-                'excerpt' => $excerpt,
-            ];
-        });
-
-        if ($query === '') {
-            return $results->all();
-        }
-
-        $needle = Str::lower($query);
-
-        return $results
-            ->filter(fn (array $result): bool => collect([
-                $result['page'],
-                $result['path'],
-                $result['excerpt'],
-            ])->contains(
-                fn (string $value): bool => Str::contains(Str::lower($value), $needle)
-            ))
+        return $posts
+            ->map(fn (Post $post): array => $this->mapResult($post))
             ->values()
             ->all();
+    }
+
+    /**
+     * @return array{
+     *     id: int,
+     *     page: string,
+     *     path: string,
+     *     href: string,
+     *     excerpt: string
+     * }
+     */
+    private function mapResult(Post $post): array
+    {
+        $excerpt = Str::of($post->content)
+            ->replaceMatches('/[`#>*_\-\[\]\(\)!]/', ' ')
+            ->replaceMatches('/\s+/', ' ')
+            ->trim()
+            ->substr(0, 140)
+            ->toString();
+
+        return [
+            'id' => $post->id,
+            'page' => $post->title,
+            'path' => '/'.$post->full_path,
+            'href' => route('posts.path', ['path' => $post->full_path]),
+            'excerpt' => $excerpt,
+        ];
     }
 }

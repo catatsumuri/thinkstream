@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Cookie;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -264,9 +264,7 @@ class PostController extends Controller
 
     private function applyPublishedPostScope(Builder $query): Builder
     {
-        return $query
-            ->where('is_draft', false)
-            ->where('published_at', '<=', now());
+        return $query->published();
     }
 
     /**

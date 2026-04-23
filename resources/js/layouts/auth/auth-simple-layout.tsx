@@ -16,9 +16,13 @@ export default function AuthSimpleLayout({
                         <Link
                             href={home()}
                             className="flex flex-col items-center gap-2 font-medium"
+                            aria-label="Go to home"
                         >
-                            <div className="mb-1 flex h-9 w-9 items-center justify-center rounded-md">
-                                <AppLogoIcon className="size-9 fill-current text-[var(--foreground)] dark:text-white" />
+                            <div className="mb-1 flex size-12 items-center justify-center rounded-2xl bg-white p-1.5 shadow-sm ring-1 ring-black/5">
+                                <AppLogoIcon
+                                    className="h-full w-full object-contain"
+                                    alt="ThinkStream logo"
+                                />
                             </div>
                             <span className="sr-only">{title}</span>
                         </Link>

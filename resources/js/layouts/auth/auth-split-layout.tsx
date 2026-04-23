@@ -18,7 +18,12 @@ export default function AuthSplitLayout({
                     href={home()}
                     className="relative z-20 flex items-center text-lg font-medium"
                 >
-                    <AppLogoIcon className="mr-2 size-8 fill-current text-white" />
+                    <div className="mr-3 flex size-11 items-center justify-center rounded-2xl bg-white p-1.5 shadow-sm ring-1 ring-black/5">
+                        <AppLogoIcon
+                            className="h-full w-full object-contain"
+                            alt={`${name} logo`}
+                        />
+                    </div>
                     {name}
                 </Link>
             </div>
@@ -27,8 +32,14 @@ export default function AuthSplitLayout({
                     <Link
                         href={home()}
                         className="relative z-20 flex items-center justify-center lg:hidden"
+                        aria-label="Go to home"
                     >
-                        <AppLogoIcon className="h-10 fill-current text-black sm:h-12" />
+                        <div className="flex size-14 items-center justify-center rounded-2xl bg-white p-2 shadow-sm ring-1 ring-black/5 sm:size-16">
+                            <AppLogoIcon
+                                className="h-full w-full object-contain"
+                                alt="ThinkStream logo"
+                            />
+                        </div>
                     </Link>
                     <div className="flex flex-col items-start gap-2 text-left sm:items-center sm:text-center">
                         <h1 className="text-xl font-medium">{title}</h1>

@@ -102,7 +102,12 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                     Navigation menu
                                 </SheetTitle>
                                 <SheetHeader className="flex justify-start text-left">
-                                    <AppLogoIcon className="h-6 w-6 fill-current text-black dark:text-white" />
+                                    <div className="flex size-10 items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-black/5">
+                                        <AppLogoIcon
+                                            className="h-full w-full object-contain"
+                                            alt="ThinkStream logo"
+                                        />
+                                    </div>
                                 </SheetHeader>
                                 <div className="flex h-full flex-1 flex-col space-y-4 p-4">
                                     <div className="flex h-full flex-col justify-between text-sm">

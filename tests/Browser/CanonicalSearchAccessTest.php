@@ -21,5 +21,6 @@ test('canonical home shows search next to login for guests', function () {
         ->assertSee('Login')
         ->click('Search')
         ->assertPresent('[data-test="search-popover-panel"]')
-        ->assertPresent('[data-test="search-popover-input"]');
+        ->assertPresent('[data-test="search-popover-input"]')
+        ->assertSee('Search posts');
 });
