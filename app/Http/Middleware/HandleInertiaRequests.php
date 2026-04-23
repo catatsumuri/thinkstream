@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\PostNamespace;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -40,6 +41,19 @@ class HandleInertiaRequests extends Middleware
             'name' => config('app.name'),
             'auth' => [
                 'user' => $request->user(),
+            ],
+            'search' => [
+                'namespaces' => fn () => PostNamespace::published()
+                    ->whereNull('parent_id')
+                    ->orderBy('name')
+                    ->get(['id', 'name', 'full_path'])
+                    ->map(fn (PostNamespace $namespace): array => [
+                        'value' => $namespace->full_path,
+                        'label' => $namespace->name,
+                        'path' => '/'.$namespace->full_path,
+                    ])
+                    ->values()
+                    ->all(),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'imageUrl' => session('imageUrl'),

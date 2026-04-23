@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { ImageOff, Settings2 } from 'lucide-react';
+import { ImageOff, Search, Settings2 } from 'lucide-react';
+import SearchPopover from '@/components/search-popover';
 import { Button } from '@/components/ui/button';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { useCurrentUrl } from '@/hooks/use-current-url';
@@ -31,17 +32,28 @@ export default function Index({ namespaces }: { namespaces: PostNamespace[] }) {
                 <header className="border-b">
                     <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-6">
                         <h1 className="text-2xl font-bold">ThinkStream</h1>
-                        {!auth.user && (
-                            <Button asChild variant="outline" size="sm">
-                                <Link
-                                    href={login.url({
-                                        query: { intended: currentUrl },
-                                    })}
-                                >
-                                    Login
-                                </Link>
-                            </Button>
-                        )}
+                        <div className="flex items-center gap-2">
+                            <SearchPopover
+                                align="right"
+                                trigger={
+                                    <Button variant="outline" size="sm">
+                                        <Search className="size-4" />
+                                        Search
+                                    </Button>
+                                }
+                            />
+                            {!auth.user && (
+                                <Button asChild variant="outline" size="sm">
+                                    <Link
+                                        href={login.url({
+                                            query: { intended: currentUrl },
+                                        })}
+                                    >
+                                        Login
+                                    </Link>
+                                </Button>
+                            )}
+                        </div>
                     </div>
                 </header>
 
