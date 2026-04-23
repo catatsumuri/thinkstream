@@ -99,7 +99,14 @@ test(':::details directive renders as details/summary element', function () {
 # Details Test
 
 :::details Show details
-Hidden content
+Before diff
+
+```diff
+- old value
++ new value
+```
+
+After diff
 :::
 MARKDOWN,
     ]);
@@ -109,6 +116,9 @@ MARKDOWN,
     $page
         ->assertNoJavaScriptErrors()
         ->assertPresent('[data-test="details-block"]')
+        ->assertPresent('[data-test="details-block"]:not(.not-prose)')
+        ->assertPresent('[data-test="details-block"] summary.not-prose')
+        ->assertPresent('[data-test="details-block"] pre.text-gray-300')
         ->assertSee('Show details');
 });
 
@@ -142,7 +152,9 @@ MARKDOWN,
     $page = visit(route('posts.path', ['path' => $post->full_path]));
 
     $page->assertNoJavaScriptErrors()
-        ->assertPresent('[data-test="embed-github"]');
+        ->assertPresent('[data-test="embed-github"]')
+        ->assertPresent('[data-test="embed-github"].bg-card');
+
 });
 
 test('@[github](URL) directive renders as github embed', function () {

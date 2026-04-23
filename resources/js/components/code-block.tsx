@@ -206,7 +206,7 @@ export function CodeBlock({
                     </div>
                 </div>
                 <div className={wrap ? '' : 'overflow-x-auto'}>
-                    <pre className="my-0 font-mono text-sm">
+                    <pre className="my-0 font-mono text-sm text-gray-300">
                         <code>
                             {content.split('\n').map((line, index) => {
                                 let bgColor = 'transparent';

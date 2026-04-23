@@ -1163,6 +1163,65 @@ test('updating a post redirects back to the requested heading fragment', functio
         ->assertRedirect(route('admin.posts.edit', [$namespace, 'my-slug']).'#my-slug-section-title');
 });
 
+test('updating a post returns to the admin show page when requested', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'my-slug',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post]), [
+            'title' => 'Updated Title',
+            'slug' => 'my-slug',
+            'content' => 'Updated content.',
+            'return_heading' => 'my-slug-設定',
+            'return_to' => route('admin.posts.show', [$namespace, $post], false),
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('admin.posts.show', [$namespace, 'my-slug'], false).'#my-slug-%E8%A8%AD%E5%AE%9A');
+});
+
+test('updating a post returns to the updated admin show page when the slug changes', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'my-slug',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post]), [
+            'title' => 'Updated Title',
+            'slug' => 'updated-slug',
+            'content' => 'Updated content.',
+            'return_heading' => 'updated-slug-設定',
+            'return_to' => route('admin.posts.show', [$namespace, $post], false),
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('admin.posts.show', [$namespace, 'updated-slug'], false).'#updated-slug-%E8%A8%AD%E5%AE%9A');
+});
+
+test('updating a post percent-encodes unicode heading fragments in redirects', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'my-slug',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post]), [
+            'title' => 'Updated Title',
+            'slug' => 'my-slug',
+            'content' => 'Updated content.',
+            'return_heading' => 'my-slug-設定',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect(route('admin.posts.edit', [$namespace, 'my-slug']).'#my-slug-%E8%A8%AD%E5%AE%9A');
+});
+
 test('updating a post redirects back to the updated canonical page', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create(['slug' => 'guides', 'full_path' => 'guides']);
@@ -1185,6 +1244,27 @@ test('updating a post redirects back to the updated canonical page', function ()
 
     expect($post->fresh()->slug)->toBe('updated-slug');
     expect($post->fresh()->full_path)->toBe('guides/updated-slug');
+});
+
+test('updating a post preserves unicode heading fragments on canonical redirects', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create(['slug' => 'guides', 'full_path' => 'guides']);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'my-slug',
+        'full_path' => 'guides/my-slug',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post]), [
+            'title' => 'Updated Title',
+            'slug' => 'updated-slug',
+            'content' => 'Updated content.',
+            'return_heading' => 'updated-slug-設定',
+            'return_to' => '/guides/my-slug',
+        ])
+        ->assertSessionHasNoErrors()
+        ->assertRedirect('/guides/updated-slug#updated-slug-%E8%A8%AD%E5%AE%9A');
 });
 
 test('updating a post ignores unsafe return paths', function () {

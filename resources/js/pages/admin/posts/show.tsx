@@ -9,6 +9,7 @@ import { useMemo, useState } from 'react';
 import MarkdownContent from '@/components/markdown-content';
 import PostHeader from '@/components/post-header';
 import TableOfContents from '@/components/table-of-contents';
+import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
@@ -112,6 +113,7 @@ export default function Show({
     namespace: Namespace;
     post: Post;
 }) {
+    const { currentUrl } = useCurrentUrl();
     const isMobile = useIsMobile();
     const [tocOverride, setTocOverride] = useState<boolean | null>(null);
     const tocPosts = useMemo(
@@ -146,6 +148,8 @@ export default function Show({
         if (id) {
             params.set('return_heading', id);
         }
+
+        params.set('return_to', currentUrl);
 
         router.visit(`${editUrl}?${params.toString()}`);
     };
