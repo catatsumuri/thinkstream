@@ -339,7 +339,17 @@ class PostController extends Controller
     {
         return Inertia::render('admin/posts/show', [
             'namespace' => $namespace,
-            'post' => $post,
+            'post' => $post->only([
+                'id',
+                'title',
+                'slug',
+                'full_path',
+                'content',
+                'is_draft',
+                'published_at',
+                'created_at',
+                'page_views',
+            ]),
         ]);
     }
 

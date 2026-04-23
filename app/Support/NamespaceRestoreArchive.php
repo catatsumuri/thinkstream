@@ -271,6 +271,7 @@ class NamespaceRestoreArchive
             $post->title = (string) $frontmatter['title'];
             $post->slug = (string) $frontmatter['slug'];
             $post->content = $body;
+            $post->page_views = (int) ($frontmatter['page_views'] ?? 0);
             $post->is_draft = (bool) ($frontmatter['is_draft'] ?? false);
             $post->published_at = $frontmatter['published_at'] ?? null;
             $post->save();

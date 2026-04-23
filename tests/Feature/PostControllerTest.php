@@ -195,6 +195,73 @@ test('published namespace shows post with breadcrumbs', function () {
         );
 });
 
+test('published post increments page views and queues a tracking cookie', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'routing',
+        'page_views' => 4,
+    ]);
+
+    $response = $this->get(route('posts.path', ['path' => $post->full_path]));
+
+    $response->assertSuccessful()
+        ->assertCookie('post_viewed_'.$post->id, '1')
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/show')
+            ->where('post.id', $post->id)
+            ->where('post.page_views', 5)
+        );
+
+    expect($post->fresh()->page_views)->toBe(5);
+});
+
+test('published post does not increment page views again while tracking cookie exists', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'routing',
+        'page_views' => 9,
+    ]);
+
+    $this->withCookie('post_viewed_'.$post->id, '1')
+        ->get(route('posts.path', ['path' => $post->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/show')
+            ->where('post.id', $post->id)
+            ->where('post.page_views', 9)
+        );
+
+    expect($post->fresh()->page_views)->toBe(9);
+});
+
+test('published post does not increment page views for bot user agents', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'routing',
+        'page_views' => 7,
+    ]);
+
+    $this->withHeader('User-Agent', 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)')
+        ->get(route('posts.path', ['path' => $post->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/show')
+            ->where('post.id', $post->id)
+            ->where('post.page_views', 7)
+        );
+
+    expect($post->fresh()->page_views)->toBe(7);
+});
+
 test('guest post page receives no authenticated user', function () {
     $namespace = PostNamespace::factory()->create([
         'slug' => 'guides',
@@ -308,6 +375,30 @@ test('authenticated users can access preview markdown for draft posts', function
         ->assertSeeText('Preview content')
         ->assertSeeText('# Draft Post')
         ->assertSeeText('Preview only.');
+});
+
+test('previewing a draft post does not increment page views', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->draft()->create([
+        'slug' => 'routing',
+        'page_views' => 3,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('posts.path', ['path' => $post->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/show')
+            ->where('post.id', $post->id)
+            ->where('post.page_views', 3)
+            ->where('preview.status', 'draft')
+        );
+
+    expect($post->fresh()->page_views)->toBe(3);
 });
 
 test('homepage counts published posts from descendant namespaces', function () {

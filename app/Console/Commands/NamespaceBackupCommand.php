@@ -94,6 +94,7 @@ class NamespaceBackupCommand extends Command
                 'title' => $post->title,
                 'slug' => $post->slug,
                 'full_path' => $post->full_path,
+                'page_views' => $post->page_views,
                 'is_draft' => $post->is_draft,
                 'published_at' => $post->published_at?->toIso8601String(),
             ];

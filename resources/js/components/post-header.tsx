@@ -9,6 +9,7 @@ import {
     ArrowLeft,
     Pencil,
     Trash2,
+    Eye,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +36,7 @@ type Post = {
     title: string;
     slug: string;
     full_path: string;
+    page_views?: number;
     is_draft: boolean;
     published_at: string | null;
 };
@@ -138,6 +140,12 @@ export default function PostHeader({
                             </span>
                         )}
                     </div>
+                    {typeof post.page_views === 'number' && (
+                        <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1 text-xs font-medium text-sky-800 dark:bg-sky-900/30 dark:text-sky-200">
+                            <Eye className="size-3.5" />
+                            {post.page_views.toLocaleString()} views
+                        </div>
+                    )}
                     {mode === 'edit' && (
                         <div className="mt-3">
                             <Button variant="outline" asChild>

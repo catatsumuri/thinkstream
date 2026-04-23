@@ -38,15 +38,21 @@ function addAdminNamespaceBackupTreeToZip(ZipArchive $zip, array $tree, string $
     ], 4));
 
     foreach ($tree['posts'] ?? [] as $post) {
+        $frontmatter = [
+            'title' => $post['title'],
+            'slug' => $post['slug'],
+            'full_path' => $post['full_path'] ?? (($tree['full_path'] ?? $tree['slug']).'/'.$post['slug']),
+            'is_draft' => $post['is_draft'] ?? false,
+            'published_at' => $post['published_at'] ?? now()->toIso8601String(),
+        ];
+
+        if (array_key_exists('page_views', $post)) {
+            $frontmatter['page_views'] = $post['page_views'];
+        }
+
         $zip->addFromString(
             $prefix.$post['slug'].'.md',
-            "---\n".Yaml::dump([
-                'title' => $post['title'],
-                'slug' => $post['slug'],
-                'full_path' => $post['full_path'] ?? (($tree['full_path'] ?? $tree['slug']).'/'.$post['slug']),
-                'is_draft' => $post['is_draft'] ?? false,
-                'published_at' => $post['published_at'] ?? now()->toIso8601String(),
-            ])."---\n\n".rtrim($post['content'])."\n"
+            "---\n".Yaml::dump($frontmatter)."---\n\n".rtrim($post['content'])."\n"
         );
     }
 
@@ -1079,6 +1085,7 @@ test('authenticated users can view a post details page', function () {
         'namespace_id' => $namespace->id,
         'title' => 'Release Notes',
         'slug' => 'release-notes',
+        'page_views' => 27,
         'is_draft' => false,
     ]);
 
@@ -1091,7 +1098,23 @@ test('authenticated users can view a post details page', function () {
             ->where('post.id', $post->id)
             ->where('post.slug', 'release-notes')
             ->where('post.title', 'Release Notes')
+            ->where('post.page_views', 27)
         );
+});
+
+test('admin post details page does not increment page views', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'page_views' => 12,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.show', [$namespace, $post]))
+        ->assertOk();
+
+    expect($post->fresh()->page_views)->toBe(12);
 });
 
 test('post details are scoped to their namespace', function () {

@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Post;
+use App\Models\PostNamespace;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -15,5 +17,40 @@ test('authenticated users can visit the dashboard', function () {
     $this->actingAs($user);
 
     $response = $this->get(route('dashboard'));
-    $response->assertOk();
+    $response->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->where('top_posts', [])
+        );
+});
+
+test('dashboard shows top 10 posts ordered by page views', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+    ]);
+
+    $topPosts = collect(range(1, 12))->map(function (int $index) use ($namespace, $user) {
+        return Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
+            'title' => "Post {$index}",
+            'slug' => "post-{$index}",
+            'full_path' => "guides/post-{$index}",
+            'page_views' => $index * 10,
+        ]);
+    });
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('top_posts', 10)
+            ->where('top_posts.0.title', $topPosts->last()->title)
+            ->where('top_posts.0.page_views', 120)
+            ->where('top_posts.0.admin_url', route('admin.posts.show', [$namespace->id, $topPosts->last()->slug], false))
+            ->where('top_posts.0.canonical_url', route('posts.path', ['path' => $topPosts->last()->full_path], false))
+            ->where('top_posts.9.title', $topPosts->get(2)->title)
+            ->where('top_posts.9.page_views', 30)
+        );
 });
