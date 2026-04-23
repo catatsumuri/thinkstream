@@ -55,6 +55,11 @@ class HandleInertiaRequests extends Middleware
                     ->values()
                     ->all(),
             ],
+            'thinkstream' => [
+                'markdown_pages' => [
+                    'enabled' => config('thinkstream.markdown_pages.enabled'),
+                ],
+            ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'imageUrl' => session('imageUrl'),
         ];

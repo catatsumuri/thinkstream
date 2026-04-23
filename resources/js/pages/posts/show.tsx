@@ -14,6 +14,7 @@ import { siX } from 'simple-icons';
 import type { ContentNavNode } from '@/components/content-nav-tree';
 import ContentNavTree from '@/components/content-nav-tree';
 import MarkdownContent from '@/components/markdown-content';
+import MarkdownPageActions from '@/components/markdown-page-actions';
 import SearchPopover from '@/components/search-popover';
 import TableOfContents from '@/components/table-of-contents';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ import {
     show as adminPostShow,
 } from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
+import { markdown as contentPathMarkdown } from '@/routes/posts/path';
 
 type PostNamespace = {
     id: number;
@@ -135,10 +137,12 @@ export default function Show({
     postUrl: string;
     preview?: Preview;
 }) {
-    const { auth } = usePage<{
+    const { auth, thinkstream } = usePage<{
         auth: { user: { id: number; name: string } | null };
+        thinkstream: { markdown_pages: { enabled: boolean } };
     }>().props;
     const { currentUrl } = useCurrentUrl();
+    const markdownPagesEnabled = thinkstream.markdown_pages.enabled;
     const handleEditHeading = ({
         level,
         text,
@@ -183,6 +187,7 @@ export default function Show({
     const isMobile = useIsMobile();
     const [tocOverride, setTocOverride] = useState<boolean | null>(null);
     const [navOverride, setNavOverride] = useState<boolean | null>(null);
+    const markdownUrl = contentPathMarkdown.url({ path: post.full_path });
     const tocVisible = tocOverride ?? !isMobile;
     const hasNav = navRoot.children.length > 0 || navRoot.posts.length > 0;
     const hasHeadings = (entry?.headings.length ?? 0) > 0;
@@ -463,6 +468,14 @@ export default function Show({
                                 <h1 className="text-3xl font-bold">
                                     {post.title}
                                 </h1>
+                                <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                                    <span>/{post.full_path}</span>
+                                    {markdownPagesEnabled && (
+                                        <MarkdownPageActions
+                                            markdownUrl={markdownUrl}
+                                        />
+                                    )}
+                                </div>
                                 <div className="flex items-center gap-2">
                                     <span className="text-xs text-muted-foreground">
                                         Share:

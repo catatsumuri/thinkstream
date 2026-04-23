@@ -14,6 +14,10 @@ Route::middleware('private.mode')->group(function () {
     Route::get('/images/{path}', [ImageController::class, 'show'])
         ->where('path', '.+')
         ->name('images.show');
+
+    Route::get('/{path}.md', [PostController::class, 'resolveMarkdown'])
+        ->where('path', ReservedContentPath::wildcardConstraint())
+        ->name('posts.path.markdown');
 });
 
 Route::get('/api/ogp', [OgpController::class, 'fetch'])
