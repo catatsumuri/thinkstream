@@ -11,6 +11,7 @@ import {
 import { useState } from 'react';
 import type { ContentNavNode } from '@/components/content-nav-tree';
 import ContentNavTree from '@/components/content-nav-tree';
+import MarkdownPageActions from '@/components/markdown-page-actions';
 import SearchPopover from '@/components/search-popover';
 import { Button } from '@/components/ui/button';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
@@ -20,6 +21,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { login } from '@/routes';
 import { namespace as adminNamespaceRoute } from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
+import { markdown as contentPathMarkdown } from '@/routes/posts/path';
 
 type PostNamespace = {
     id: number;
@@ -58,13 +60,16 @@ export default function Namespace({
     posts: Post[];
     preview?: boolean;
 }) {
-    const { auth } = usePage<{
+    const { auth, thinkstream } = usePage<{
         auth: { user: { id: number; name: string } | null };
+        thinkstream: { markdown_pages: { enabled: boolean } };
     }>().props;
     const { currentUrl } = useCurrentUrl();
     const isMobile = useIsMobile();
     const [navOverride, setNavOverride] = useState<boolean | null>(null);
     const navVisible = navOverride ?? !isMobile;
+    const markdownPagesEnabled = thinkstream.markdown_pages.enabled;
+    const markdownUrl = contentPathMarkdown.url({ path: namespace.full_path });
 
     return (
         <>
@@ -214,9 +219,14 @@ export default function Namespace({
 
                     <main data-test="namespace-main" className="space-y-12">
                         <section className="space-y-3">
-                            <p className="text-sm text-muted-foreground">
-                                /{namespace.full_path}
-                            </p>
+                            <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                                <p>/{namespace.full_path}</p>
+                                {markdownPagesEnabled && (
+                                    <MarkdownPageActions
+                                        markdownUrl={markdownUrl}
+                                    />
+                                )}
+                            </div>
                             {namespace.description ? (
                                 <p className="max-w-3xl text-base leading-7 whitespace-pre-line text-muted-foreground">
                                     {namespace.description}

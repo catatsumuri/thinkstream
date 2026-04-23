@@ -6,7 +6,9 @@ use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Support\ReservedContentPath;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -56,56 +58,57 @@ class PostController extends Controller
 
         abort_if(ReservedContentPath::startsWithReservedSegment($normalizedPath), 404);
 
-        $post = Post::query()
-            ->with('namespace:id,parent_id,slug,full_path,name,cover_image,is_published')
-            ->where('full_path', $normalizedPath)
-            ->tap(fn (Builder $query) => $this->applyPublishedPostScope($query))
-            ->first();
+        $resolvedPost = $this->resolvePostForPath($normalizedPath);
 
-        if ($post) {
-            $ancestors = $this->ancestorChain($post->namespace);
-
-            abort_unless($this->namespaceChainIsPublished($post->namespace, $ancestors), 404);
-
-            return $this->renderPost($post, $ancestors);
+        if ($resolvedPost !== null) {
+            return $this->renderPost(
+                $resolvedPost['post'],
+                $resolvedPost['ancestors'],
+                $resolvedPost['preview'],
+            );
         }
 
-        if (auth()->check()) {
-            $previewPost = Post::query()
-                ->with('namespace:id,parent_id,slug,full_path,name,cover_image,is_published')
-                ->where('full_path', $normalizedPath)
-                ->first();
+        $resolvedNamespace = $this->resolveNamespaceForPath($normalizedPath);
 
-            if ($previewPost) {
-                $ancestors = $this->ancestorChain($previewPost->namespace);
-
-                return $this->renderPost($previewPost, $ancestors, preview: true);
-            }
+        if ($resolvedNamespace !== null) {
+            return $this->renderNamespace(
+                $resolvedNamespace['namespace'],
+                $resolvedNamespace['ancestors'],
+                $resolvedNamespace['preview'],
+            );
         }
 
-        $namespace = PostNamespace::query()
-            ->where('full_path', $normalizedPath)
-            ->where('is_published', true)
-            ->first();
+        abort(404);
+    }
 
-        if ($namespace) {
-            $ancestors = $this->ancestorChain($namespace);
+    public function resolveMarkdown(string $path): HttpResponse
+    {
+        abort_unless(config('thinkstream.markdown_pages.enabled'), 404);
 
-            abort_unless($this->namespaceChainIsPublished($namespace, $ancestors), 404);
+        $normalizedPath = trim($path, '/');
 
-            return $this->renderNamespace($namespace, $ancestors);
+        abort_if(ReservedContentPath::startsWithReservedSegment($normalizedPath), 404);
+
+        $resolvedPost = $this->resolvePostForPath($normalizedPath);
+
+        if ($resolvedPost !== null) {
+            return $this->markdownResponse(
+                $this->buildPostMarkdown(
+                    $resolvedPost['post'],
+                    $resolvedPost['preview'],
+                ),
+            );
         }
 
-        if (auth()->check()) {
-            $previewNamespace = PostNamespace::query()
-                ->where('full_path', $normalizedPath)
-                ->first();
+        $resolvedNamespace = $this->resolveNamespaceForPath($normalizedPath);
 
-            if ($previewNamespace) {
-                $ancestors = $this->ancestorChain($previewNamespace);
-
-                return $this->renderNamespace($previewNamespace, $ancestors, preview: true);
-            }
+        if ($resolvedNamespace !== null) {
+            return $this->markdownResponse(
+                $this->buildNamespaceMarkdown(
+                    $resolvedNamespace['namespace'],
+                    $resolvedNamespace['preview'],
+                ),
+            );
         }
 
         abort(404);
@@ -204,6 +207,198 @@ class PostController extends Controller
         return $query
             ->where('is_draft', false)
             ->where('published_at', '<=', now());
+    }
+
+    /**
+     * @return array{post: Post, ancestors: Collection<int, PostNamespace>, preview: bool}|null
+     */
+    private function resolvePostForPath(string $normalizedPath): ?array
+    {
+        $post = Post::query()
+            ->with('namespace:id,parent_id,slug,full_path,name,cover_image,is_published')
+            ->where('full_path', $normalizedPath)
+            ->tap(fn (Builder $query) => $this->applyPublishedPostScope($query))
+            ->first();
+
+        if ($post !== null) {
+            $ancestors = $this->ancestorChain($post->namespace);
+
+            abort_unless($this->namespaceChainIsPublished($post->namespace, $ancestors), 404);
+
+            return [
+                'post' => $post,
+                'ancestors' => $ancestors,
+                'preview' => false,
+            ];
+        }
+
+        if (! auth()->check()) {
+            return null;
+        }
+
+        $previewPost = Post::query()
+            ->with('namespace:id,parent_id,slug,full_path,name,cover_image,is_published')
+            ->where('full_path', $normalizedPath)
+            ->first();
+
+        if ($previewPost === null) {
+            return null;
+        }
+
+        return [
+            'post' => $previewPost,
+            'ancestors' => $this->ancestorChain($previewPost->namespace),
+            'preview' => true,
+        ];
+    }
+
+    /**
+     * @return array{namespace: PostNamespace, ancestors: Collection<int, PostNamespace>, preview: bool}|null
+     */
+    private function resolveNamespaceForPath(string $normalizedPath): ?array
+    {
+        $namespace = PostNamespace::query()
+            ->where('full_path', $normalizedPath)
+            ->where('is_published', true)
+            ->first();
+
+        if ($namespace !== null) {
+            $ancestors = $this->ancestorChain($namespace);
+
+            abort_unless($this->namespaceChainIsPublished($namespace, $ancestors), 404);
+
+            return [
+                'namespace' => $namespace,
+                'ancestors' => $ancestors,
+                'preview' => false,
+            ];
+        }
+
+        if (! auth()->check()) {
+            return null;
+        }
+
+        $previewNamespace = PostNamespace::query()
+            ->where('full_path', $normalizedPath)
+            ->first();
+
+        if ($previewNamespace === null) {
+            return null;
+        }
+
+        return [
+            'namespace' => $previewNamespace,
+            'ancestors' => $this->ancestorChain($previewNamespace),
+            'preview' => true,
+        ];
+    }
+
+    private function markdownResponse(string $content): HttpResponse
+    {
+        return response($content, 200, [
+            'Content-Type' => 'text/markdown; charset=UTF-8',
+        ]);
+    }
+
+    private function buildPostMarkdown(Post $post, bool $preview = false): string
+    {
+        $lines = [];
+
+        if ($preview) {
+            $lines[] = '> Preview content';
+            $lines[] = '';
+        }
+
+        if (! $this->startsWithMatchingHeading($post->content, $post->title)) {
+            $lines[] = '# '.$post->title;
+            $lines[] = '';
+        }
+
+        $lines[] = ltrim($post->content);
+
+        return rtrim(implode("\n", $lines))."\n";
+    }
+
+    private function buildNamespaceMarkdown(PostNamespace $namespace, bool $preview = false): string
+    {
+        $children = $namespace->children()
+            ->when(
+                ! $preview,
+                fn (Builder $query) => $query->where('is_published', true),
+            )
+            ->orderBy('name')
+            ->get(['name', 'full_path']);
+
+        $posts = $namespace->posts()
+            ->when(
+                ! $preview,
+                fn (Builder $query) => $this->applyPublishedPostScope($query),
+            )
+            ->orderBy('published_at')
+            ->orderBy('id')
+            ->get(['title', 'full_path']);
+
+        $lines = [];
+
+        if ($preview) {
+            $lines[] = '> Preview content';
+            $lines[] = '';
+        }
+
+        $lines[] = '# '.$namespace->name;
+
+        if (filled($namespace->description)) {
+            $lines[] = '';
+            $lines[] = trim($namespace->description);
+        }
+
+        if ($children->isNotEmpty()) {
+            $lines[] = '';
+            $lines[] = '## Child Namespaces';
+            $lines[] = '';
+
+            foreach ($namespace->sortNamespaces($children) as $child) {
+                $lines[] = sprintf(
+                    '- [%s](%s)',
+                    $child->name,
+                    route('posts.path', ['path' => $child->full_path], absolute: false),
+                );
+            }
+        }
+
+        if ($posts->isNotEmpty()) {
+            $lines[] = '';
+            $lines[] = '## Posts';
+            $lines[] = '';
+
+            foreach ($namespace->sortPosts($posts) as $post) {
+                $lines[] = sprintf(
+                    '- [%s](%s)',
+                    $post->title,
+                    route('posts.path', ['path' => $post->full_path], absolute: false),
+                );
+            }
+        }
+
+        return rtrim(implode("\n", $lines))."\n";
+    }
+
+    private function startsWithMatchingHeading(string $content, string $title): bool
+    {
+        $normalizedContent = ltrim($content);
+
+        if ($normalizedContent === '') {
+            return false;
+        }
+
+        $firstLine = Str::of($normalizedContent)->before("\n")->trim()->value();
+        $headingMatch = preg_match('/^#\s+(.+)$/u', $firstLine, $matches);
+
+        if ($headingMatch !== 1) {
+            return false;
+        }
+
+        return trim($matches[1]) === trim($title);
     }
 
     /**

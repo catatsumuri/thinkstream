@@ -233,6 +233,83 @@ test('authenticated post page receives the current user for canonical controls',
         );
 });
 
+test('markdown route returns 404 when markdown pages are disabled', function () {
+    config(['thinkstream.markdown_pages.enabled' => false]);
+
+    $post = Post::factory()->published()->create([
+        'slug' => 'routing',
+    ]);
+
+    $this->get(route('posts.path.markdown', ['path' => $post->full_path]))
+        ->assertNotFound();
+});
+
+test('markdown route returns post markdown when markdown pages are enabled', function () {
+    config(['thinkstream.markdown_pages.enabled' => true]);
+
+    $post = Post::factory()->published()->create([
+        'slug' => 'routing',
+        'title' => 'Routing',
+        'content' => "## Intro\n\nRoute content.",
+    ]);
+
+    $this->get(route('posts.path.markdown', ['path' => $post->full_path]))
+        ->assertSuccessful()
+        ->assertHeader('content-type', 'text/markdown; charset=UTF-8')
+        ->assertSeeText('# Routing')
+        ->assertSeeText('## Intro')
+        ->assertSeeText('Route content.');
+});
+
+test('markdown route returns namespace markdown when markdown pages are enabled', function () {
+    config(['thinkstream.markdown_pages.enabled' => true]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+        'description' => 'Practical guides.',
+        'is_published' => true,
+    ]);
+    $child = PostNamespace::factory()->create([
+        'parent_id' => $namespace->id,
+        'slug' => 'laravel',
+        'name' => 'Laravel',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'routing',
+        'title' => 'Routing',
+    ]);
+
+    $this->get(route('posts.path.markdown', ['path' => $namespace->full_path]))
+        ->assertSuccessful()
+        ->assertHeader('content-type', 'text/markdown; charset=UTF-8')
+        ->assertSeeText('# Guides')
+        ->assertSeeText('Practical guides.')
+        ->assertSeeText('[Laravel](/guides/laravel)', false)
+        ->assertSeeText('[Routing](/guides/routing)', false);
+});
+
+test('authenticated users can access preview markdown for draft posts', function () {
+    config(['thinkstream.markdown_pages.enabled' => true]);
+
+    $user = User::factory()->create();
+    $post = Post::factory()->create([
+        'slug' => 'draft-post',
+        'title' => 'Draft Post',
+        'is_draft' => true,
+        'published_at' => null,
+        'content' => 'Preview only.',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('posts.path.markdown', ['path' => $post->full_path]))
+        ->assertSuccessful()
+        ->assertSeeText('Preview content')
+        ->assertSeeText('# Draft Post')
+        ->assertSeeText('Preview only.');
+});
+
 test('homepage counts published posts from descendant namespaces', function () {
     $root = PostNamespace::factory()->create([
         'slug' => 'guides',
