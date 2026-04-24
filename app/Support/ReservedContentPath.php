@@ -10,6 +10,7 @@ class ReservedContentPath
         'images',
         'login',
         'register',
+        'tags',
     ];
 
     /**

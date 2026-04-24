@@ -86,8 +86,8 @@ class NamespaceBackupCommand extends Command
         }
 
         $posts = $withRevisions
-            ? $namespace->posts()->with('revisions.user')->get()
-            : $namespace->posts()->get();
+            ? $namespace->posts()->with('revisions.user', 'tags')->get()
+            : $namespace->posts()->with('tags')->get();
 
         foreach ($posts as $post) {
             $frontmatter = [
@@ -99,6 +99,7 @@ class NamespaceBackupCommand extends Command
                 'published_at' => $post->published_at?->toIso8601String(),
                 'reference_title' => $post->reference_title,
                 'reference_url' => $post->reference_url,
+                'tags' => $post->tags->pluck('name')->all(),
             ];
 
             $content = "---\n".Yaml::dump($frontmatter)."---\n\n".$post->content."\n";

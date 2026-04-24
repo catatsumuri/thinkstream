@@ -34,6 +34,7 @@ import {
 } from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
 import { markdown as contentPathMarkdown } from '@/routes/posts/path';
+import { show as tagShow } from '@/routes/tags';
 
 const postDateFormatter = new Intl.DateTimeFormat('en-US', {
     year: 'numeric',
@@ -66,6 +67,7 @@ type Post = {
     updated_at: string;
     reference_title: string | null;
     reference_url: string | null;
+    tags: Array<{ name: string }>;
 };
 
 function findHeadingOffset(
@@ -547,6 +549,20 @@ export default function Show({
                                             </span>
                                             <ExternalLink className="size-3 shrink-0" />
                                         </a>
+                                    </div>
+                                )}
+
+                                {post.tags.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {post.tags.map((tag) => (
+                                            <Link
+                                                key={tag.name}
+                                                href={tagShow.url(tag.name)}
+                                                className="inline-flex items-center rounded-md border px-2 py-0.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                            >
+                                                {tag.name}
+                                            </Link>
+                                        ))}
                                     </div>
                                 )}
 
