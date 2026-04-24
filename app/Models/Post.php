@@ -25,6 +25,8 @@ class Post extends Model
         'user_id',
         'is_draft',
         'published_at',
+        'reference_title',
+        'reference_url',
     ];
 
     protected function casts(): array

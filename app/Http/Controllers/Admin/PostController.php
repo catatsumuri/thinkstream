@@ -349,6 +349,8 @@ class PostController extends Controller
                 'published_at',
                 'created_at',
                 'page_views',
+                'reference_title',
+                'reference_url',
             ]),
         ]);
     }
@@ -357,7 +359,17 @@ class PostController extends Controller
     {
         return Inertia::render('admin/posts/edit', [
             'namespace' => $namespace,
-            'post' => $post,
+            'post' => $post->only([
+                'id',
+                'title',
+                'slug',
+                'full_path',
+                'content',
+                'is_draft',
+                'published_at',
+                'reference_title',
+                'reference_url',
+            ]),
             'slugPrefix' => trim($namespace->full_path, '/').'/',
         ]);
     }

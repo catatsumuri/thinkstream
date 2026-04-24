@@ -966,6 +966,8 @@ test('authenticated users can store a post', function () {
             'slug' => 'hello-world',
             'content' => '# Hello\n\nThis is a test post.',
             'published_at' => null,
+            'reference_title' => 'Laravel Routing',
+            'reference_url' => 'https://laravel.com/docs/routing',
         ])
         ->assertSessionHasNoErrors()
         ->assertSessionHas('inertia.flash_data.toast', [
@@ -979,6 +981,8 @@ test('authenticated users can store a post', function () {
         'title' => 'Hello World',
         'slug' => 'hello-world',
         'user_id' => $user->id,
+        'reference_title' => 'Laravel Routing',
+        'reference_url' => 'https://laravel.com/docs/routing',
     ]);
 
     expect(Post::query()->where('slug', 'hello-world')->value('published_at'))->not->toBeNull();
@@ -1087,6 +1091,8 @@ test('authenticated users can view a post details page', function () {
         'slug' => 'release-notes',
         'page_views' => 27,
         'is_draft' => false,
+        'reference_title' => 'Release Notes Source',
+        'reference_url' => 'https://example.com/release-notes',
     ]);
 
     $this->actingAs($user)
@@ -1099,6 +1105,8 @@ test('authenticated users can view a post details page', function () {
             ->where('post.slug', 'release-notes')
             ->where('post.title', 'Release Notes')
             ->where('post.page_views', 27)
+            ->where('post.reference_title', 'Release Notes Source')
+            ->where('post.reference_url', 'https://example.com/release-notes')
         );
 });
 
@@ -1141,6 +1149,8 @@ test('authenticated users can update a post', function () {
             'slug' => 'new-slug',
             'content' => 'Updated content.',
             'published_at' => null,
+            'reference_title' => 'Updated Reference',
+            'reference_url' => 'https://example.com/updated-reference',
         ])
         ->assertSessionHasNoErrors()
         ->assertRedirect(route('admin.posts.edit', [$namespace, 'new-slug']));
@@ -1149,6 +1159,8 @@ test('authenticated users can update a post', function () {
     expect($post->title)->toBe('New Title');
     expect($post->slug)->toBe('new-slug');
     expect($post->published_at)->not->toBeNull();
+    expect($post->reference_title)->toBe('Updated Reference');
+    expect($post->reference_url)->toBe('https://example.com/updated-reference');
 });
 
 test('updating a post allows keeping the same slug', function () {

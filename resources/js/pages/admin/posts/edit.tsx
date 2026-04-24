@@ -34,6 +34,8 @@ type Post = {
     content: string;
     is_draft: boolean;
     published_at: string | null;
+    reference_title: string | null;
+    reference_url: string | null;
 };
 
 export default function Edit({
@@ -245,6 +247,41 @@ export default function Edit({
                                 })}
                                 jumpTo={jumpTo}
                             />
+
+                            <div className="grid gap-4 rounded-lg border border-dashed p-4">
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    Reference (optional)
+                                </p>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="reference_title">
+                                        Title
+                                    </Label>
+                                    <Input
+                                        id="reference_title"
+                                        name="reference_title"
+                                        placeholder="Reference title"
+                                        defaultValue={
+                                            post.reference_title ?? ''
+                                        }
+                                    />
+                                    <InputError
+                                        message={errors.reference_title}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="reference_url">URL</Label>
+                                    <Input
+                                        id="reference_url"
+                                        name="reference_url"
+                                        type="url"
+                                        placeholder="https://example.com"
+                                        defaultValue={post.reference_url ?? ''}
+                                    />
+                                    <InputError
+                                        message={errors.reference_url}
+                                    />
+                                </div>
+                            </div>
 
                             <div className="flex items-center gap-2">
                                 <input

@@ -178,6 +178,8 @@ test('published namespace shows post with breadcrumbs', function () {
     ]);
     $post = Post::factory()->for($child, 'namespace')->published()->create([
         'slug' => 'routing',
+        'reference_title' => 'Laravel Routing',
+        'reference_url' => 'https://laravel.com/docs/routing',
     ]);
 
     $this->get(route('posts.path', ['path' => $post->full_path]))
@@ -189,6 +191,8 @@ test('published namespace shows post with breadcrumbs', function () {
             ->where('navRoot.children.0.posts.0.full_path', $post->full_path)
             ->where('namespace.full_path', $child->full_path)
             ->where('post.full_path', $post->full_path)
+            ->where('post.reference_title', 'Laravel Routing')
+            ->where('post.reference_url', 'https://laravel.com/docs/routing')
             ->where('postUrl', route('posts.path', ['path' => $post->full_path]))
             ->where('breadcrumbs.0.full_path', $root->full_path)
             ->where('posts.0.full_path', $post->full_path)

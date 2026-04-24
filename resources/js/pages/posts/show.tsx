@@ -3,6 +3,7 @@ import {
     AlertTriangle,
     BookOpen,
     ChevronRight,
+    ExternalLink,
     List,
     PanelLeftClose,
     PanelLeftOpen,
@@ -63,6 +64,8 @@ type Post = {
     content: string;
     published_at: string;
     updated_at: string;
+    reference_title: string | null;
+    reference_url: string | null;
 };
 
 function findHeadingOffset(
@@ -526,6 +529,27 @@ export default function Show({
                                         </span>
                                     </div>
                                 </div>
+                                {post.reference_url && (
+                                    <div className="flex justify-end">
+                                        <a
+                                            href={post.reference_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex items-center gap-2 rounded-md border border-border/60 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                        >
+                                            <span className="text-muted-foreground/60">
+                                                Source
+                                            </span>
+                                            <span className="h-3 w-px bg-border" />
+                                            <span className="max-w-64 truncate">
+                                                {post.reference_title ??
+                                                    post.reference_url}
+                                            </span>
+                                            <ExternalLink className="size-3 shrink-0" />
+                                        </a>
+                                    </div>
+                                )}
+
                                 <div className="flex flex-col gap-3">
                                     <div
                                         data-test="post-header-actions"
@@ -563,10 +587,10 @@ export default function Show({
                                 />
                             </div>
 
-                            <footer className="border-t pt-4">
+                            <footer className="flex justify-end border-t pt-4">
                                 <time
                                     dateTime={post.updated_at}
-                                    className="text-sm text-muted-foreground"
+                                    className="text-xs text-muted-foreground/60"
                                 >
                                     Last updated:{' '}
                                     {postDateFormatter.format(

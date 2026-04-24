@@ -105,6 +105,8 @@ type Post = {
     is_draft: boolean;
     published_at: string | null;
     created_at: string;
+    reference_title: string | null;
+    reference_url: string | null;
 };
 
 export default function Show({
@@ -246,9 +248,26 @@ export default function Show({
                         }
                     >
                         <div className="min-w-0 rounded-xl border bg-card p-6">
-                            <div className="mb-6 rounded-lg border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-                                /{post.full_path}
-                            </div>
+                            {post.reference_url && (
+                                <div className="mb-6 flex justify-end">
+                                    <a
+                                        href={post.reference_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 rounded-md border border-border/60 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                    >
+                                        <span className="text-muted-foreground/60">
+                                            Source
+                                        </span>
+                                        <span className="h-3 w-px bg-border" />
+                                        <span className="max-w-64 truncate">
+                                            {post.reference_title ??
+                                                post.reference_url}
+                                        </span>
+                                        <ExternalLink className="size-3 shrink-0" />
+                                    </a>
+                                </div>
+                            )}
                             {post.is_draft && (
                                 <div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/40 dark:bg-amber-900/20">
                                     <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />

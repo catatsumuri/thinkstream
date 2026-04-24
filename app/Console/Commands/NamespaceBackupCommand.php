@@ -97,6 +97,8 @@ class NamespaceBackupCommand extends Command
                 'page_views' => $post->page_views,
                 'is_draft' => $post->is_draft,
                 'published_at' => $post->published_at?->toIso8601String(),
+                'reference_title' => $post->reference_title,
+                'reference_url' => $post->reference_url,
             ];
 
             $content = "---\n".Yaml::dump($frontmatter)."---\n\n".$post->content."\n";

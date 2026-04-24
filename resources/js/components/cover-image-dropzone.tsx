@@ -1,6 +1,7 @@
 import { ImageMinus, ImagePlus, ImageUp, Pencil, X } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { useEffect, useRef, useState } from 'react';
+import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -10,7 +11,6 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import InputError from '@/components/input-error';
 import { cn } from '@/lib/utils';
 
 const COVER_IMAGE_ASPECT_RATIO = 16 / 9;
