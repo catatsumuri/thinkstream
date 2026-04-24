@@ -508,6 +508,45 @@ test('namespace backup management separates namespaces that share the same slug'
     }
 });
 
+test('namespace backup management includes legacy id-prefixed backups', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-legacy-backup',
+        'full_path' => 'guides-legacy-backup',
+        'name' => 'Guides Legacy Backup',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    $legacyPrefix = 'namespace-'.$namespace->id.'-'.$backupPrefix;
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete([
+        ...File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'),
+        ...File::glob($backupDirectory.'/'.$legacyPrefix.'-*.zip'),
+    ]);
+
+    $legacyBackup = $backupDirectory.'/'.$legacyPrefix.'-20260421-040506.zip';
+    File::put($legacyBackup, 'legacy');
+
+    try {
+        $this->actingAs($user)
+            ->get(route('admin.posts.backups', $namespace))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('admin/posts/backups')
+                ->where('namespace.id', $namespace->id)
+                ->where('namespace.backup_count', 1)
+                ->has('backups', 1)
+                ->where('backups.0.filename', basename($legacyBackup))
+            );
+    } finally {
+        File::delete([
+            ...File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'),
+            ...File::glob($backupDirectory.'/'.$legacyPrefix.'-*.zip'),
+        ]);
+    }
+});
+
 test('authenticated users can create a namespace backup from backup management', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create([
@@ -1131,6 +1170,40 @@ test('authenticated users can view a post details page', function () {
             ->where('post.page_views', 27)
             ->where('post.reference_title', 'Release Notes Source')
             ->where('post.reference_url', 'https://example.com/release-notes')
+        );
+});
+
+test('admin post details page includes admin navigation rooted at the top namespace', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create([
+        'slug' => 'guides-admin-nav',
+        'full_path' => 'guides-admin-nav',
+        'name' => 'Guides Admin Nav',
+    ]);
+    $child = PostNamespace::factory()->create([
+        'parent_id' => $root->id,
+        'slug' => 'laravel',
+        'full_path' => 'guides-admin-nav/laravel',
+        'name' => 'Laravel',
+    ]);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $child->id,
+        'slug' => 'routing',
+        'full_path' => 'guides-admin-nav/laravel/routing',
+        'title' => 'Routing',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.show', [$child, $post]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/show')
+            ->where('navRoot.full_path', $root->full_path)
+            ->where('navRoot.href', route('admin.posts.namespace', $root, false))
+            ->where('navRoot.children.0.full_path', $child->full_path)
+            ->where('navRoot.children.0.href', route('admin.posts.namespace', $child, false))
+            ->where('navRoot.children.0.posts.0.full_path', $post->full_path)
+            ->where('navRoot.children.0.posts.0.href', route('admin.posts.show', [$child, $post], false))
         );
 });
 
