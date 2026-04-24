@@ -14,7 +14,24 @@ test('top page loads', function () {
 
     $page
         ->assertSee('ThinkStream')
-        ->assertPresent('[data-test="docs-search-shortcut"]');
+        ->assertPresent('[data-test="docs-search-shortcut"]')
+        ->assertSee('Powered by ThinkStream')
+        ->assertAttribute(
+            '[data-test="homepage-github-link"]',
+            'href',
+            'https://github.com/catatsumuri/thinkstream',
+        )
+        ->assertAttribute(
+            '[data-test="homepage-github-link"]',
+            'target',
+            '_blank',
+        )
+        ->assertAttribute(
+            '[data-test="homepage-github-link"]',
+            'rel',
+            'noopener noreferrer',
+        )
+        ->assertPresent('[data-test="homepage-github-icon"]');
 });
 
 test('published post headings expose copyable anchor links', function () {

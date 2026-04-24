@@ -196,7 +196,7 @@ class PostController extends Controller
             'namespace' => $namespace->only(['id', 'slug', 'full_path', 'name', 'cover_image_url']),
             'postUrl' => route('posts.path', ['path' => $post->full_path]),
             'post' => [
-                ...$post->only(['id', 'slug', 'full_path', 'title', 'content', 'published_at', 'updated_at']),
+                ...$post->only(['id', 'slug', 'full_path', 'title', 'content', 'published_at', 'updated_at', 'reference_title', 'reference_url']),
                 'page_views' => $pageViews,
             ],
             'posts' => $namespace->sortPosts($posts),

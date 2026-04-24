@@ -1,10 +1,12 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ImageOff, Settings2 } from 'lucide-react';
 import DocsSearchTrigger from '@/components/docs-search-trigger';
+import { SimpleIconSvg } from '@/components/markdown-card-group';
 import SearchPopover from '@/components/search-popover';
 import { Button } from '@/components/ui/button';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { getSimpleIcon } from '@/lib/simple-icon-lookup';
 import { login } from '@/routes';
 import { namespace as adminNamespaceRoute } from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
@@ -24,6 +26,7 @@ export default function Index({ namespaces }: { namespaces: PostNamespace[] }) {
         auth: { user: { id: number; name: string } | null };
     }>().props;
     const { currentUrl } = useCurrentUrl();
+    const githubIcon = getSimpleIcon('github');
 
     return (
         <>
@@ -134,6 +137,31 @@ export default function Index({ namespaces }: { namespaces: PostNamespace[] }) {
                         </div>
                     )}
                 </div>
+
+                <footer className="border-t">
+                    <div className="mx-auto flex max-w-7xl justify-center px-4 py-6 text-sm text-muted-foreground">
+                        <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+                            <span>Powered by ThinkStream</span>
+                            <a
+                                href="https://github.com/catatsumuri/thinkstream"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-2 font-medium text-foreground underline underline-offset-4 transition-opacity hover:opacity-70"
+                                data-test="homepage-github-link"
+                            >
+                                {githubIcon && (
+                                    <span data-test="homepage-github-icon">
+                                        <SimpleIconSvg
+                                            icon={githubIcon}
+                                            className="size-4"
+                                        />
+                                    </span>
+                                )}
+                                github.com/catatsumuri/thinkstream
+                            </a>
+                        </p>
+                    </div>
+                </footer>
             </div>
         </>
     );

@@ -57,6 +57,8 @@ class UpdatePostRequest extends FormRequest
             'content' => ['required', 'string'],
             'is_draft' => ['boolean'],
             'published_at' => ['nullable', 'date'],
+            'reference_title' => ['nullable', 'string', 'max:255'],
+            'reference_url' => ['nullable', 'url', 'max:2048'],
         ];
     }
 

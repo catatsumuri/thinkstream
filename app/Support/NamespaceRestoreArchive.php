@@ -274,6 +274,8 @@ class NamespaceRestoreArchive
             $post->page_views = (int) ($frontmatter['page_views'] ?? 0);
             $post->is_draft = (bool) ($frontmatter['is_draft'] ?? false);
             $post->published_at = $frontmatter['published_at'] ?? null;
+            $post->reference_title = $frontmatter['reference_title'] ?? null;
+            $post->reference_url = $frontmatter['reference_url'] ?? null;
             $post->save();
 
             if ($withRevisions) {

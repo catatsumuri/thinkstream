@@ -52,6 +52,14 @@ function addNamespaceBackupTreeToZip(ZipArchive $zip, array $tree, string $prefi
             $frontmatter['page_views'] = $post['page_views'];
         }
 
+        if (array_key_exists('reference_title', $post)) {
+            $frontmatter['reference_title'] = $post['reference_title'];
+        }
+
+        if (array_key_exists('reference_url', $post)) {
+            $frontmatter['reference_url'] = $post['reference_url'];
+        }
+
         $zip->addFromString(
             $prefix.$post['slug'].'.md',
             "---\n".Yaml::dump($frontmatter)."---\n\n".rtrim($post['content'])."\n"
@@ -97,6 +105,8 @@ test('namespace backup command exports namespace metadata and markdown posts', f
         'slug' => 'routing',
         'full_path' => 'guides/routing',
         'page_views' => 42,
+        'reference_title' => 'Laravel Routing Docs',
+        'reference_url' => 'https://laravel.com/docs/routing',
         'content' => "# Routing\n\n![Diagram](/images/posts/123/diagram.png)\n\nBackup me.",
     ]);
 
@@ -132,6 +142,8 @@ test('namespace backup command exports namespace metadata and markdown posts', f
         ->toContain('slug: routing')
         ->toContain('full_path: guides/routing')
         ->toContain('page_views: 42')
+        ->toContain("reference_title: 'Laravel Routing Docs'")
+        ->toContain("reference_url: 'https://laravel.com/docs/routing'")
         ->toContain('![Diagram](/images/posts/123/diagram.png)')
         ->toContain("# Routing\n\n![Diagram](/images/posts/123/diagram.png)\n\nBackup me.")
         ->and($coverImage)->toBe('cover-image-bytes')
@@ -156,6 +168,8 @@ test('namespace restore command imports a namespace backup zip', function () {
                 'title' => 'Laravel AI SDK',
                 'slug' => 'laravel-ai-sdk',
                 'page_views' => 11,
+                'reference_title' => 'Laravel AI SDK Docs',
+                'reference_url' => 'https://laravel.com/docs/ai',
                 'content' => "# Laravel AI SDK\n\n![Diagram](/images/posts/legacy-id/ai-sdk.png)\n\nIntro.",
             ],
             [
@@ -196,6 +210,8 @@ test('namespace restore command imports a namespace backup zip', function () {
                 'upgrade-12-to-13',
             ])
             ->and($posts->firstWhere('slug', 'laravel-ai-sdk')?->page_views)->toBe(11)
+            ->and($posts->firstWhere('slug', 'laravel-ai-sdk')?->reference_title)->toBe('Laravel AI SDK Docs')
+            ->and($posts->firstWhere('slug', 'laravel-ai-sdk')?->reference_url)->toBe('https://laravel.com/docs/ai')
             ->and($posts->firstWhere('slug', 'upgrade-12-to-13')?->page_views)->toBe(0)
             ->and($posts->pluck('user_id')->unique()->all())->toBe([$user->id]);
 

@@ -175,6 +175,37 @@ export default function Create({
                                 )}
                             />
 
+                            <div className="grid gap-4 rounded-lg border border-dashed p-4">
+                                <p className="text-sm font-medium text-muted-foreground">
+                                    Reference (optional)
+                                </p>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="reference_title">
+                                        Title
+                                    </Label>
+                                    <Input
+                                        id="reference_title"
+                                        name="reference_title"
+                                        placeholder="Reference title"
+                                    />
+                                    <InputError
+                                        message={errors.reference_title}
+                                    />
+                                </div>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="reference_url">URL</Label>
+                                    <Input
+                                        id="reference_url"
+                                        name="reference_url"
+                                        type="url"
+                                        placeholder="https://example.com"
+                                    />
+                                    <InputError
+                                        message={errors.reference_url}
+                                    />
+                                </div>
+                            </div>
+
                             <div className="flex items-center gap-2">
                                 <input
                                     type="hidden"
