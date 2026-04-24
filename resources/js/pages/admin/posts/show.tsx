@@ -210,11 +210,7 @@ export default function Show({
             <div className="space-y-4 p-4">
                 <PostHeader namespace={namespace} post={post} />
 
-                <div
-                    className={
-                        gridCols ? `lg:grid lg:gap-8 ${gridCols}` : ''
-                    }
-                >
+                <div className={gridCols ? `lg:grid lg:gap-8 ${gridCols}` : ''}>
                     {hasNav && (
                         <aside className="hidden self-start lg:sticky lg:top-20 lg:block">
                             {navVisible ? (
