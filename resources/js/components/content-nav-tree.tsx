@@ -7,10 +7,12 @@ import { path as contentPath } from '@/routes/posts';
 export type ContentNavNode = {
     name: string;
     full_path: string;
+    href?: string;
     children: ContentNavNode[];
     posts: Array<{
         title: string;
         full_path: string;
+        href?: string;
     }>;
 };
 
@@ -75,7 +77,7 @@ function TreeNode({
                         </span>
                     )}
                     <Link
-                        href={contentPath.url(node.full_path)}
+                        href={node.href ?? contentPath.url(node.full_path)}
                         onClick={() => onNavigate?.()}
                         data-active={
                             currentPath === node.full_path ? 'true' : undefined
@@ -117,7 +119,7 @@ function TreeNode({
                     {node.posts.map((post) => (
                         <Link
                             key={post.full_path}
-                            href={contentPath.url(post.full_path)}
+                            href={post.href ?? contentPath.url(post.full_path)}
                             onClick={() => onNavigate?.()}
                             data-active={
                                 currentPath === post.full_path

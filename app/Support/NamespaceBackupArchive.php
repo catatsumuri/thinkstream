@@ -26,6 +26,22 @@ class NamespaceBackupArchive
             return 'namespace-'.$namespace->id;
         }
 
-        return 'namespace-'.$namespace->id.'-'.str_replace('/', '--', $path);
+        return str_replace('/', '--', $path);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    public static function legacyLookupPatterns(PostNamespace $namespace): array
+    {
+        $path = trim($namespace->full_path, '/');
+
+        if ($path === '') {
+            return [];
+        }
+
+        return [
+            'namespace-*-'.str_replace('/', '--', $path),
+        ];
     }
 }
