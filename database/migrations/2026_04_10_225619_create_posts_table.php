@@ -17,9 +17,13 @@ return new class extends Migration
             $table->foreignId('namespace_id')->constrained('namespaces');
             $table->string('title');
             $table->string('slug');
+            $table->string('full_path')->nullable()->unique();
             $table->longText('content');
+            $table->unsignedBigInteger('page_views')->default(0);
             $table->boolean('is_draft')->default(false);
             $table->timestamp('published_at')->nullable();
+            $table->string('reference_title')->nullable();
+            $table->string('reference_url', 2048)->nullable();
             $table->timestamps();
             $table->unique(['namespace_id', 'slug']);
         });

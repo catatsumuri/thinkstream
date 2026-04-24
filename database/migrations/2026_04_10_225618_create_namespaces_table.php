@@ -13,12 +13,18 @@ return new class extends Migration
     {
         Schema::create('namespaces', function (Blueprint $table) {
             $table->id();
-            $table->string('slug')->unique();
+            $table->foreignId('parent_id')
+                ->nullable()
+                ->constrained('namespaces')
+                ->cascadeOnDelete();
+            $table->string('slug');
+            $table->string('full_path')->nullable()->unique();
             $table->string('name');
             $table->text('description')->nullable();
             $table->string('cover_image')->nullable();
             $table->boolean('is_published')->default(true);
             $table->json('post_order')->nullable();
+            $table->unsignedInteger('sort_order')->nullable();
             $table->timestamps();
         });
     }
