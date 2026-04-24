@@ -2,6 +2,7 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -90,6 +91,42 @@ test('search page filters guide results by query', function () {
             ->where('query', 'mintlify')
             ->has('results', 1)
             ->where('results.0.page', 'Mintlify Syntax')
+        );
+});
+
+test('search page finds results by tag matches', function () {
+    $user = User::factory()->create();
+    $guides = PostNamespace::factory()->create([
+        'name' => 'Guides',
+        'slug' => 'guides',
+        'full_path' => 'guides',
+        'is_published' => true,
+        'parent_id' => null,
+    ]);
+
+    $taggedPost = Post::factory()->for($guides, 'namespace')->published()->create([
+        'title' => 'Routing Overview',
+        'slug' => 'routing-overview',
+        'full_path' => 'guides/routing-overview',
+        'content' => 'Searchable guide content.',
+    ]);
+    $taggedPost->tags()->attach(Tag::firstOrCreate(['name' => 'laravel']));
+
+    Post::factory()->for($guides, 'namespace')->published()->create([
+        'title' => 'Queues Overview',
+        'slug' => 'queues-overview',
+        'full_path' => 'guides/queues-overview',
+        'content' => 'Queue processing content.',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('search', ['q' => 'laravel']))
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('search/index')
+            ->where('query', 'laravel')
+            ->has('results', 1)
+            ->where('results.0.page', 'Routing Overview')
         );
 });
 

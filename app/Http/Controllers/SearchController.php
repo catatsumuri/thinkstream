@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Post;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -43,19 +44,52 @@ class SearchController extends Controller
                 ->orderByDesc('id')
                 ->limit(6)
                 ->get(['id', 'namespace_id', 'title', 'full_path', 'content', 'published_at'])
-            : Post::search($query)
-                ->query(fn (Builder $builder) => $builder
-                    ->with('namespace:id,full_path')
-                    ->published()
-                    ->withinNamespace($namespace)
-                )
-                ->take(10)
-                ->get();
+            : $this->searchResults($query, $namespace);
 
         return $posts
             ->map(fn (Post $post): array => $this->mapResult($post))
             ->values()
             ->all();
+    }
+
+    /**
+     * @return Collection<int, Post>
+     */
+    private function searchResults(string $query, string $namespace)
+    {
+        $scoutResults = Post::search($query)
+            ->query(fn (Builder $builder) => $builder
+                ->with('namespace:id,full_path')
+                ->published()
+                ->withinNamespace($namespace)
+            )
+            ->take(10)
+            ->get();
+
+        $tagResults = Post::query()
+            ->with('namespace:id,full_path')
+            ->published()
+            ->withinNamespace($namespace)
+            ->whereHas('tags', fn (Builder $builder) => $builder->where(
+                'name',
+                'like',
+                '%'.$this->escapeLike($query).'%',
+            ))
+            ->orderByDesc('published_at')
+            ->orderByDesc('id')
+            ->limit(10)
+            ->get(['id', 'namespace_id', 'title', 'full_path', 'content', 'published_at']);
+
+        return $scoutResults
+            ->concat($tagResults)
+            ->unique('id')
+            ->take(10)
+            ->values();
+    }
+
+    private function escapeLike(string $value): string
+    {
+        return addcslashes($value, '\%_');
     }
 
     /**
