@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownEditor from '@/components/markdown-editor';
 import PostHeader from '@/components/post-header';
+import TagInput from '@/components/tag-input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -36,16 +37,19 @@ type Post = {
     published_at: string | null;
     reference_title: string | null;
     reference_url: string | null;
+    tags: string[];
 };
 
 export default function Edit({
     namespace,
     post,
     slugPrefix,
+    availableTags,
 }: {
     namespace: Namespace;
     post: Post;
     slugPrefix: string;
+    availableTags: string[];
 }) {
     const initialPublishedAt = post.published_at
         ? new Date(post.published_at).toISOString().slice(0, 16)
@@ -77,6 +81,7 @@ export default function Edit({
 
     const [isDraft, setIsDraft] = useState(post.is_draft);
     const [scheduleEnabled, setScheduleEnabled] = useState(isFutureDate);
+    const [currentTags, setCurrentTags] = useState<string[]>(post.tags);
     const [publishedAt, setPublishedAt] = useState(
         isFutureDate ? initialPublishedAt : '',
     );
@@ -281,6 +286,25 @@ export default function Edit({
                                         message={errors.reference_url}
                                     />
                                 </div>
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label>Tags</Label>
+                                <TagInput
+                                    tags={currentTags}
+                                    onChange={(next) => {
+                                        setCurrentTags(next);
+                                        setHasUnsavedChanges(true);
+                                    }}
+                                    availableTags={availableTags}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Lowercase letters, numbers, and hyphens
+                                    only. Press Enter or comma to add.
+                                </p>
+                                <InputError
+                                    message={errors['tags'] ?? errors['tags.0']}
+                                />
                             </div>
 
                             <div className="flex items-center gap-2">

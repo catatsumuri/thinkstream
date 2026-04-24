@@ -2,6 +2,7 @@ import { Head, Form, setLayoutProps } from '@inertiajs/react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownEditor from '@/components/markdown-editor';
+import TagInput from '@/components/tag-input';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -35,9 +36,11 @@ function toSlug(value: string): string {
 
 export default function Create({
     namespace,
+    availableTags,
     slugPrefix,
 }: {
     namespace: Namespace;
+    availableTags: string[];
     slugPrefix?: string | null;
 }) {
     const returnTo =
@@ -57,6 +60,7 @@ export default function Create({
     const [slug, setSlug] = useState('');
     const [slugTouched, setSlugTouched] = useState(false);
     const [isDraft, setIsDraft] = useState(false);
+    const [currentTags, setCurrentTags] = useState<string[]>([]);
     const [scheduleEnabled, setScheduleEnabled] = useState(false);
     const [publishedAt, setPublishedAt] = useState('');
     const [relativeTimeHint, setRelativeTimeHint] = useState<string | null>(
@@ -204,6 +208,22 @@ export default function Create({
                                         message={errors.reference_url}
                                     />
                                 </div>
+                            </div>
+
+                            <div className="grid gap-2">
+                                <Label>Tags</Label>
+                                <TagInput
+                                    tags={currentTags}
+                                    onChange={setCurrentTags}
+                                    availableTags={availableTags}
+                                />
+                                <p className="text-xs text-muted-foreground">
+                                    Lowercase letters, numbers, and hyphens
+                                    only. Press Enter or comma to add.
+                                </p>
+                                <InputError
+                                    message={errors.tags ?? errors['tags.0']}
+                                />
                             </div>
 
                             <div className="flex items-center gap-2">

@@ -57,6 +57,8 @@ class StorePostRequest extends FormRequest
             'published_at' => ['nullable', 'date'],
             'reference_title' => ['nullable', 'string', 'max:255'],
             'reference_url' => ['nullable', 'url', 'max:2048'],
+            'tags' => ['nullable', 'array', 'max:20'],
+            'tags.*' => ['string', 'max:50', 'regex:/^[a-z0-9][a-z0-9\-]*[a-z0-9]$|^[a-z0-9]$/'],
         ];
     }
 

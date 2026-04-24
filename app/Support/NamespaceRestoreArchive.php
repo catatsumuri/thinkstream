@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\PostRevision;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
@@ -277,6 +278,19 @@ class NamespaceRestoreArchive
             $post->reference_title = $frontmatter['reference_title'] ?? null;
             $post->reference_url = $frontmatter['reference_url'] ?? null;
             $post->save();
+
+            $rawTags = isset($frontmatter['tags']) && is_array($frontmatter['tags'])
+                ? $frontmatter['tags']
+                : [];
+
+            $tagIds = collect($rawTags)
+                ->map(fn (string $t) => mb_strtolower(trim($t)))
+                ->filter(fn (string $t) => $t !== '')
+                ->unique()
+                ->map(fn (string $name) => Tag::firstOrCreate(['name' => $name])->id)
+                ->all();
+
+            $post->tags()->sync($tagIds);
 
             if ($withRevisions) {
                 $revisionsPath = $path.'/'.$post->slug.'.revisions.json';

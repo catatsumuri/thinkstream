@@ -4,9 +4,11 @@ namespace App\Models;
 
 use Database\Factories\PostFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Scout\Searchable;
 
@@ -71,7 +73,7 @@ class Post extends Model
     }
 
     /**
-     * @return array{id: int, title: string, full_path: string, content: string}
+     * @return array{id: int, title: string, full_path: string, content: string, tags: string}
      */
     public function toSearchableArray(): array
     {
@@ -80,6 +82,7 @@ class Post extends Model
             'title' => $this->title,
             'full_path' => $this->full_path,
             'content' => $this->content,
+            'tags' => $this->tags->pluck('name')->implode(' '),
         ];
     }
 
@@ -90,6 +93,15 @@ class Post extends Model
             && $this->published_at->isPast();
     }
 
+    /**
+     * @param  Collection<int, self>  $models
+     * @return Collection<int, self>
+     */
+    public function makeSearchableUsing(Collection $models): Collection
+    {
+        return $models->load('tags');
+    }
+
     public function namespace(): BelongsTo
     {
         return $this->belongsTo(PostNamespace::class, 'namespace_id');
@@ -98,6 +110,11 @@ class Post extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function tags(): BelongsToMany
+    {
+        return $this->belongsToMany(Tag::class)->orderBy('name');
     }
 
     public function revisions(): HasMany

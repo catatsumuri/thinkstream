@@ -2,6 +2,7 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\Tag;
 use App\Models\User;
 use App\Support\ReservedContentPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -551,3 +552,43 @@ test('lookalike slugs still resolve through the content path wildcard', function
     'apiary' => 'apiary',
     'administrator' => 'administrator',
 ]);
+
+test('public post show includes tags', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'tagged-post',
+        'full_path' => 'guides/tagged-post',
+    ]);
+    $tag = Tag::firstOrCreate(['name' => 'php']);
+    $post->tags()->attach($tag);
+
+    $this->get(route('posts.path', ['path' => 'guides/tagged-post']))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/show')
+            ->where('post.tags.0.name', 'php')
+        );
+});
+
+test('public post show has empty tags when none are set', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'no-tags',
+        'full_path' => 'guides/no-tags',
+    ]);
+
+    $this->get(route('posts.path', ['path' => 'guides/no-tags']))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/show')
+            ->where('post.tags', [])
+        );
+});

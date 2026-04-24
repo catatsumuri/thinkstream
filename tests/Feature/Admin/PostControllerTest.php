@@ -2,6 +2,7 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\Tag;
 use App\Models\User;
 use App\Support\NamespaceBackupArchive;
 use App\Support\NamespaceRestoreArchive;
@@ -48,6 +49,10 @@ function addAdminNamespaceBackupTreeToZip(ZipArchive $zip, array $tree, string $
 
         if (array_key_exists('page_views', $post)) {
             $frontmatter['page_views'] = $post['page_views'];
+        }
+
+        if (array_key_exists('tags', $post)) {
+            $frontmatter['tags'] = $post['tags'];
         }
 
         $zip->addFromString(
@@ -148,6 +153,25 @@ test('authenticated users can view the namespace post list', function () {
     $namespace = PostNamespace::factory()->create();
 
     $this->actingAs($user)->get(route('admin.posts.namespace', $namespace))->assertOk();
+});
+
+test('create form includes available tags', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+    ]);
+    Tag::firstOrCreate(['name' => 'php']);
+    Tag::firstOrCreate(['name' => 'laravel']);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.create', $namespace))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/create')
+            ->where('slugPrefix', 'guides/')
+            ->where('availableTags', ['laravel', 'php'])
+        );
 });
 
 test('uploading a restore zip from the posts index returns a restore preview', function () {
@@ -1441,4 +1465,305 @@ test('authenticated users can upload an image during post creation', function ()
         ->assertRedirect(route('admin.posts.create', $namespace));
 
     Storage::disk('public')->assertExists("posts/{$namespace->full_path}/{$image->hashName()}");
+});
+
+test('storing a post syncs tags', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.store', $namespace), [
+            'title' => 'Tagged Post',
+            'slug' => 'tagged-post',
+            'content' => 'Some content',
+            'tags' => ['php', 'laravel'],
+        ])
+        ->assertSessionHasNoErrors();
+
+    $post = Post::query()->where('slug', 'tagged-post')->firstOrFail();
+
+    expect($post->tags->pluck('name')->sort()->values()->all())->toBe(['laravel', 'php']);
+});
+
+test('storing a post without tags succeeds', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.store', $namespace), [
+            'title' => 'No Tags Post',
+            'slug' => 'no-tags-post',
+            'content' => 'Some content',
+        ])
+        ->assertSessionHasNoErrors();
+
+    $post = Post::query()->where('slug', 'no-tags-post')->firstOrFail();
+
+    expect($post->tags)->toBeEmpty();
+});
+
+test('storing a post rejects tags with invalid characters', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.store', $namespace), [
+            'title' => 'Invalid Tags',
+            'slug' => 'invalid-tags',
+            'content' => 'Some content',
+            'tags' => ['UPPERCASE', '--bad'],
+        ])
+        ->assertSessionHasErrors(['tags.0', 'tags.1']);
+});
+
+test('storing a post rejects more than 20 tags', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.store', $namespace), [
+            'title' => 'Too Many Tags',
+            'slug' => 'too-many-tags',
+            'content' => 'Some content',
+            'tags' => array_map(fn ($i) => "tag-{$i}", range(1, 21)),
+        ])
+        ->assertSessionHasErrors('tags');
+});
+
+test('tags are shared between posts using firstOrCreate', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.store', $namespace), [
+            'title' => 'Post One',
+            'slug' => 'post-one',
+            'content' => 'Content',
+            'tags' => ['shared-tag'],
+        ])
+        ->assertSessionHasNoErrors();
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.store', $namespace), [
+            'title' => 'Post Two',
+            'slug' => 'post-two',
+            'content' => 'Content',
+            'tags' => ['shared-tag'],
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect(Tag::where('name', 'shared-tag')->count())->toBe(1);
+});
+
+test('updating a post syncs tags', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create(['namespace_id' => $namespace->id]);
+    $existing = Tag::firstOrCreate(['name' => 'old-tag']);
+    $post->tags()->attach($existing);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post]), [
+            'title' => $post->title,
+            'slug' => $post->slug,
+            'content' => $post->content,
+            'tags' => ['new-tag'],
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($post->fresh()->tags->pluck('name')->all())->toBe(['new-tag']);
+    expect(Tag::where('name', 'old-tag')->exists())->toBeTrue();
+});
+
+test('updating a post with empty tags removes all tags', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create(['namespace_id' => $namespace->id]);
+    $tag = Tag::firstOrCreate(['name' => 'some-tag']);
+    $post->tags()->attach($tag);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post]), [
+            'title' => $post->title,
+            'slug' => $post->slug,
+            'content' => $post->content,
+            'tags' => [],
+        ])
+        ->assertSessionHasNoErrors();
+
+    expect($post->fresh()->tags)->toBeEmpty();
+});
+
+test('namespace post list includes tags for each post', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create(['namespace_id' => $namespace->id]);
+    $tag = Tag::firstOrCreate(['name' => 'php']);
+    $post->tags()->attach($tag);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.namespace', $namespace))
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/namespace')
+            ->where('posts.0.tags.0.name', 'php')
+        );
+});
+
+test('edit form includes post tags and available tags', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create(['namespace_id' => $namespace->id]);
+    $phpTag = Tag::firstOrCreate(['name' => 'php']);
+    Tag::firstOrCreate(['name' => 'laravel']);
+    $post->tags()->attach($phpTag);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.edit', [$namespace, $post]))
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/edit')
+            ->where('post.tags', ['php'])
+            ->where('availableTags', ['laravel', 'php'])
+        );
+});
+
+test('namespace backup includes post tags in frontmatter', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-backup-tags',
+        'name' => 'Guides',
+    ]);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'tagged-post',
+        'title' => 'Tagged Post',
+        'content' => 'Content here.',
+    ]);
+    $post->tags()->attach([
+        Tag::firstOrCreate(['name' => 'php'])->id,
+        Tag::firstOrCreate(['name' => 'laravel'])->id,
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    try {
+        $this->actingAs($user)
+            ->post(route('admin.posts.backups.store', $namespace))
+            ->assertSessionHasNoErrors();
+
+        $zipFiles = File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip');
+        expect($zipFiles)->toHaveCount(1);
+
+        $zip = new ZipArchive;
+        $zip->open($zipFiles[0]);
+        $content = $zip->getFromName('tagged-post.md');
+        $zip->close();
+
+        expect($content)
+            ->toContain('php')
+            ->toContain('laravel');
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+    }
+});
+
+test('restoring a backup syncs post tags', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-restore-tags',
+        'name' => 'Guides',
+    ]);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'my-post',
+        'title' => 'My Post',
+        'content' => 'Old content',
+    ]);
+    $post->tags()->attach(Tag::firstOrCreate(['name' => 'old-tag'])->id);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    $zipPath = $backupDirectory.'/'.$backupPrefix.'-20260424-120000.zip';
+    createAdminNamespaceBackupZip($zipPath, [
+        'slug' => 'guides-restore-tags',
+        'name' => 'Guides',
+        'full_path' => 'guides-restore-tags',
+        'posts' => [
+            [
+                'title' => 'My Post',
+                'slug' => 'my-post',
+                'full_path' => 'guides-restore-tags/my-post',
+                'content' => 'Restored content',
+                'tags' => ['php', 'laravel'],
+            ],
+        ],
+    ]);
+
+    try {
+        $this->actingAs($user)
+            ->post(route('admin.posts.backups.restore', [
+                'namespace' => $namespace,
+                'backup' => basename($zipPath),
+            ]), ['confirmation' => 'Guides'])
+            ->assertSessionHasNoErrors();
+
+        $post->refresh();
+        $tagNames = $post->tags->pluck('name')->sort()->values()->all();
+        expect($tagNames)->toBe(['laravel', 'php']);
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+    }
+});
+
+test('restoring a backup clears tags when frontmatter has no tags field', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-restore-notags',
+        'name' => 'Guides',
+    ]);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'my-post',
+        'title' => 'My Post',
+        'content' => 'Old content',
+    ]);
+    $post->tags()->attach(Tag::firstOrCreate(['name' => 'old-tag'])->id);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    $zipPath = $backupDirectory.'/'.$backupPrefix.'-20260424-130000.zip';
+    createAdminNamespaceBackupZip($zipPath, [
+        'slug' => 'guides-restore-notags',
+        'name' => 'Guides',
+        'full_path' => 'guides-restore-notags',
+        'posts' => [
+            [
+                'title' => 'My Post',
+                'slug' => 'my-post',
+                'full_path' => 'guides-restore-notags/my-post',
+                'content' => 'Restored content',
+            ],
+        ],
+    ]);
+
+    try {
+        $this->actingAs($user)
+            ->post(route('admin.posts.backups.restore', [
+                'namespace' => $namespace,
+                'backup' => basename($zipPath),
+            ]), ['confirmation' => 'Guides'])
+            ->assertSessionHasNoErrors();
+
+        expect($post->fresh()->tags)->toBeEmpty();
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+    }
 });

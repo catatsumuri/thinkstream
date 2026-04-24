@@ -198,6 +198,7 @@ class PostController extends Controller
             'post' => [
                 ...$post->only(['id', 'slug', 'full_path', 'title', 'content', 'published_at', 'updated_at', 'reference_title', 'reference_url']),
                 'page_views' => $pageViews,
+                'tags' => $post->tags->map(fn ($tag) => ['name' => $tag->name])->values()->all(),
             ],
             'posts' => $namespace->sortPosts($posts),
             'preview' => $preview ? [
@@ -273,7 +274,7 @@ class PostController extends Controller
     private function resolvePostForPath(string $normalizedPath): ?array
     {
         $post = Post::query()
-            ->with('namespace:id,parent_id,slug,full_path,name,cover_image,is_published')
+            ->with(['namespace:id,parent_id,slug,full_path,name,cover_image,is_published', 'tags'])
             ->where('full_path', $normalizedPath)
             ->tap(fn (Builder $query) => $this->applyPublishedPostScope($query))
             ->first();
@@ -295,7 +296,7 @@ class PostController extends Controller
         }
 
         $previewPost = Post::query()
-            ->with('namespace:id,parent_id,slug,full_path,name,cover_image,is_published')
+            ->with(['namespace:id,parent_id,slug,full_path,name,cover_image,is_published', 'tags'])
             ->where('full_path', $normalizedPath)
             ->first();
 

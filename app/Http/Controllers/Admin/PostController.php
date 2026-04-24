@@ -10,6 +10,7 @@ use App\Http\Requests\Admin\UploadPostImageRequest;
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\PostRevision;
+use App\Models\Tag;
 use App\Support\NamespaceBackupArchive;
 use App\Support\NamespaceRestoreArchive;
 use Illuminate\Http\RedirectResponse;
@@ -83,7 +84,7 @@ class PostController extends Controller
 
     public function namespaceIndex(PostNamespace $namespace): Response
     {
-        $posts = $namespace->sortPosts($namespace->posts()->latest()->get([
+        $posts = $namespace->sortPosts($namespace->posts()->with('tags')->latest()->get([
             'id',
             'title',
             'slug',
@@ -103,6 +104,7 @@ class PostController extends Controller
                 ? route('posts.path', ['path' => $post->full_path], absolute: false)
                 : null,
             'admin_url' => route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug], absolute: false),
+            'tags' => $post->tags->map(fn (Tag $tag) => ['id' => $tag->id, 'name' => $tag->name])->values()->all(),
         ]);
 
         $backupCount = $this->backupCount($namespace);
@@ -274,17 +276,35 @@ class PostController extends Controller
     {
         return Inertia::render('admin/posts/create', [
             'namespace' => $namespace,
+            'availableTags' => Tag::orderBy('name')->pluck('name')->all(),
             'slugPrefix' => trim($namespace->full_path, '/').'/',
         ]);
     }
 
+    private function syncTags(Post $post, array $rawTags): void
+    {
+        $tagIds = collect($rawTags)
+            ->map(fn (string $t) => mb_strtolower(trim($t)))
+            ->filter(fn (string $t) => $t !== '')
+            ->unique()
+            ->map(fn (string $name) => Tag::firstOrCreate(['name' => $name])->id)
+            ->all();
+
+        $post->tags()->sync($tagIds);
+    }
+
     public function store(StorePostRequest $request, PostNamespace $namespace): RedirectResponse
     {
+        $data = $request->validated();
+        $tags = $data['tags'] ?? [];
+
         $post = Post::create([
-            ...$request->validated(),
+            ...collect($data)->except('tags')->all(),
             'namespace_id' => $namespace->id,
             'user_id' => $request->user()->id,
         ]);
+
+        $this->syncTags($post, $tags);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Post created.']);
 
@@ -357,19 +377,25 @@ class PostController extends Controller
 
     public function edit(PostNamespace $namespace, Post $post): Response
     {
+        $post->load('tags');
+
         return Inertia::render('admin/posts/edit', [
             'namespace' => $namespace,
-            'post' => $post->only([
-                'id',
-                'title',
-                'slug',
-                'full_path',
-                'content',
-                'is_draft',
-                'published_at',
-                'reference_title',
-                'reference_url',
-            ]),
+            'post' => [
+                ...$post->only([
+                    'id',
+                    'title',
+                    'slug',
+                    'full_path',
+                    'content',
+                    'is_draft',
+                    'published_at',
+                    'reference_title',
+                    'reference_url',
+                ]),
+                'tags' => $post->tags->pluck('name')->values()->all(),
+            ],
+            'availableTags' => Tag::orderBy('name')->pluck('name')->all(),
             'slugPrefix' => trim($namespace->full_path, '/').'/',
         ]);
     }
@@ -377,8 +403,11 @@ class PostController extends Controller
     public function update(UpdatePostRequest $request, PostNamespace $namespace, Post $post): RedirectResponse
     {
         $data = $request->validated();
-        $hasChanges = $post->title !== ($data['title'] ?? $post->title)
-            || $post->content !== ($data['content'] ?? $post->content);
+        $tags = $data['tags'] ?? [];
+        $filteredData = collect($data)->except('tags')->all();
+
+        $hasChanges = $post->title !== ($filteredData['title'] ?? $post->title)
+            || $post->content !== ($filteredData['content'] ?? $post->content);
 
         if ($hasChanges) {
             $post->revisions()->create([
@@ -388,7 +417,8 @@ class PostController extends Controller
             ]);
         }
 
-        $post->update($data);
+        $post->update($filteredData);
+        $this->syncTags($post, $tags);
 
         $fragment = $request->string('return_heading')->toString();
         $hash = $fragment !== '' ? '#'.rawurlencode(ltrim($fragment, '#')) : '';

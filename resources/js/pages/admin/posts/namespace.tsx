@@ -43,6 +43,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 import { timeAgo } from '@/lib/time';
 import { dashboard } from '@/routes';
 import { create as namespaceCreate } from '@/routes/admin/namespaces';
@@ -85,6 +86,7 @@ type Post = {
     created_at: string;
     canonical_url: string | null;
     admin_url: string;
+    tags: Array<{ id: number; name: string }>;
 };
 
 type Ancestor = {
@@ -211,11 +213,26 @@ function SortablePostRow({
                 )}
             </td>
             <td className="px-4 py-3 font-medium">
-                <div className="flex items-center gap-2">
-                    <FileText className="size-4 text-muted-foreground" />
-                    <Link href={post.admin_url} className="hover:underline">
-                        {post.title}
-                    </Link>
+                <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-2">
+                        <FileText className="size-4 text-muted-foreground" />
+                        <Link href={post.admin_url} className="hover:underline">
+                            {post.title}
+                        </Link>
+                    </div>
+                    {post.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-1 pl-6">
+                            {post.tags.map((tag) => (
+                                <Badge
+                                    key={tag.id}
+                                    variant="outline"
+                                    className="py-0 text-xs"
+                                >
+                                    {tag.name}
+                                </Badge>
+                            ))}
+                        </div>
+                    )}
                 </div>
             </td>
             <td className="px-4 py-3 text-muted-foreground">
