@@ -1214,6 +1214,10 @@ test('admin post details page builds empty-root navigation without including oth
         'full_path' => '',
         'name' => 'Docs Root',
     ]);
+    PostNamespace::query()
+        ->whereKey($root->id)
+        ->update(['full_path' => '']);
+    $root->refresh();
     $child = PostNamespace::factory()->create([
         'parent_id' => $root->id,
         'slug' => 'laravel',
