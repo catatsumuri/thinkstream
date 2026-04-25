@@ -395,13 +395,15 @@ class PostController extends Controller
     {
         $rootPath = trim($rootNamespace->full_path, '/');
 
-        if ($rootPath === '') {
-            return $this->buildNavigationNodeRecursively($rootNamespace);
+        $namespaceQuery = PostNamespace::query();
+
+        if ($rootPath !== '') {
+            $namespaceQuery
+                ->whereKey($rootNamespace->id)
+                ->orWhere('full_path', 'like', $rootPath.'/%');
         }
 
-        $namespaces = PostNamespace::query()
-            ->whereKey($rootNamespace->id)
-            ->orWhere('full_path', 'like', $rootPath.'/%')
+        $namespaces = $namespaceQuery
             ->get(['id', 'parent_id', 'slug', 'full_path', 'name', 'post_order'])
             ->keyBy('id');
 
@@ -409,8 +411,12 @@ class PostController extends Controller
             ->groupBy(fn (PostNamespace $namespace): int => $namespace->parent_id ?? 0)
             ->map(fn ($group) => $group->values());
 
+        $namespaceIds = $rootPath === ''
+            ? $this->navigationSubtreeNamespaceIds($rootNamespace->id, $namespacesByParent->all())
+            : $namespaces->keys()->all();
+
         $postsByNamespace = Post::query()
-            ->whereIn('namespace_id', $namespaces->keys())
+            ->whereIn('namespace_id', $namespaceIds)
             ->orderBy('published_at')
             ->orderBy('id')
             ->get(['namespace_id', 'title', 'full_path', 'slug'])
@@ -420,30 +426,29 @@ class PostController extends Controller
         return $this->buildNavigationNode($rootNamespace, $namespacesByParent->all(), $postsByNamespace->all());
     }
 
-    private function buildNavigationNodeRecursively(PostNamespace $namespace): array
+    /**
+     * @param  array<int, \Illuminate\Support\Collection<int, PostNamespace>>  $namespacesByParent
+     * @return array<int, int>
+     */
+    private function navigationSubtreeNamespaceIds(int $rootNamespaceId, array $namespacesByParent): array
     {
-        $children = $namespace->children()->get(['id', 'slug', 'full_path', 'name', 'post_order']);
-        $posts = $namespace->sortPosts(
-            $namespace->posts()
-                ->orderBy('published_at')
-                ->orderBy('id')
-                ->get(['namespace_id', 'title', 'full_path', 'slug'])
-        );
+        $namespaceIds = [$rootNamespaceId];
+        $pendingParentIds = [$rootNamespaceId];
 
-        return [
-            'name' => $namespace->name,
-            'full_path' => $namespace->full_path,
-            'href' => route('admin.posts.namespace', ['namespace' => $namespace], absolute: false),
-            'children' => $namespace->sortNamespaces($children)
-                ->map(fn (PostNamespace $child) => $this->buildNavigationNodeRecursively($child))
-                ->values()
-                ->all(),
-            'posts' => $posts->map(fn (Post $post) => [
-                'title' => $post->title,
-                'full_path' => $post->full_path,
-                'href' => route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug], absolute: false),
-            ])->values()->all(),
-        ];
+        while ($pendingParentIds !== []) {
+            $parentId = array_pop($pendingParentIds);
+
+            if ($parentId === null) {
+                continue;
+            }
+
+            foreach ($namespacesByParent[$parentId] ?? [] as $childNamespace) {
+                $namespaceIds[] = $childNamespace->id;
+                $pendingParentIds[] = $childNamespace->id;
+            }
+        }
+
+        return $namespaceIds;
     }
 
     /**
