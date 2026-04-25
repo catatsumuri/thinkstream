@@ -1,4 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
+import { Code2, Eye } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownContent from '@/components/markdown-content';
@@ -26,6 +27,7 @@ export default function MarkdownEditor({
     jumpTo,
 }: Props) {
     const [value, setValue] = useState(defaultValue);
+    const [activeTab, setActiveTab] = useState<'write' | 'preview'>('write');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const previewRef = useRef<HTMLDivElement>(null);
     const { props } = usePage<{ imageUrl?: string }>();
@@ -153,54 +155,117 @@ export default function MarkdownEditor({
     return (
         <div className="grid gap-2">
             {label && <Label htmlFor={name}>{label}</Label>}
-            <div className="grid grid-cols-2 gap-4">
-                <div className="grid gap-1">
-                    <p className="text-xs text-muted-foreground">Markdown</p>
-                    <textarea
-                        ref={textareaRef}
-                        id={name}
-                        name={name}
-                        value={value}
-                        onChange={(e) => setValue(e.target.value)}
-                        onDrop={uploadUrl ? handleDrop : undefined}
-                        onDragOver={
-                            uploadUrl ? (e) => e.preventDefault() : undefined
-                        }
-                        onPaste={uploadUrl ? handlePaste : undefined}
-                        className={cn(
-                            'h-[600px] w-full resize-y rounded-md border border-input bg-transparent px-3 py-2 font-mono text-sm shadow-xs outline-none placeholder:text-muted-foreground',
-                            'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
-                            error && 'border-destructive',
-                        )}
-                        placeholder="Write markdown here..."
-                    />
+
+            <div
+                data-test="markdown-editor"
+                className="overflow-hidden rounded-xl border border-border bg-card shadow-sm"
+            >
+                {/* Tab header */}
+                <div className="flex items-center justify-between border-b border-border px-4 py-2">
+                    <div className="flex gap-1 rounded-lg bg-muted/50 p-0.5">
+                        <button
+                            type="button"
+                            data-test="markdown-editor-write-tab"
+                            aria-pressed={activeTab === 'write'}
+                            onClick={() => setActiveTab('write')}
+                            className={cn(
+                                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                                activeTab === 'write'
+                                    ? 'bg-card text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground',
+                            )}
+                        >
+                            <Code2 className="size-3.5" />
+                            <span className="hidden sm:inline">Markdown</span>
+                        </button>
+                        <button
+                            type="button"
+                            data-test="markdown-editor-preview-tab"
+                            aria-pressed={activeTab === 'preview'}
+                            onClick={() => setActiveTab('preview')}
+                            className={cn(
+                                'flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                                activeTab === 'preview'
+                                    ? 'bg-card text-foreground shadow-sm'
+                                    : 'text-muted-foreground hover:text-foreground',
+                            )}
+                        >
+                            <Eye className="size-3.5" />
+                            <span className="hidden sm:inline">Preview</span>
+                        </button>
+                    </div>
                     {uploadUrl && (
-                        <p className="text-xs text-muted-foreground">
-                            Tip: Drag & drop or paste images to upload
+                        <p className="hidden text-xs text-muted-foreground lg:block">
+                            Drag &amp; drop or paste images to upload
                         </p>
                     )}
                 </div>
-                <div className="grid gap-1">
-                    <p className="text-xs text-muted-foreground">Preview</p>
+
+                <div className="grid lg:grid-cols-2">
+                    {/* Write column */}
                     <div
-                        ref={previewRef}
-                        className="h-[600px] overflow-y-auto rounded-md border border-input bg-transparent px-3 py-2 text-sm"
-                    >
-                        {value ? (
-                            <div className="prose prose-sm max-w-none dark:prose-invert">
-                                <MarkdownContent
-                                    content={value}
-                                    components={createMarkdownComponents()}
-                                />
-                            </div>
-                        ) : (
-                            <p className="text-muted-foreground">
-                                Nothing to preview
-                            </p>
+                        data-test="markdown-editor-write-panel"
+                        className={cn(
+                            'border-border lg:border-r',
+                            activeTab !== 'write' && 'hidden lg:block',
                         )}
+                    >
+                        <p className="px-4 pt-3 text-xs text-muted-foreground">
+                            Markdown
+                        </p>
+                        <textarea
+                            ref={textareaRef}
+                            id={name}
+                            name={name}
+                            value={value}
+                            onChange={(e) => setValue(e.target.value)}
+                            onDrop={uploadUrl ? handleDrop : undefined}
+                            onDragOver={
+                                uploadUrl
+                                    ? (e) => e.preventDefault()
+                                    : undefined
+                            }
+                            onPaste={uploadUrl ? handlePaste : undefined}
+                            placeholder="Write markdown here..."
+                            className={cn(
+                                'h-[50vh] w-full resize-none border-0 bg-transparent px-4 pb-4 font-mono text-sm shadow-none outline-none placeholder:text-muted-foreground/60 lg:h-[65vh]',
+                                error && 'border-b border-destructive',
+                            )}
+                        />
+                    </div>
+
+                    {/* Preview column */}
+                    <div
+                        data-test="markdown-editor-preview-panel"
+                        className={cn(
+                            'bg-muted/20',
+                            activeTab !== 'preview' && 'hidden lg:block',
+                        )}
+                    >
+                        <p className="px-4 pt-3 text-xs text-muted-foreground">
+                            Preview
+                        </p>
+                        <div
+                            ref={previewRef}
+                            className="h-[50vh] overflow-y-auto px-4 pb-4 text-sm lg:h-[65vh]"
+                        >
+                            {value ? (
+                                <div className="prose prose-sm max-w-none dark:prose-invert">
+                                    <MarkdownContent
+                                        content={value}
+                                        components={createMarkdownComponents()}
+                                    />
+                                </div>
+                            ) : (
+                                <p className="text-muted-foreground">
+                                    Nothing to preview
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
+
             <InputError message={error} />
         </div>
     );
