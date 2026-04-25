@@ -2,6 +2,7 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\Tag;
 use App\Models\User;
 use App\Support\NamespaceBackupArchive;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -1250,4 +1251,62 @@ test('admin post header shows revisions and delete as labeled actions', function
             return editRect.left < adminRect.left;
         })()
     JS))->toBeTrue();
+});
+
+test('admin post details show scheduled status and tags in the info panel', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->create([
+        'slug' => 'release-plan',
+        'title' => 'Release Plan',
+        'content' => "# Plan\n\n## Next steps\n\nShip it.",
+        'is_draft' => false,
+        'published_at' => now()->addDay(),
+    ]);
+
+    $post->tags()->attach([
+        Tag::firstOrCreate(['name' => 'laravel'])->id,
+        Tag::firstOrCreate(['name' => 'release'])->id,
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.show', [
+        'namespace' => $namespace->id,
+        'post' => $post->slug,
+    ], absolute: false))->resize(1440, 900);
+
+    $page->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="post-show-status-card"]')
+        ->assertPresent('[data-test="post-show-tags-card"]');
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const statusCard = document.querySelector('[data-test="post-show-status-card"]');
+            const tagsCard = document.querySelector('[data-test="post-show-tags-card"]');
+
+            if (! statusCard || ! tagsCard) {
+                return null;
+            }
+
+            return {
+                hasScheduledStatus: statusCard.textContent?.includes('Scheduled') ?? false,
+                hasVisibleFromCopy: statusCard.textContent?.includes('Visible from') ?? false,
+                hasLaravelTag: tagsCard.textContent?.includes('laravel') ?? false,
+                hasReleaseTag: tagsCard.textContent?.includes('release') ?? false,
+            };
+        })()
+    JS))->toBe([
+        'hasScheduledStatus' => true,
+        'hasVisibleFromCopy' => true,
+        'hasLaravelTag' => true,
+        'hasReleaseTag' => true,
+    ]);
 });

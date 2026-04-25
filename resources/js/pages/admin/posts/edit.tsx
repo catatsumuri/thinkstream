@@ -277,7 +277,7 @@ export default function Edit({
                                             name="title"
                                             defaultValue={post.title}
                                             placeholder="Post title..."
-                                            className="w-full border-0 bg-transparent text-2xl font-bold tracking-tight text-foreground placeholder:text-muted-foreground/40 focus:outline-none sm:text-3xl lg:text-4xl"
+                                            className="w-full border-0 border-b-2 border-border/40 bg-transparent pb-1 text-2xl font-bold tracking-tight text-foreground placeholder:text-muted-foreground/40 focus:border-ring focus:outline-none sm:text-3xl lg:text-4xl"
                                             required
                                         />
                                         <InputError message={errors.title} />
@@ -301,20 +301,15 @@ export default function Edit({
                                         />
                                         <InputError message={errors.slug} />
                                     </div>
-                                    <div className="mb-8 space-y-0.5">
-                                        <p className="text-xs text-muted-foreground">
-                                            Lowercase letters, numbers, and
-                                            hyphens only.
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Must be unique among pages and child
-                                            namespaces under /
-                                            {namespace.full_path}.
-                                        </p>
-                                        <p className="text-xs text-muted-foreground">
-                                            Path preview: /{slugPrefix}
+                                    <div className="mb-8 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                                        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs text-foreground">
+                                            /{slugPrefix}
                                             {slug || 'slug'}
-                                        </p>
+                                        </code>
+                                        <span className="text-xs text-muted-foreground">
+                                            Lowercase, numbers, hyphens · unique
+                                            under /{namespace.full_path}
+                                        </span>
                                     </div>
 
                                     <MarkdownEditor

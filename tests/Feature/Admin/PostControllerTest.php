@@ -1173,6 +1173,23 @@ test('authenticated users can view a post details page', function () {
         );
 });
 
+test('admin post details page includes post tags', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+    ]);
+    $post->tags()->attach(Tag::firstOrCreate(['name' => 'laravel'])->id);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.show', [$namespace, $post]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/show')
+            ->where('post.tags', ['laravel'])
+        );
+});
+
 test('admin post details page includes admin navigation rooted at the top namespace', function () {
     $user = User::factory()->create();
     $root = PostNamespace::factory()->create([
