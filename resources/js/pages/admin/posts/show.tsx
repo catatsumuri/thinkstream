@@ -1,27 +1,44 @@
-import { Head, router, setLayoutProps } from '@inertiajs/react';
+import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
 import {
     AlertTriangle,
     ExternalLink,
+    Eye,
+    EyeOff,
+    FileText,
+    History,
     PanelLeftClose,
     PanelLeftOpen,
-    PanelRightClose,
-    PanelRightOpen,
+    Pencil,
+    Trash2,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { ContentNavNode } from '@/components/content-nav-tree';
 import ContentNavTree from '@/components/content-nav-tree';
 import MarkdownContent from '@/components/markdown-content';
-import PostHeader from '@/components/post-header';
 import TableOfContents from '@/components/table-of-contents';
+import ViewContextBadge from '@/components/view-context-badge';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { useBelowDesktop } from '@/hooks/use-below-desktop';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
 import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import {
+    destroy,
     edit,
     index,
     namespace as namespaceRoute,
+    revisions,
     show,
 } from '@/routes/admin/posts';
 
@@ -111,6 +128,7 @@ type Post = {
     created_at: string;
     reference_title: string | null;
     reference_url: string | null;
+    tags: string[];
 };
 
 export default function Show({
@@ -124,8 +142,8 @@ export default function Show({
 }) {
     const { currentUrl } = useCurrentUrl();
     const isBelowDesktop = useBelowDesktop();
-    const [tocOverride, setTocOverride] = useState<boolean | null>(null);
     const [navOverride, setNavOverride] = useState<boolean | null>(null);
+    const [rightTab, setRightTab] = useState<'toc' | 'info'>('info');
     const tocPosts = useMemo(
         () => [{ slug: post.slug, content: post.content }],
         [post.content, post.slug],
@@ -172,23 +190,16 @@ export default function Show({
     const hasHeadings = (entry?.headings.length ?? 0) > 0;
     const hasNav = navRoot.children.length > 0 || navRoot.posts.length > 0;
     const navVisible = navOverride ?? true;
-    const tocVisible = tocOverride ?? true;
-    const showDesktopSidebars = !isBelowDesktop;
-    const showDesktopNav = showDesktopSidebars && hasNav;
-    const showDesktopToc = showDesktopSidebars && tocVisible && hasHeadings;
+    const showDesktopNav = !isBelowDesktop && hasNav;
 
     let gridCols = '';
 
-    if (showDesktopNav && navVisible && showDesktopToc) {
-        gridCols = 'lg:grid-cols-[240px_1fr_240px]';
-    } else if (showDesktopNav && navVisible) {
-        gridCols = 'lg:grid-cols-[240px_1fr]';
-    } else if (showDesktopNav && !navVisible && showDesktopToc) {
-        gridCols = 'lg:grid-cols-[40px_1fr_240px]';
+    if (showDesktopNav && navVisible) {
+        gridCols = 'lg:grid-cols-[240px_1fr_280px]';
     } else if (showDesktopNav && !navVisible) {
-        gridCols = 'lg:grid-cols-[40px_1fr]';
-    } else if (showDesktopToc) {
-        gridCols = 'lg:grid-cols-[1fr_240px]';
+        gridCols = 'lg:grid-cols-[40px_1fr_280px]';
+    } else {
+        gridCols = 'lg:grid-cols-[1fr_280px]';
     }
 
     setLayoutProps({
@@ -203,14 +214,17 @@ export default function Show({
         ],
     });
 
+    const isScheduled =
+        !post.is_draft &&
+        !!post.published_at &&
+        new Date(post.published_at) > new Date();
+
     return (
         <>
             <Head title={post.title} />
 
             <div className="space-y-4 p-4">
-                <PostHeader namespace={namespace} post={post} />
-
-                <div className={gridCols ? `lg:grid lg:gap-8 ${gridCols}` : ''}>
+                <div className={`lg:grid lg:gap-8 ${gridCols}`}>
                     {hasNav && (
                         <aside className="hidden self-start lg:sticky lg:top-20 lg:block">
                             {navVisible ? (
@@ -255,48 +269,45 @@ export default function Show({
                     )}
 
                     <section className="min-w-0 space-y-4">
-                        <div className="flex items-center justify-between gap-4 rounded-xl border bg-card px-5 py-4">
-                            <div className="flex items-center gap-3">
-                                <div>
-                                    <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                                        Preview
+                        {post.is_draft && (
+                            <div className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/40 dark:bg-amber-900/20">
+                                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
+                                <div className="text-amber-800 dark:text-amber-400">
+                                    <p className="font-semibold">
+                                        Draft — not publicly visible
                                     </p>
-                                    <p className="mt-1 text-sm text-muted-foreground">
-                                        Canonical rendering inside the admin
-                                        workflow.
+                                    <p className="text-sm">
+                                        This post is saved as a draft. Visitors
+                                        will see a 404.
                                     </p>
                                 </div>
-                                <a
-                                    href={`/${post.full_path}`}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-muted-foreground transition-colors hover:text-foreground"
-                                    title="Open canonical URL"
-                                >
-                                    <ExternalLink className="size-4" />
-                                </a>
                             </div>
-                            {hasHeadings && (
-                                <button
-                                    type="button"
-                                    onClick={() =>
-                                        setTocOverride(
-                                            (prev) => !(prev ?? true),
-                                        )
-                                    }
-                                    className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-                                >
-                                    {tocVisible ? (
-                                        <PanelRightClose size={16} />
-                                    ) : (
-                                        <PanelRightOpen size={16} />
-                                    )}
-                                    TOC
-                                </button>
-                            )}
-                        </div>
+                        )}
 
-                        {tocVisible && hasHeadings && (
+                        {isScheduled && (
+                            <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800/40 dark:bg-blue-900/20">
+                                <AlertTriangle className="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                                <div className="text-blue-800 dark:text-blue-400">
+                                    <p className="font-semibold">
+                                        Scheduled — not yet public
+                                    </p>
+                                    <p className="text-sm">
+                                        Publicly accessible from{' '}
+                                        <span className="font-medium">
+                                            {new Date(
+                                                post.published_at!,
+                                            ).toLocaleString(undefined, {
+                                                dateStyle: 'long',
+                                                timeStyle: 'short',
+                                            })}
+                                        </span>
+                                        . Visitors will see a 404 until then.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {hasHeadings && (
                             <div className="lg:hidden">
                                 <TableOfContents
                                     posts={[
@@ -311,93 +322,343 @@ export default function Show({
                             </div>
                         )}
 
-                        <div className="min-w-0 rounded-xl border bg-card p-6">
-                            {post.reference_url && (
-                                <div className="mb-6 flex justify-end">
+                        <div className="min-w-0 rounded-xl border bg-card">
+                            <div className="flex items-center justify-between border-b border-border px-5 py-3">
+                                <div className="flex items-center gap-2">
+                                    <FileText className="size-4 text-muted-foreground" />
+                                    <span className="text-sm font-medium text-muted-foreground">
+                                        Preview
+                                    </span>
+                                </div>
+                                {post.reference_url && (
                                     <a
                                         href={post.reference_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-2 rounded-md border border-border/60 px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                        className="flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                                     >
-                                        <span className="text-muted-foreground/60">
-                                            Source
-                                        </span>
-                                        <span className="h-3 w-px bg-border" />
-                                        <span className="max-w-64 truncate">
+                                        <span className="max-w-32 truncate">
                                             {post.reference_title ??
-                                                post.reference_url}
+                                                'Reference'}
                                         </span>
                                         <ExternalLink className="size-3 shrink-0" />
                                     </a>
-                                </div>
-                            )}
-                            {post.is_draft && (
-                                <div className="mb-6 flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800/40 dark:bg-amber-900/20">
-                                    <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                                    <div className="text-amber-800 dark:text-amber-400">
-                                        <p className="font-semibold">
-                                            Draft — not publicly visible
-                                        </p>
-                                        <p className="text-sm">
-                                            This post is saved as a draft.
-                                            Visitors will see a 404.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-                            {!post.is_draft &&
-                                post.published_at &&
-                                new Date(post.published_at) > new Date() && (
-                                    <div className="mb-6 flex items-start gap-3 rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-800/40 dark:bg-blue-900/20">
-                                        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400" />
-                                        <div className="text-blue-800 dark:text-blue-400">
-                                            <p className="font-semibold">
-                                                Scheduled — not yet public
-                                            </p>
-                                            <p className="text-sm">
-                                                Publicly accessible from{' '}
-                                                <span className="font-medium">
-                                                    {new Date(
-                                                        post.published_at,
-                                                    ).toLocaleString(
-                                                        undefined,
-                                                        {
-                                                            dateStyle: 'long',
-                                                            timeStyle: 'short',
-                                                        },
-                                                    )}
-                                                </span>
-                                                . Visitors will see a 404 until
-                                                then.
-                                            </p>
-                                        </div>
-                                    </div>
                                 )}
-                            <div className="prose max-w-none prose-neutral dark:prose-invert">
-                                <MarkdownContent
-                                    content={post.content}
-                                    components={entry?.components}
-                                />
                             </div>
+                            <div className="p-6 lg:p-8">
+                                <h1 className="mb-6 text-3xl font-bold tracking-tight lg:text-4xl">
+                                    {post.title}
+                                </h1>
+                                <div className="prose max-w-none prose-neutral dark:prose-invert">
+                                    <MarkdownContent
+                                        content={post.content}
+                                        components={entry?.components}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2 lg:hidden">
+                            <Button asChild variant="outline" size="sm">
+                                <Link
+                                    href={edit.url({
+                                        namespace: namespace.id,
+                                        post: post.slug,
+                                    })}
+                                >
+                                    <Pencil className="size-4" />
+                                    Edit
+                                </Link>
+                            </Button>
+                            <Button asChild variant="outline" size="sm">
+                                <a
+                                    href={`/${post.full_path}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                >
+                                    <ExternalLink className="size-4" />
+                                    View Site
+                                </a>
+                            </Button>
+                            <Button asChild variant="outline" size="sm">
+                                <Link
+                                    href={revisions.url({
+                                        namespace: namespace.id,
+                                        post: post.slug,
+                                    })}
+                                >
+                                    <History className="size-4" />
+                                    Revisions
+                                </Link>
+                            </Button>
                         </div>
                     </section>
 
-                    {showDesktopToc && (
-                        <aside className="hidden self-start lg:sticky lg:top-20 lg:block">
-                            <TableOfContents
-                                sticky
-                                posts={[
-                                    {
-                                        id: post.id,
-                                        title: post.title,
-                                        slug: post.slug,
-                                        headings: entry!.headings,
-                                    },
-                                ]}
-                            />
-                        </aside>
-                    )}
+                    <aside className="hidden self-start lg:sticky lg:top-20 lg:block">
+                        <div className="mb-4 flex gap-1 rounded-lg bg-muted/50 p-0.5">
+                            <button
+                                type="button"
+                                onClick={() => setRightTab('info')}
+                                className={cn(
+                                    'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                                    rightTab === 'info'
+                                        ? 'bg-card text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                )}
+                            >
+                                Info
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setRightTab('toc')}
+                                className={cn(
+                                    'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                                    rightTab === 'toc'
+                                        ? 'bg-card text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground',
+                                )}
+                            >
+                                TOC
+                            </button>
+                        </div>
+
+                        <div className={cn(rightTab !== 'toc' && 'hidden')}>
+                            {hasHeadings ? (
+                                <TableOfContents
+                                    sticky
+                                    posts={[
+                                        {
+                                            id: post.id,
+                                            title: post.title,
+                                            slug: post.slug,
+                                            headings: entry!.headings,
+                                        },
+                                    ]}
+                                />
+                            ) : (
+                                <p className="px-1 text-xs text-muted-foreground">
+                                    No headings
+                                </p>
+                            )}
+                        </div>
+
+                        <div
+                            className={cn(
+                                'space-y-4',
+                                rightTab !== 'info' && 'hidden',
+                            )}
+                        >
+                            <div
+                                data-test="post-show-status-card"
+                                className="overflow-hidden rounded-xl border border-border bg-card"
+                            >
+                                <div className="border-b border-border px-4 py-3">
+                                    <h3 className="text-sm font-semibold">
+                                        Status
+                                    </h3>
+                                </div>
+                                <div className="p-4">
+                                    <div className="flex items-center gap-3">
+                                        <div
+                                            className={cn(
+                                                'flex size-9 items-center justify-center rounded-lg',
+                                                post.is_draft
+                                                    ? 'bg-amber-100 dark:bg-amber-900/30'
+                                                    : isScheduled
+                                                      ? 'bg-blue-100 dark:bg-blue-900/30'
+                                                      : 'bg-green-100 dark:bg-green-900/30',
+                                            )}
+                                        >
+                                            {post.is_draft ? (
+                                                <EyeOff className="size-4 text-amber-700 dark:text-amber-400" />
+                                            ) : (
+                                                <Eye
+                                                    className={cn(
+                                                        'size-4',
+                                                        isScheduled
+                                                            ? 'text-blue-700 dark:text-blue-400'
+                                                            : 'text-green-700 dark:text-green-400',
+                                                    )}
+                                                />
+                                            )}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium">
+                                                {post.is_draft
+                                                    ? 'Draft'
+                                                    : isScheduled
+                                                      ? 'Scheduled'
+                                                      : 'Published'}
+                                            </p>
+                                            <p className="text-xs text-muted-foreground">
+                                                {post.is_draft
+                                                    ? 'Not visible to readers'
+                                                    : isScheduled
+                                                      ? `Visible from ${new Date(post.published_at!).toLocaleDateString()}`
+                                                      : post.published_at
+                                                        ? `Since ${new Date(post.published_at).toLocaleDateString()}`
+                                                        : 'Visible to everyone'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="overflow-hidden rounded-xl border border-border bg-card">
+                                <div className="border-b border-border px-4 py-3">
+                                    <h3 className="text-sm font-semibold">
+                                        Info
+                                    </h3>
+                                </div>
+                                <div className="divide-y divide-border">
+                                    <div className="flex items-center justify-between px-4 py-3">
+                                        <span className="text-sm text-muted-foreground">
+                                            Views
+                                        </span>
+                                        <span className="text-sm font-medium">
+                                            {post.page_views.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between px-4 py-3">
+                                        <span className="text-sm text-muted-foreground">
+                                            Created
+                                        </span>
+                                        <span className="text-sm font-medium">
+                                            {new Date(
+                                                post.created_at,
+                                            ).toLocaleDateString()}
+                                        </span>
+                                    </div>
+                                    <div className="flex items-center justify-between px-4 py-3">
+                                        <span className="text-sm text-muted-foreground">
+                                            Path
+                                        </span>
+                                        <span className="max-w-32 truncate font-mono text-xs text-muted-foreground">
+                                            /{post.full_path}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {post.tags.length > 0 && (
+                                <div
+                                    data-test="post-show-tags-card"
+                                    className="overflow-hidden rounded-xl border border-border bg-card"
+                                >
+                                    <div className="border-b border-border px-4 py-3">
+                                        <h3 className="text-sm font-semibold">
+                                            Tags
+                                        </h3>
+                                    </div>
+                                    <div className="flex flex-wrap gap-1.5 p-4">
+                                        {post.tags.map((tag) => (
+                                            <span
+                                                key={tag}
+                                                className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground"
+                                            >
+                                                {tag}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            <div className="overflow-hidden rounded-xl border border-border bg-card">
+                                <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                                    <h3 className="text-sm font-semibold">
+                                        Actions
+                                    </h3>
+                                    <ViewContextBadge
+                                        label="Admin View"
+                                        variant="admin"
+                                    />
+                                </div>
+                                <div className="space-y-1 p-2">
+                                    <Link
+                                        data-test="manage-post-edit-link"
+                                        href={edit.url({
+                                            namespace: namespace.id,
+                                            post: post.slug,
+                                        })}
+                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+                                    >
+                                        <Pencil className="size-4 text-muted-foreground" />
+                                        <span>Edit</span>
+                                    </Link>
+                                    <a
+                                        href={`/${post.full_path}`}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+                                    >
+                                        <ExternalLink className="size-4 text-muted-foreground" />
+                                        <span>View Site</span>
+                                    </a>
+                                    <Link
+                                        data-test="manage-post-revisions-link"
+                                        href={revisions.url({
+                                            namespace: namespace.id,
+                                            post: post.slug,
+                                        })}
+                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+                                    >
+                                        <History className="size-4 text-muted-foreground" />
+                                        <span>Revisions</span>
+                                    </Link>
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <button
+                                                type="button"
+                                                data-test="manage-post-delete-trigger"
+                                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+                                            >
+                                                <Trash2 className="size-4" />
+                                                <span>Delete</span>
+                                            </button>
+                                        </DialogTrigger>
+                                        <DialogContent>
+                                            <DialogTitle>
+                                                Delete &ldquo;{post.title}
+                                                &rdquo;?
+                                            </DialogTitle>
+                                            <DialogDescription>
+                                                This action cannot be undone.
+                                                The post and all its revisions
+                                                will be permanently deleted.
+                                            </DialogDescription>
+                                            <Form
+                                                {...destroy.form({
+                                                    namespace: namespace.id,
+                                                    post: post.slug,
+                                                })}
+                                            >
+                                                {({ processing }) => (
+                                                    <DialogFooter className="gap-2">
+                                                        <DialogClose asChild>
+                                                            <Button variant="secondary">
+                                                                Cancel
+                                                            </Button>
+                                                        </DialogClose>
+                                                        <Button
+                                                            variant="destructive"
+                                                            disabled={
+                                                                processing
+                                                            }
+                                                            asChild
+                                                        >
+                                                            <button type="submit">
+                                                                Delete
+                                                            </button>
+                                                        </Button>
+                                                    </DialogFooter>
+                                                )}
+                                            </Form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </div>
+                            </div>
+                        </div>
+                    </aside>
                 </div>
             </div>
         </>

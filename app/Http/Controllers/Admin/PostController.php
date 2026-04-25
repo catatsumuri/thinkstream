@@ -359,23 +359,27 @@ class PostController extends Controller
     public function show(PostNamespace $namespace, Post $post): Response
     {
         $rootNamespace = $this->rootNamespace($namespace);
+        $post->load('tags');
 
         return Inertia::render('admin/posts/show', [
             'namespace' => $namespace,
             'navRoot' => $this->buildNavigationTree($rootNamespace),
-            'post' => $post->only([
-                'id',
-                'title',
-                'slug',
-                'full_path',
-                'content',
-                'is_draft',
-                'published_at',
-                'created_at',
-                'page_views',
-                'reference_title',
-                'reference_url',
-            ]),
+            'post' => [
+                ...$post->only([
+                    'id',
+                    'title',
+                    'slug',
+                    'full_path',
+                    'content',
+                    'is_draft',
+                    'published_at',
+                    'created_at',
+                    'page_views',
+                    'reference_title',
+                    'reference_url',
+                ]),
+                'tags' => $post->tags->pluck('name')->values()->all(),
+            ],
         ]);
     }
 
@@ -427,7 +431,7 @@ class PostController extends Controller
     }
 
     /**
-     * @param  array<int, \Illuminate\Support\Collection<int, PostNamespace>>  $namespacesByParent
+     * @param  array<int, Collection<int, PostNamespace>>  $namespacesByParent
      * @return array<int, int>
      */
     private function navigationSubtreeNamespaceIds(int $rootNamespaceId, array $namespacesByParent): array

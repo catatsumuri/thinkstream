@@ -210,7 +210,7 @@ export default function MarkdownEditor({
                             activeTab !== 'write' && 'hidden lg:block',
                         )}
                     >
-                        <p className="px-4 pt-3 text-xs text-muted-foreground">
+                        <p className="border-b border-border px-4 py-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                             Markdown
                         </p>
                         <textarea
@@ -242,7 +242,7 @@ export default function MarkdownEditor({
                             activeTab !== 'preview' && 'hidden lg:block',
                         )}
                     >
-                        <p className="px-4 pt-3 text-xs text-muted-foreground">
+                        <p className="border-b border-border px-4 py-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                             Preview
                         </p>
                         <div
