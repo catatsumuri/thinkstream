@@ -251,7 +251,9 @@ export default function Edit({
                                             data-test="edit-meta-panel-toggle"
                                             aria-expanded={metaPanelOpen}
                                             onClick={() =>
-                                                setMetaPanelOpen((value) => !value)
+                                                setMetaPanelOpen(
+                                                    (value) => !value,
+                                                )
                                             }
                                             title={
                                                 metaPanelOpen
