@@ -1,4 +1,4 @@
-import type { Code, Root } from 'mdast';
+import { type Code, type Root } from 'mdast';
 import { visit } from 'unist-util-visit';
 
 /**

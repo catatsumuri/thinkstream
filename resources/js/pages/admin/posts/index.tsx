@@ -1,5 +1,5 @@
-import type { DragEndEvent } from '@dnd-kit/core';
 import {
+    type DragEndEvent,
     DndContext,
     KeyboardSensor,
     PointerSensor,
@@ -15,8 +15,7 @@ import {
     arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Form } from '@inertiajs/react';
-import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Form, Head, Link, router, useForm } from '@inertiajs/react';
 import {
     ArrowUpDown,
     Check,

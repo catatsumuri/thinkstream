@@ -5,9 +5,10 @@ import {
     isValidElement,
     useContext,
     useRef,
+    type ComponentPropsWithoutRef,
+    type ReactNode,
 } from 'react';
-import type { ComponentPropsWithoutRef, ReactNode } from 'react';
-import type { Components } from 'react-markdown';
+import { type Components } from 'react-markdown';
 import { CodeBlock } from '@/components/code-block';
 import { MarkdownImage } from '@/components/markdown-image';
 import { extractRenderedHeadingText } from '@/lib/markdown-heading-text';

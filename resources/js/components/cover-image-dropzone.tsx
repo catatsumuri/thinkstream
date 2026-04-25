@@ -1,6 +1,5 @@
 import { ImageMinus, ImagePlus, ImageUp, Pencil, X } from 'lucide-react';
-import type { CSSProperties } from 'react';
-import { useEffect, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import {

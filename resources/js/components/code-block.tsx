@@ -1,7 +1,6 @@
 import { Check, Copy, MoveHorizontal, WrapText } from 'lucide-react';
-import type { ComponentPropsWithoutRef } from 'react';
-import { useEffect, useState } from 'react';
-import type { ExtraProps } from 'react-markdown';
+import { type ComponentPropsWithoutRef, useEffect, useState } from 'react';
+import { type ExtraProps } from 'react-markdown';
 import { MermaidBlock } from '@/components/mermaid-block';
 import { useClipboard } from '@/hooks/use-clipboard';
 import Prism, { ensurePrismLoaded } from '@/lib/prism';

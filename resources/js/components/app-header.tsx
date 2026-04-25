@@ -35,7 +35,7 @@ import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn, toUrl } from '@/lib/utils';
 import { dashboard, home } from '@/routes';
-import type { BreadcrumbItem, NavItem } from '@/types';
+import { type BreadcrumbItem, type NavItem } from '@/types';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];

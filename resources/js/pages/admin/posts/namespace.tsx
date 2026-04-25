@@ -1,5 +1,5 @@
-import type { DragEndEvent } from '@dnd-kit/core';
 import {
+    type DragEndEvent,
     DndContext,
     KeyboardSensor,
     PointerSensor,
@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import NamespaceHeader from '@/components/namespace-header';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -43,7 +44,6 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { timeAgo } from '@/lib/time';
 import { dashboard } from '@/routes';
 import { create as namespaceCreate } from '@/routes/admin/namespaces';

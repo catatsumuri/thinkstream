@@ -3,7 +3,7 @@ import { pandocMarkFromMarkdown } from 'mdast-util-mark';
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-expect-error
 import { pandocMark } from 'micromark-extension-mark';
-import type { Processor } from 'unified';
+import { type Processor } from 'unified';
 
 /**
  * Remark plugin to support ==highlight== syntax, rendered as <mark>.

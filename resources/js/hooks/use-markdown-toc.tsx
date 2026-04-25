@@ -1,9 +1,13 @@
 import { useMemo } from 'react';
-import type { Components } from 'react-markdown';
-import { createMarkdownComponents } from '@/lib/markdown-components';
-import type { MarkdownComponentOptions } from '@/lib/markdown-components';
-import { extractMarkdownHeadings } from '@/lib/markdown-headings';
-import type { MarkdownHeading } from '@/lib/markdown-headings';
+import { type Components } from 'react-markdown';
+import {
+    createMarkdownComponents,
+    type MarkdownComponentOptions,
+} from '@/lib/markdown-components';
+import {
+    extractMarkdownHeadings,
+    type MarkdownHeading,
+} from '@/lib/markdown-headings';
 
 export type Heading = MarkdownHeading;
 

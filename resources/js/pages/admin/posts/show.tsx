@@ -8,8 +8,9 @@ import {
     PanelRightOpen,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import type { ContentNavNode } from '@/components/content-nav-tree';
-import ContentNavTree from '@/components/content-nav-tree';
+import ContentNavTree, {
+    type ContentNavNode,
+} from '@/components/content-nav-tree';
 import MarkdownContent from '@/components/markdown-content';
 import PostHeader from '@/components/post-header';
 import TableOfContents from '@/components/table-of-contents';

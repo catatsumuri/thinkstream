@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Heading } from '@/hooks/use-markdown-toc';
+import { type Heading } from '@/hooks/use-markdown-toc';
 import { cn } from '@/lib/utils';
 
 type TocPost = {

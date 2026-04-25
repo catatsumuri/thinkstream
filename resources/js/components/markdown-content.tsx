@@ -1,6 +1,5 @@
 import { AlertTriangle, CircleCheck, Info, Lightbulb } from 'lucide-react';
-import type { Components } from 'react-markdown';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { type Components } from 'react-markdown';
 import {
     defListHastHandlers,
     remarkDefinitionList,

@@ -1,5 +1,4 @@
-import { Head, Link } from '@inertiajs/react';
-import { Form } from '@inertiajs/react';
+import { Form, Head, Link } from '@inertiajs/react';
 import { FolderPlus } from 'lucide-react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import { Button } from '@/components/ui/button';

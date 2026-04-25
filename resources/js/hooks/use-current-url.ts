@@ -1,5 +1,4 @@
-import type { InertiaLinkProps } from '@inertiajs/react';
-import { usePage } from '@inertiajs/react';
+import { usePage, type InertiaLinkProps } from '@inertiajs/react';
 import { toUrl } from '@/lib/utils';
 
 export type IsCurrentUrlFn = (

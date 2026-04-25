@@ -1,5 +1,5 @@
-import type { Paragraph, Root, Text } from 'mdast';
-import type { Node } from 'unist';
+import { type Paragraph, type Root, type Text } from 'mdast';
+import { type Node } from 'unist';
 import { visit } from 'unist-util-visit';
 
 interface ContainerDirectiveNode extends Node {

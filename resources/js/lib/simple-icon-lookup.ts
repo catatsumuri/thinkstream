@@ -33,8 +33,8 @@ import {
     siVercel,
     siVite,
     siVuedotjs,
+    type SimpleIcon,
 } from 'simple-icons';
-import type { SimpleIcon } from 'simple-icons';
 
 export type { SimpleIcon };
 

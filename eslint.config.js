@@ -67,7 +67,7 @@ export default [
                 'error',
                 {
                     prefer: 'type-imports',
-                    fixStyle: 'separate-type-imports',
+                    fixStyle: 'inline-type-imports',
                 },
             ],
             'import/order': [
@@ -89,8 +89,9 @@ export default [
             ],
             'import/consistent-type-specifier-style': [
                 'error',
-                'prefer-top-level',
+                'prefer-inline',
             ],
+            'import/no-duplicates': ['error', { 'prefer-inline': true }],
         },
     },
     {

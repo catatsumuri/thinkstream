@@ -47,13 +47,12 @@ import {
     Users,
     XCircle,
     Zap,
+    type LucideIcon,
 } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
 import { sanitizeMarkdownCardHref } from '@/lib/markdown-card-href';
-import type { SimpleIcon } from '@/lib/simple-icon-lookup';
-import { getSimpleIcon } from '@/lib/simple-icon-lookup';
+import { type SimpleIcon, getSimpleIcon } from '@/lib/simple-icon-lookup';
 import { cn } from '@/lib/utils';
 
 const ICON_MAP: Record<string, LucideIcon> = {

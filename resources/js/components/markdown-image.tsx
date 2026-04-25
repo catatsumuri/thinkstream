@@ -1,4 +1,4 @@
-import type { ComponentPropsWithoutRef } from 'react';
+import { type ComponentPropsWithoutRef } from 'react';
 import { parseMarkdownImageMetadata } from '@/lib/markdown-syntax';
 import { cn } from '@/lib/utils';
 

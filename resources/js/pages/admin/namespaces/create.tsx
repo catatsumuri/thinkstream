@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes';
 import { create } from '@/routes/admin/namespaces';
-import { namespace as namespaceRoute } from '@/routes/admin/posts';
-import { index as postsIndex } from '@/routes/admin/posts';
+import {
+    namespace as namespaceRoute,
+    index as postsIndex,
+} from '@/routes/admin/posts';
 
 function toSlug(value: string): string {
     return value

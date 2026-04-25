@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { dashboard, home } from '@/routes';
-import type { NavItem } from '@/types';
+import { type NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
     {

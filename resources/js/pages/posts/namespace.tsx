@@ -1,8 +1,9 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { AlertTriangle, ChevronRight, ImageOff } from 'lucide-react';
 import { useState } from 'react';
-import type { ContentNavNode } from '@/components/content-nav-tree';
-import ContentNavTree from '@/components/content-nav-tree';
+import ContentNavTree, {
+    type ContentNavNode,
+} from '@/components/content-nav-tree';
 import DocsHeaderActions from '@/components/docs-header-actions';
 import MarkdownPageActions from '@/components/markdown-page-actions';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';

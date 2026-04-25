@@ -1,5 +1,4 @@
-import type { ReactNode } from 'react';
-import { useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
 import { CodeBlock } from '@/components/code-block';
 import { SimpleIconSvg } from '@/components/markdown-card-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';

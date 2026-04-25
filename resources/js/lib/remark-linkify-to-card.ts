@@ -5,7 +5,7 @@
  * whitespace), the paragraph node is converted to a <div> via data.hName and
  * data.hProperties — no rehype-raw required.
  */
-import type { Link, Paragraph, Root, Text } from 'mdast';
+import { type Link, type Paragraph, type Root, type Text } from 'mdast';
 import { visit } from 'unist-util-visit';
 import { isGithubUrl, isYoutubeUrl } from './url-matcher';
 
