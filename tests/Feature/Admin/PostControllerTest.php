@@ -1207,6 +1207,86 @@ test('admin post details page includes admin navigation rooted at the top namesp
         );
 });
 
+test('admin post details page builds empty-root navigation without including other top-level trees', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create([
+        'slug' => 'docs-root',
+        'full_path' => '',
+        'name' => 'Docs Root',
+    ]);
+    PostNamespace::query()
+        ->whereKey($root->id)
+        ->update(['full_path' => '']);
+    $root->refresh();
+    $child = PostNamespace::factory()->create([
+        'parent_id' => $root->id,
+        'slug' => 'laravel',
+        'full_path' => 'laravel',
+        'name' => 'Laravel',
+    ]);
+    $grandchild = PostNamespace::factory()->create([
+        'parent_id' => $child->id,
+        'slug' => 'routing',
+        'full_path' => 'laravel/routing',
+        'name' => 'Routing',
+    ]);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $grandchild->id,
+        'slug' => 'controllers',
+        'full_path' => 'laravel/routing/controllers',
+        'title' => 'Controllers',
+    ]);
+    $foreignRoot = PostNamespace::factory()->create([
+        'slug' => 'other-root',
+        'full_path' => 'other-root',
+        'name' => 'Other Root',
+    ]);
+    $foreignChild = PostNamespace::factory()->create([
+        'parent_id' => $foreignRoot->id,
+        'slug' => 'ignored-child',
+        'full_path' => 'other-root/ignored-child',
+        'name' => 'Ignored Child',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $foreignChild->id,
+        'slug' => 'ignored-post',
+        'full_path' => 'other-root/ignored-child/ignored-post',
+        'title' => 'Ignored Post',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.show', [$grandchild, $post]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/show')
+            ->where('navRoot.full_path', '')
+            ->where('navRoot.href', route('admin.posts.namespace', $root, false))
+            ->where('navRoot.children', [
+                [
+                    'name' => 'Laravel',
+                    'full_path' => 'laravel',
+                    'href' => route('admin.posts.namespace', $child, false),
+                    'children' => [
+                        [
+                            'name' => 'Routing',
+                            'full_path' => 'laravel/routing',
+                            'href' => route('admin.posts.namespace', $grandchild, false),
+                            'children' => [],
+                            'posts' => [
+                                [
+                                    'title' => 'Controllers',
+                                    'full_path' => 'laravel/routing/controllers',
+                                    'href' => route('admin.posts.show', [$grandchild, $post], false),
+                                ],
+                            ],
+                        ],
+                    ],
+                    'posts' => [],
+                ],
+            ])
+        );
+});
+
 test('admin post details page does not increment page views', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create();
