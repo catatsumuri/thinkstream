@@ -1052,6 +1052,150 @@ test('admin post edit warns before leaving with unsaved changes', function () {
     ]);
 });
 
+test('admin post edit can collapse the metadata panel', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->create([
+        'slug' => 'todo',
+        'title' => 'Todo',
+        'content' => '# Todo',
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.edit', [
+        'namespace' => $namespace->id,
+        'post' => $post->slug,
+    ], absolute: false))->resize(1440, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="edit-meta-panel"]')
+        ->assertPresent('[data-test="edit-meta-panel-toggle"]');
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const panel = document.querySelector('[data-test="edit-meta-panel"]');
+            const toggle = document.querySelector('[data-test="edit-meta-panel-toggle"]');
+
+            if (! panel || ! toggle) {
+                return null;
+            }
+
+            return {
+                hidden: panel.classList.contains('hidden'),
+                expanded: toggle.getAttribute('aria-expanded'),
+            };
+        })()
+    JS))->toBe([
+        'hidden' => false,
+        'expanded' => 'true',
+    ]);
+
+    $page->click('[data-test="edit-meta-panel-toggle"]')->wait(0.2);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const panel = document.querySelector('[data-test="edit-meta-panel"]');
+            const toggle = document.querySelector('[data-test="edit-meta-panel-toggle"]');
+
+            if (! panel || ! toggle) {
+                return null;
+            }
+
+            return {
+                hidden: panel.classList.contains('hidden'),
+                expanded: toggle.getAttribute('aria-expanded'),
+            };
+        })()
+    JS))->toBe([
+        'hidden' => true,
+        'expanded' => 'false',
+    ]);
+});
+
+test('admin post edit switches markdown editor tabs on mobile', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->create([
+        'slug' => 'todo',
+        'title' => 'Todo',
+        'content' => "# Todo\n\nPreview body.",
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.edit', [
+        'namespace' => $namespace->id,
+        'post' => $post->slug,
+    ], absolute: false))->resize(390, 844);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="markdown-editor-write-tab"]')
+        ->assertPresent('[data-test="markdown-editor-preview-tab"]');
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const writePanel = document.querySelector('[data-test="markdown-editor-write-panel"]');
+            const previewPanel = document.querySelector('[data-test="markdown-editor-preview-panel"]');
+
+            if (! writePanel || ! previewPanel) {
+                return null;
+            }
+
+            return {
+                writeHidden: writePanel.classList.contains('hidden'),
+                previewHidden: previewPanel.classList.contains('hidden'),
+            };
+        })()
+    JS))->toBe([
+        'writeHidden' => false,
+        'previewHidden' => true,
+    ]);
+
+    $page->click('[data-test="markdown-editor-preview-tab"]')->wait(0.2);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const writePanel = document.querySelector('[data-test="markdown-editor-write-panel"]');
+            const previewPanel = document.querySelector('[data-test="markdown-editor-preview-panel"]');
+            const previewText = previewPanel
+                ?.querySelector('.prose')
+                ?.textContent?.replace(/\s+/g, ' ')
+                .trim() ?? null;
+
+            if (! writePanel || ! previewPanel) {
+                return null;
+            }
+
+            return {
+                writeHidden: writePanel.classList.contains('hidden'),
+                previewHidden: previewPanel.classList.contains('hidden'),
+                previewText,
+            };
+        })()
+    JS))->toBe([
+        'writeHidden' => true,
+        'previewHidden' => false,
+        'previewText' => 'Todo Preview body.',
+    ]);
+});
+
 test('admin post header shows revisions and delete as labeled actions', function () {
     $user = User::factory()->create([
         'email' => 'test@example.com',
