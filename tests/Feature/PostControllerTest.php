@@ -210,7 +210,9 @@ test('published post increments page views and queues a tracking cookie', functi
         'page_views' => 4,
     ]);
 
-    $response = $this->get(route('posts.path', ['path' => $post->full_path]));
+    $response = $this
+        ->withHeader('Referer', 'https://example.com/search?q=laravel')
+        ->get(route('posts.path', ['path' => $post->full_path]));
 
     $response->assertSuccessful()
         ->assertCookie('post_viewed_'.$post->id, '1')
@@ -220,7 +222,8 @@ test('published post increments page views and queues a tracking cookie', functi
             ->where('post.page_views', 5)
         );
 
-    expect($post->fresh()->page_views)->toBe(5);
+    expect($post->fresh()->page_views)->toBe(5)
+        ->and($post->fresh()->http_referer)->toBe('https://example.com/search?q=laravel');
 });
 
 test('published post does not increment page views again while tracking cookie exists', function () {
@@ -243,6 +246,23 @@ test('published post does not increment page views again while tracking cookie e
         );
 
     expect($post->fresh()->page_views)->toBe(9);
+});
+
+test('published post keeps the previous referer when the request has no referer header', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'routing',
+        'page_views' => 1,
+        'http_referer' => 'https://old.example.com/article',
+    ]);
+
+    $this->get(route('posts.path', ['path' => $post->full_path]))->assertSuccessful();
+
+    expect($post->fresh()->page_views)->toBe(2)
+        ->and($post->fresh()->http_referer)->toBe('https://old.example.com/article');
 });
 
 test('published post does not increment page views for bot user agents', function () {

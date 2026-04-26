@@ -375,12 +375,31 @@ class PostController extends Controller
                     'published_at',
                     'created_at',
                     'page_views',
+                    'http_referer',
                     'reference_title',
                     'reference_url',
                 ]),
+                'http_referer_url' => $this->safeExternalUrl($post->http_referer),
                 'tags' => $post->tags->pluck('name')->values()->all(),
             ],
         ]);
+    }
+
+    private function safeExternalUrl(?string $url): ?string
+    {
+        $candidate = trim((string) $url);
+
+        if ($candidate === '' || filter_var($candidate, FILTER_VALIDATE_URL) === false) {
+            return null;
+        }
+
+        $scheme = parse_url($candidate, PHP_URL_SCHEME);
+
+        if (! is_string($scheme) || ! in_array(strtolower($scheme), ['http', 'https'], true)) {
+            return null;
+        }
+
+        return $candidate;
     }
 
     private function rootNamespace(PostNamespace $namespace): PostNamespace

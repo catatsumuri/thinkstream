@@ -122,22 +122,12 @@ test('routing check seeder creates wildcard routing lookalike namespaces', funct
     expect($administratorPost->content)->toContain('/admin/*');
 });
 
-test('syntax seeder keeps the meta namespace without the content url handoff article', function () {
+test('syntax seeder does not create the meta namespace', function () {
     $this->seed(SyntaxSeeder::class);
 
     $namespace = PostNamespace::query()
         ->where('slug', 'meta')
         ->first();
 
-    expect($namespace)->not->toBeNull();
-    expect($namespace->name)->toBe('Meta');
-    expect($namespace->description)->toBe('Internal notes about Thinkstream architecture, implementation status, and operational decisions.');
-    expect($namespace->post_order)->toBe([]);
-
-    $post = Post::query()
-        ->where('namespace_id', $namespace->id)
-        ->where('slug', 'content-url-unification-handoff')
-        ->first();
-
-    expect($post)->toBeNull();
+    expect($namespace)->toBeNull();
 });

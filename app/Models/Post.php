@@ -23,6 +23,7 @@ class Post extends Model
         'full_path',
         'content',
         'page_views',
+        'http_referer',
         'user_id',
         'is_draft',
         'published_at',
