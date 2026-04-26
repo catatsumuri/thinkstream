@@ -1170,11 +1170,13 @@ test('admin post edit can collapse the metadata panel', function () {
             return {
                 hidden: panel.classList.contains('hidden'),
                 expanded: toggle.getAttribute('aria-expanded'),
+                icon: toggle.querySelector('svg')?.getAttribute('class'),
             };
         })()
     JS))->toBe([
         'hidden' => false,
         'expanded' => 'true',
+        'icon' => expect()->toContain('lucide-expand'),
     ]);
 
     $page->click('[data-test="edit-meta-panel-toggle"]')->wait(0.2);
@@ -1191,11 +1193,13 @@ test('admin post edit can collapse the metadata panel', function () {
             return {
                 hidden: panel.classList.contains('hidden'),
                 expanded: toggle.getAttribute('aria-expanded'),
+                icon: toggle.querySelector('svg')?.getAttribute('class'),
             };
         })()
     JS))->toBe([
         'hidden' => true,
         'expanded' => 'false',
+        'icon' => expect()->toContain('lucide-minimize-2'),
     ]);
 });
 

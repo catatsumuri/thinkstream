@@ -3,10 +3,10 @@ import {
     ArrowLeft,
     Calendar,
     Check,
+    Expand,
     Eye,
     EyeOff,
     Link2,
-    Maximize2,
     Minimize2,
     Save,
     Tag,
@@ -262,9 +262,9 @@ export default function Edit({
                                             }
                                         >
                                             {metaPanelOpen ? (
-                                                <Minimize2 className="size-4" />
+                                                <Expand className="size-4" />
                                             ) : (
-                                                <Maximize2 className="size-4" />
+                                                <Minimize2 className="size-4" />
                                             )}
                                         </Button>
                                     </div>
