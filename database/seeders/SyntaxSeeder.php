@@ -24,10 +24,10 @@ class SyntaxSeeder extends Seeder
         );
 
         $namespace = PostNamespace::updateOrCreate(
-            ['slug' => 'guides'],
+            ['slug' => 'syntax'],
             [
-                'name' => 'Guides',
-                'description' => 'Practical guides, walkthroughs, and reference notes for writing and publishing posts.',
+                'name' => 'Syntax',
+                'description' => 'Practical syntax references, walkthroughs, and rendering notes for writing and publishing posts.',
                 'cover_image' => $coverImagePath,
                 'post_order' => ['index', 'extended-syntax', 'zenn-syntax', 'mintlify-syntax'],
             ],
@@ -1002,18 +1002,18 @@ Mintlify uses `<Card>` blocks to create linked navigation tiles.
 
 Live example:
 
-<Card title="Tabs" icon="folder" href="/guides/index">
+<Card title="Tabs" icon="folder" href="/syntax/index">
   Organize related content into a switchable tab UI.
 </Card>
 
-<Card title="Callouts" icon="message-square-warning" href="/guides/zenn-syntax">
+<Card title="Callouts" icon="message-square-warning" href="/syntax/zenn-syntax">
   Highlight important information with styled alerts.
 </Card>
 
 Source:
 
 ```mdx
-<Card title="Tabs" icon="folder" href="/guides/index">
+<Card title="Tabs" icon="folder" href="/syntax/index">
   Organize related content into a switchable tab UI.
 </Card>
 ```
@@ -1027,16 +1027,16 @@ Cards are often grouped to create documentation indexes.
 Live example:
 
 <CardGroup cols={2}>
-  <Card title="Tabs" icon="folder" href="/guides/index">
+  <Card title="Tabs" icon="folder" href="/syntax/index">
     Organize related content into a switchable tab UI.
   </Card>
-  <Card title="Steps" icon="list-ordered" href="/guides/zenn-syntax">
+  <Card title="Steps" icon="list-ordered" href="/syntax/zenn-syntax">
     Sequential steps guide the reader through a process.
   </Card>
-  <Card title="Callouts" icon="message-square-warning" href="/guides/extended-syntax">
+  <Card title="Callouts" icon="message-square-warning" href="/syntax/extended-syntax">
     Highlight important information with styled alerts.
   </Card>
-  <Card title="Code Blocks" icon="code" href="/guides/index">
+  <Card title="Code Blocks" icon="code" href="/syntax/index">
     Display syntax-highlighted code with optional filenames.
   </Card>
 </CardGroup>
@@ -1044,19 +1044,19 @@ Live example:
 Self-closing cards (no body text):
 
 <CardGroup cols={3}>
-  <Card title="npm" icon="download" href="/guides/index" />
-  <Card title="yarn" icon="zap" href="/guides/index" />
-  <Card title="pnpm" icon="rocket" href="/guides/index" />
+  <Card title="npm" icon="download" href="/syntax/index" />
+  <Card title="yarn" icon="zap" href="/syntax/index" />
+  <Card title="pnpm" icon="rocket" href="/syntax/index" />
 </CardGroup>
 
 Source:
 
 ```mdx
 <CardGroup cols={2}>
-  <Card title="Tabs" icon="folder" href="/guides/index">
+  <Card title="Tabs" icon="folder" href="/syntax/index">
     Organize related content into a switchable tab UI.
   </Card>
-  <Card title="Steps" icon="list-ordered" href="/guides/zenn-syntax">
+  <Card title="Steps" icon="list-ordered" href="/syntax/zenn-syntax">
     Sequential steps guide the reader through a process.
   </Card>
 </CardGroup>
@@ -1065,10 +1065,10 @@ Source:
 Rendered result for the same source:
 
 <CardGroup cols={2}>
-  <Card title="Tabs" icon="folder" href="/guides/index">
+  <Card title="Tabs" icon="folder" href="/syntax/index">
     Organize related content into a switchable tab UI.
   </Card>
-  <Card title="Steps" icon="list-ordered" href="/guides/zenn-syntax">
+  <Card title="Steps" icon="list-ordered" href="/syntax/zenn-syntax">
     Sequential steps guide the reader through a process.
   </Card>
 </CardGroup>
@@ -1407,14 +1407,14 @@ $data = $response->json();
 
 Live example:
 
-Hover over <Tooltip tip="Application Programming Interface: a set of protocols that lets software components communicate." headline="API" cta="Read more" href="/guides/index">API</Tooltip> for a definition.
+Hover over <Tooltip tip="Application Programming Interface: a set of protocols that lets software components communicate." headline="API" cta="Read more" href="/syntax/index">API</Tooltip> for a definition.
 
 Simple tooltip: hover over <Tooltip tip="Hypertext Markup Language — the standard language for web pages.">HTML</Tooltip>.
 
 Source:
 
 ```mdx
-Hover over <Tooltip tip="Application Programming Interface: a set of protocols that lets software components communicate." headline="API" cta="Read more" href="/guides/index">API</Tooltip> for a definition.
+Hover over <Tooltip tip="Application Programming Interface: a set of protocols that lets software components communicate." headline="API" cta="Read more" href="/syntax/index">API</Tooltip> for a definition.
 
 Simple tooltip: hover over <Tooltip tip="Hypertext Markup Language — the standard language for web pages.">HTML</Tooltip>.
 ```

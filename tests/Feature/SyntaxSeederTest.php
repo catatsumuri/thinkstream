@@ -2,17 +2,24 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\RoutingCheckSeeder;
 use Database\Seeders\SyntaxSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
 
+test('database seeder creates only the syntax namespace', function () {
+    $this->seed(DatabaseSeeder::class);
+
+    expect(PostNamespace::query()->pluck('slug')->all())->toBe(['syntax']);
+});
+
 test('syntax seeder creates the zenn syntax guide with code block examples', function () {
     $this->seed(SyntaxSeeder::class);
 
     $namespace = PostNamespace::query()
-        ->where('slug', 'guides')
+        ->where('slug', 'syntax')
         ->first();
 
     expect($namespace)->not->toBeNull();
@@ -48,7 +55,7 @@ test('syntax seeder creates the mintlify syntax page', function () {
     $this->seed(SyntaxSeeder::class);
 
     $namespace = PostNamespace::query()
-        ->where('slug', 'guides')
+        ->where('slug', 'syntax')
         ->first();
 
     expect($namespace)->not->toBeNull();
@@ -62,7 +69,7 @@ test('syntax seeder creates the mintlify syntax page', function () {
     expect($post)->not->toBeNull();
     expect($post->title)->toBe('Mintlify Syntax');
     expect($post->content)->toContain('# Mintlify Syntax');
-    expect($post->content)->toContain('<Card title="Tabs" icon="folder" href="/guides/index">');
+    expect($post->content)->toContain('<Card title="Tabs" icon="folder" href="/syntax/index">');
     expect($post->content)->toContain('<CardGroup cols={2}>');
     expect($post->content)->toContain('Rendered result for the same source:');
     expect($post->content)->toContain('Live example:');
@@ -78,7 +85,7 @@ test('syntax seeder creates the mintlify syntax page', function () {
     expect($post->content)->toContain('<Badge color="green" icon="circle-check">Stable</Badge>');
     expect($post->content)->toContain('This feature requires a <Badge color="orange" size="sm">Premium</Badge> subscription.');
     expect($post->content)->toContain('# Tooltip');
-    expect($post->content)->toContain('<Tooltip tip="Application Programming Interface: a set of protocols that lets software components communicate." headline="API" cta="Read more" href="/guides/index">API</Tooltip>');
+    expect($post->content)->toContain('<Tooltip tip="Application Programming Interface: a set of protocols that lets software components communicate." headline="API" cta="Read more" href="/syntax/index">API</Tooltip>');
     expect($post->content)->toContain('Simple tooltip: hover over <Tooltip tip="Hypertext Markup Language — the standard language for web pages.">HTML</Tooltip>.');
     expect($post->content)->toContain('# Update');
     expect($post->content)->toContain('<Update label="2024-10-11" description="v0.2.0" tags={["Feature", "Improvement"]}>');

@@ -22,7 +22,6 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             SyntaxSeeder::class,
-            NamespaceBackupSeeder::class,
             // RoutingCheckSeeder::class, // for testing
         ]);
     }
