@@ -51,6 +51,10 @@ function addAdminNamespaceBackupTreeToZip(ZipArchive $zip, array $tree, string $
             $frontmatter['page_views'] = $post['page_views'];
         }
 
+        if (array_key_exists('http_referer', $post)) {
+            $frontmatter['http_referer'] = $post['http_referer'];
+        }
+
         if (array_key_exists('tags', $post)) {
             $frontmatter['tags'] = $post['tags'];
         }
@@ -1153,6 +1157,7 @@ test('authenticated users can view a post details page', function () {
         'title' => 'Release Notes',
         'slug' => 'release-notes',
         'page_views' => 27,
+        'http_referer' => 'https://example.com/changelog',
         'is_draft' => false,
         'reference_title' => 'Release Notes Source',
         'reference_url' => 'https://example.com/release-notes',
@@ -1168,8 +1173,28 @@ test('authenticated users can view a post details page', function () {
             ->where('post.slug', 'release-notes')
             ->where('post.title', 'Release Notes')
             ->where('post.page_views', 27)
+            ->where('post.http_referer', 'https://example.com/changelog')
+            ->where('post.http_referer_url', 'https://example.com/changelog')
             ->where('post.reference_title', 'Release Notes Source')
             ->where('post.reference_url', 'https://example.com/release-notes')
+        );
+});
+
+test('admin post details page does not expose unsafe referer links', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'http_referer' => 'javascript:alert(1)',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.show', [$namespace, $post]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/show')
+            ->where('post.http_referer', 'javascript:alert(1)')
+            ->where('post.http_referer_url', null)
         );
 });
 

@@ -273,6 +273,7 @@ class NamespaceRestoreArchive
             $post->slug = (string) $frontmatter['slug'];
             $post->content = $body;
             $post->page_views = (int) ($frontmatter['page_views'] ?? 0);
+            $post->http_referer = $frontmatter['http_referer'] ?? null;
             $post->is_draft = (bool) ($frontmatter['is_draft'] ?? false);
             $post->published_at = $frontmatter['published_at'] ?? null;
             $post->reference_title = $frontmatter['reference_title'] ?? null;

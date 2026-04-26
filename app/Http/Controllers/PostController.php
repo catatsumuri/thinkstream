@@ -183,7 +183,16 @@ class PostController extends Controller
             && ! $this->isBotRequest($request)
             && ! $request->hasCookie($this->pageViewCookieName($post))
         ) {
-            $post->increment('page_views');
+            $referer = $this->resolveHttpReferer($request);
+
+            if ($referer !== null) {
+                $post->increment('page_views', 1, [
+                    'http_referer' => $referer,
+                ]);
+            } else {
+                $post->increment('page_views');
+            }
+
             $pageViews++;
 
             Cookie::queue($this->pageViewCookieName($post), '1', self::PAGE_VIEW_COOKIE_TTL_MINUTES);
@@ -211,6 +220,16 @@ class PostController extends Controller
     private function pageViewCookieName(Post $post): string
     {
         return 'post_viewed_'.$post->id;
+    }
+
+    private function resolveHttpReferer(Request $request): ?string
+    {
+        $referer = Str::of((string) $request->headers->get('referer', ''))
+            ->trim()
+            ->substr(0, 2048)
+            ->value();
+
+        return $referer === '' ? null : $referer;
     }
 
     private function isBotRequest(Request $request): bool

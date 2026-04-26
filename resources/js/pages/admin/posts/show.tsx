@@ -123,6 +123,8 @@ type Post = {
     full_path: string;
     content: string;
     page_views: number;
+    http_referer: string | null;
+    http_referer_url: string | null;
     is_draft: boolean;
     published_at: string | null;
     created_at: string;
@@ -536,6 +538,30 @@ export default function Show({
                                         <span className="max-w-32 truncate font-mono text-xs text-muted-foreground">
                                             /{post.full_path}
                                         </span>
+                                    </div>
+                                    <div className="flex items-center justify-between gap-3 px-4 py-3">
+                                        <span className="text-sm text-muted-foreground">
+                                            Referer
+                                        </span>
+                                        {post.http_referer &&
+                                        post.http_referer_url ? (
+                                            <a
+                                                href={post.http_referer_url}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="max-w-32 truncate text-right text-xs text-muted-foreground underline-offset-4 hover:underline"
+                                            >
+                                                {post.http_referer}
+                                            </a>
+                                        ) : post.http_referer ? (
+                                            <span className="max-w-32 truncate text-right text-xs text-muted-foreground">
+                                                {post.http_referer}
+                                            </span>
+                                        ) : (
+                                            <span className="text-sm font-medium">
+                                                -
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
                             </div>

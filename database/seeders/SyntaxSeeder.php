@@ -1516,13 +1516,5 @@ MD),
                 'published_at' => now(),
             ]);
 
-        $metaNamespace = PostNamespace::updateOrCreate(
-            ['slug' => 'meta'],
-            [
-                'name' => 'Meta',
-                'description' => 'Internal notes about Thinkstream architecture, implementation status, and operational decisions.',
-                'post_order' => [],
-            ],
-        );
     }
 }
