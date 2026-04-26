@@ -6,13 +6,43 @@ use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\RoutingCheckSeeder;
 use Database\Seeders\SyntaxSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use Symfony\Component\Yaml\Yaml;
 
 uses(RefreshDatabase::class);
 
-test('database seeder creates only the syntax namespace', function () {
-    $this->seed(DatabaseSeeder::class);
+function withinIsolatedNamespaceBackupDirectory(callable $callback): mixed
+{
+    $backupDirectory = storage_path('app/private/backups');
+    $stashedBackupDirectory = storage_path('framework/testing/backups-'.Str::uuid());
+    $hadExistingBackups = is_dir($backupDirectory);
 
-    expect(PostNamespace::query()->pluck('slug')->all())->toBe(['syntax']);
+    if ($hadExistingBackups) {
+        File::ensureDirectoryExists(dirname($stashedBackupDirectory));
+        rename($backupDirectory, $stashedBackupDirectory);
+    }
+
+    File::ensureDirectoryExists($backupDirectory);
+
+    try {
+        return $callback($backupDirectory);
+    } finally {
+        File::deleteDirectory($backupDirectory);
+
+        if ($hadExistingBackups) {
+            rename($stashedBackupDirectory, $backupDirectory);
+        }
+    }
+}
+
+test('database seeder creates only the syntax namespace', function () {
+    withinIsolatedNamespaceBackupDirectory(function (): void {
+        $this->seed(DatabaseSeeder::class);
+
+        expect(PostNamespace::query()->pluck('slug')->all())->toBe(['syntax']);
+    });
 });
 
 test('syntax seeder creates the zenn syntax guide with code block examples', function () {
@@ -137,4 +167,45 @@ test('syntax seeder does not create the meta namespace', function () {
         ->first();
 
     expect($namespace)->toBeNull();
+});
+
+test('database seeder restores the latest namespace backup for each slug', function () {
+    Storage::fake('public');
+
+    withinIsolatedNamespaceBackupDirectory(function (string $backupDirectory): void {
+        $zipPath = $backupDirectory.'/'.Str::uuid().'.zip';
+        $zip = new ZipArchive;
+
+        expect($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE))->toBeTrue();
+
+        $zip->addFromString('_namespace.yaml', Yaml::dump([
+            'name' => 'Restored Docs',
+            'slug' => 'restored-docs',
+            'full_path' => 'restored-docs',
+            'description' => 'Restored from backup seeder.',
+            'is_published' => true,
+            'post_order' => ['intro'],
+        ], 4));
+
+        $zip->addFromString('intro.md', "---\n".Yaml::dump([
+            'title' => 'Intro',
+            'slug' => 'intro',
+            'full_path' => 'restored-docs/intro',
+            'is_draft' => false,
+            'published_at' => now()->toIso8601String(),
+        ])."---\n\n# Intro\n\nRestored content.\n");
+
+        $zip->close();
+
+        $this->seed(DatabaseSeeder::class);
+
+        $namespace = PostNamespace::query()->where('slug', 'restored-docs')->first();
+        $post = Post::query()->where('full_path', 'restored-docs/intro')->first();
+
+        expect($namespace)->not->toBeNull()
+            ->and($namespace->full_path)->toBe('restored-docs')
+            ->and($namespace->description)->toBe('Restored from backup seeder.')
+            ->and($post)->not->toBeNull()
+            ->and($post->title)->toBe('Intro');
+    });
 });

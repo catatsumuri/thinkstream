@@ -92,3 +92,16 @@ test('app header search opens with keyboard shortcut', function () {
         ->assertPresent('[data-test="search-popover-panel"]')
         ->assertPresent('[data-test="search-popover-input"]');
 });
+
+test('app header shows the backups navigation link', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user);
+
+    $page = visit(route('dashboard', absolute: false))->resize(1440, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('a[href="/admin/backups"]')
+        ->assertSee('Backups');
+});

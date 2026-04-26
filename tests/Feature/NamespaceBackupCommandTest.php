@@ -120,6 +120,7 @@ test('namespace backup command exports namespace metadata and markdown posts', f
     $this->artisan('namespace:backup', [
         'namespace' => $namespace->slug,
         '--output' => $zipPath,
+        '--description' => 'Pre-release backup',
     ])->assertSuccessful();
 
     expect($zipPath)->toBeFile();
@@ -128,6 +129,7 @@ test('namespace backup command exports namespace metadata and markdown posts', f
     expect($zip->open($zipPath))->toBeTrue();
 
     $namespaceData = Yaml::parse($zip->getFromName('_namespace.yaml'));
+    $backupData = Yaml::parse($zip->getFromName('_backup.yaml'));
     $postMarkdown = $zip->getFromName('routing.md');
     $coverImage = $zip->getFromName('_files/namespaces/guides-cover.jpg');
     $postImage = $zip->getFromName('_files/posts/123/diagram.png');
@@ -141,6 +143,10 @@ test('namespace backup command exports namespace metadata and markdown posts', f
         'cover_image' => 'namespaces/guides-cover.jpg',
         'post_order' => ['routing'],
         'sort_order' => 3,
+    ]);
+
+    expect($backupData)->toMatchArray([
+        'description' => 'Pre-release backup',
     ]);
 
     expect($postMarkdown)->toContain('title: Routing')

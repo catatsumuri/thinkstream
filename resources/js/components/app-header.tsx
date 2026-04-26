@@ -1,5 +1,12 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Globe, LayoutGrid, Menu, NotebookPen, Search } from 'lucide-react';
+import {
+    Archive,
+    Globe,
+    LayoutGrid,
+    Menu,
+    NotebookPen,
+    Search,
+} from 'lucide-react';
 import { index as adminPostsIndex } from '@/actions/App/Http/Controllers/Admin/PostController';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
@@ -35,6 +42,7 @@ import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useInitials } from '@/hooks/use-initials';
 import { cn, toUrl } from '@/lib/utils';
 import { dashboard, home } from '@/routes';
+import { index as adminBackupsIndex } from '@/routes/admin/backups';
 import type { BreadcrumbItem, NavItem } from '@/types';
 
 type Props = {
@@ -51,6 +59,11 @@ const mainNavItems: NavItem[] = [
         title: 'Posts',
         href: adminPostsIndex.url(),
         icon: NotebookPen,
+    },
+    {
+        title: 'Backups',
+        href: adminBackupsIndex.url(),
+        icon: Archive,
     },
     {
         title: 'Site',
@@ -70,12 +83,21 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const getInitials = useInitials();
     const { currentUrl, isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
     const postsIndexUrl = adminPostsIndex.url();
+    const backupsIndexUrl = adminBackupsIndex.url();
     const isPostsActive =
         currentUrl === postsIndexUrl ||
         currentUrl.startsWith(`${postsIndexUrl}/`);
+    const isBackupsActive =
+        currentUrl === backupsIndexUrl ||
+        currentUrl.startsWith(`${backupsIndexUrl}/`);
     const resolvedMainNavItems = mainNavItems.map((item) => ({
         ...item,
-        isActive: item.href === postsIndexUrl ? isPostsActive : item.isActive,
+        isActive:
+            item.href === postsIndexUrl
+                ? isPostsActive
+                : item.href === backupsIndexUrl
+                  ? isBackupsActive
+                  : item.isActive,
     }));
 
     return (

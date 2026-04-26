@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { Globe, LayoutGrid, NotebookPen } from 'lucide-react';
+import { Archive, Globe, LayoutGrid, NotebookPen } from 'lucide-react';
 import { index as adminPostsIndex } from '@/actions/App/Http/Controllers/Admin/PostController';
 import AppLogo from '@/components/app-logo';
 import { NavFooter } from '@/components/nav-footer';
@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { dashboard, home } from '@/routes';
+import { index as adminBackupsIndex } from '@/routes/admin/backups';
 import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
@@ -30,6 +31,11 @@ const mainNavItems: NavItem[] = [
         icon: NotebookPen,
     },
     {
+        title: 'Backups',
+        href: adminBackupsIndex.url(),
+        icon: Archive,
+    },
+    {
         title: 'Site',
         href: home(),
         icon: Globe,
@@ -41,12 +47,21 @@ const footerNavItems: NavItem[] = [];
 export function AppSidebar() {
     const { currentUrl } = useCurrentUrl();
     const postsIndexUrl = adminPostsIndex.url();
+    const backupsIndexUrl = adminBackupsIndex.url();
     const isPostsActive =
         currentUrl === postsIndexUrl ||
         currentUrl.startsWith(`${postsIndexUrl}/`);
+    const isBackupsActive =
+        currentUrl === backupsIndexUrl ||
+        currentUrl.startsWith(`${backupsIndexUrl}/`);
     const resolvedMainNavItems = mainNavItems.map((item) => ({
         ...item,
-        isActive: item.href === postsIndexUrl ? isPostsActive : item.isActive,
+        isActive:
+            item.href === postsIndexUrl
+                ? isPostsActive
+                : item.href === backupsIndexUrl
+                  ? isBackupsActive
+                  : item.isActive,
     }));
 
     return (

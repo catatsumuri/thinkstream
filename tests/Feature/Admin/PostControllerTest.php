@@ -27,6 +27,12 @@ function createAdminNamespaceBackupZip(string $zipPath, array $tree): void
 
 function addAdminNamespaceBackupTreeToZip(ZipArchive $zip, array $tree, string $prefix = ''): void
 {
+    if ($prefix === '' && array_key_exists('backup_description', $tree)) {
+        $zip->addFromString('_backup.yaml', Yaml::dump([
+            'description' => $tree['backup_description'],
+        ], 4));
+    }
+
     $zip->addFromString($prefix.'_namespace.yaml', Yaml::dump([
         'name' => $tree['name'],
         'slug' => $tree['slug'],
@@ -565,15 +571,63 @@ test('authenticated users can create a namespace backup from backup management',
 
     try {
         $this->actingAs($user)
-            ->post(route('admin.posts.backups.store', $namespace))
+            ->post(route('admin.posts.backups.store', $namespace), [
+                'description' => 'Before schema rewrite',
+            ])
             ->assertRedirect(route('admin.posts.backups', $namespace))
             ->assertSessionHas('inertia.flash_data.toast', [
                 'type' => 'success',
                 'message' => 'Backup created.',
             ]);
 
-        expect(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'))
-            ->toHaveCount(1);
+        $zipFiles = File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip');
+        expect($zipFiles)->toHaveCount(1);
+
+        $zip = new ZipArchive;
+        expect($zip->open($zipFiles[0]))->toBeTrue();
+
+        $backupManifest = Yaml::parse($zip->getFromName('_backup.yaml'));
+        $zip->close();
+
+        expect($backupManifest)->toMatchArray([
+            'description' => 'Before schema rewrite',
+        ]);
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+    }
+});
+
+test('namespace backup management exposes archive descriptions in the restore list', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides-backup-description',
+        'full_path' => 'guides-backup-description',
+        'name' => 'Guides',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($namespace);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    $zipPath = $backupDirectory.'/'.$backupPrefix.'-20260421-040506.zip';
+    createAdminNamespaceBackupZip($zipPath, [
+        'slug' => 'guides-backup-description',
+        'name' => 'Guides',
+        'full_path' => 'guides-backup-description',
+        'description' => 'Namespace description',
+        'backup_description' => 'Before risky refactor',
+    ]);
+
+    try {
+        $this->actingAs($user)
+            ->get(route('admin.posts.backups', $namespace))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('admin/posts/backups')
+                ->where('backups.0.filename', basename($zipPath))
+                ->where('backups.0.description', 'Before risky refactor')
+            );
     } finally {
         File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
     }

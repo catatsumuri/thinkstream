@@ -11,7 +11,7 @@ use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\PostRevision;
 use App\Models\Tag;
-use App\Support\NamespaceBackupArchive;
+use App\Support\NamespaceBackupIndex;
 use App\Support\NamespaceRestoreArchive;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -83,7 +83,7 @@ class PostController extends Controller
         ];
     }
 
-    public function namespaceIndex(PostNamespace $namespace): Response
+    public function namespaceIndex(PostNamespace $namespace, NamespaceBackupIndex $backupIndex): Response
     {
         $posts = $namespace->sortPosts($namespace->posts()->with('tags')->latest()->get([
             'id',
@@ -108,7 +108,7 @@ class PostController extends Controller
             'tags' => $post->tags->map(fn (Tag $tag) => ['id' => $tag->id, 'name' => $tag->name])->values()->all(),
         ]);
 
-        $backupCount = $this->backupCount($namespace);
+        $backupCount = $backupIndex->countForNamespace($namespace);
 
         $namespace->setAttribute('backup_count', $backupCount);
         $namespace->setAttribute(
@@ -125,7 +125,7 @@ class PostController extends Controller
         ]);
     }
 
-    public function backups(PostNamespace $namespace): Response
+    public function backups(PostNamespace $namespace, NamespaceBackupIndex $backupIndex): Response
     {
         return Inertia::render('admin/posts/backups', [
             'namespace' => [
@@ -133,21 +133,47 @@ class PostController extends Controller
                 'name' => $namespace->name,
                 'slug' => $namespace->slug,
                 'full_path' => $namespace->full_path,
-                'backup_count' => $this->backupCount($namespace),
+                'backup_count' => $backupIndex->countForNamespace($namespace),
             ],
             'create_backup_url' => route('admin.posts.backups.store', $namespace, absolute: false),
             'delete_backups_url' => route('admin.posts.backups.destroyMany', $namespace, absolute: false),
-            'backups' => collect($this->backupsForNamespace($namespace))
-                ->map(fn (array $backup): array => collect($backup)->except('path')->all())
+            'backups' => collect($backupIndex->filesForNamespace($namespace))
+                ->map(fn (array $backup): array => [
+                    'filename' => $backup['filename'],
+                    'created_at' => $backup['created_at'],
+                    'size_bytes' => $backup['size_bytes'],
+                    'size_human' => $backup['size_human'],
+                    'description' => $backup['archive']['description'],
+                    'download_url' => route('admin.posts.backups.download', [
+                        'namespace' => $namespace,
+                        'backup' => $backup['filename'],
+                    ], absolute: false),
+                    'restore_url' => route('admin.posts.backups.restore', [
+                        'namespace' => $namespace,
+                        'backup' => $backup['filename'],
+                    ], absolute: false),
+                ])
                 ->all(),
         ]);
     }
 
-    public function storeBackup(PostNamespace $namespace): RedirectResponse
+    public function storeBackup(Request $request, PostNamespace $namespace): RedirectResponse
     {
-        $exitCode = Artisan::call('namespace:backup', [
-            'namespace' => $namespace->id,
+        $data = $request->validate([
+            'description' => ['nullable', 'string', 'max:2000'],
         ]);
+
+        $description = trim((string) ($data['description'] ?? ''));
+
+        $arguments = [
+            'namespace' => $namespace->id,
+        ];
+
+        if ($description !== '') {
+            $arguments['--description'] = $description;
+        }
+
+        $exitCode = Artisan::call('namespace:backup', $arguments);
 
         if ($exitCode !== 0) {
             return back()->withErrors([
@@ -160,9 +186,12 @@ class PostController extends Controller
         return to_route('admin.posts.backups', $namespace);
     }
 
-    public function destroyManyBackups(Request $request, PostNamespace $namespace): RedirectResponse
-    {
-        $availableFilenames = collect($this->backupsForNamespace($namespace))
+    public function destroyManyBackups(
+        Request $request,
+        PostNamespace $namespace,
+        NamespaceBackupIndex $backupIndex
+    ): RedirectResponse {
+        $availableFilenames = collect($backupIndex->filesForNamespace($namespace))
             ->pluck('filename')
             ->all();
 
@@ -172,7 +201,7 @@ class PostController extends Controller
         ]);
 
         foreach ($data['filenames'] as $filename) {
-            $backupRecord = $this->backupRecordFor($namespace, $filename);
+            $backupRecord = $backupIndex->fileForNamespace($namespace, $filename);
 
             if ($backupRecord !== null && File::exists($backupRecord['path'])) {
                 File::delete($backupRecord['path']);
@@ -184,13 +213,17 @@ class PostController extends Controller
         return to_route('admin.posts.backups', $namespace);
     }
 
-    public function restoreBackup(Request $request, PostNamespace $namespace, string $backup): RedirectResponse
-    {
+    public function restoreBackup(
+        Request $request,
+        PostNamespace $namespace,
+        string $backup,
+        NamespaceBackupIndex $backupIndex
+    ): RedirectResponse {
         $request->validate([
             'confirmation' => ['required', 'string', Rule::in([$namespace->name])],
         ]);
 
-        $backupRecord = $this->backupRecordFor($namespace, $backup);
+        $backupRecord = $backupIndex->fileForNamespace($namespace, $backup);
 
         abort_unless($backupRecord !== null, 404);
 
@@ -209,9 +242,12 @@ class PostController extends Controller
         return to_route('admin.posts.backups', $namespace);
     }
 
-    public function downloadBackup(PostNamespace $namespace, string $backup): BinaryFileResponse
-    {
-        $backupRecord = $this->backupRecordFor($namespace, $backup);
+    public function downloadBackup(
+        PostNamespace $namespace,
+        string $backup,
+        NamespaceBackupIndex $backupIndex
+    ): BinaryFileResponse {
+        $backupRecord = $backupIndex->fileForNamespace($namespace, $backup);
 
         abort_unless($backupRecord !== null && File::exists($backupRecord['path']), 404);
 
@@ -679,98 +715,5 @@ class PostController extends Controller
         }
 
         return $path;
-    }
-
-    private function backupCount(PostNamespace $namespace): int
-    {
-        return count($this->backupsForNamespace($namespace));
-    }
-
-    /**
-     * @return array<int, array{
-     *     filename: string,
-     *     path: string,
-     *     created_at: string,
-     *     size_bytes: int,
-     *     size_human: string,
-     *     download_url: string,
-     *     restore_url: string
-     * }>
-     */
-    private function backupsForNamespace(PostNamespace $namespace): array
-    {
-        $backupDirectory = NamespaceBackupArchive::directory();
-
-        if (! File::isDirectory($backupDirectory)) {
-            return [];
-        }
-
-        $backupPaths = collect([
-            ...(
-                File::glob($backupDirectory.'/'.NamespaceBackupArchive::currentPrefix($namespace).'-*.zip')
-                ?: []
-            ),
-            ...collect(NamespaceBackupArchive::legacyLookupPatterns($namespace))
-                ->flatMap(fn (string $pattern): array => File::glob($backupDirectory.'/'.$pattern.'-*.zip') ?: [])
-                ->all(),
-        ]);
-
-        if (PostNamespace::query()->where('slug', $namespace->slug)->count() === 1) {
-            $backupPaths = $backupPaths->merge(
-                File::glob($backupDirectory.'/'.$namespace->slug.'-*.zip') ?: []
-            );
-        }
-
-        return $backupPaths
-            ->unique()
-            ->filter(fn (string $path): bool => File::isFile($path))
-            ->sortByDesc(fn (string $path): int => File::lastModified($path))
-            ->values()
-            ->map(fn (string $path): array => [
-                'filename' => basename($path),
-                'path' => $path,
-                'created_at' => date(DATE_ATOM, File::lastModified($path)),
-                'size_bytes' => File::size($path),
-                'size_human' => $this->formatBytes(File::size($path)),
-                'download_url' => route('admin.posts.backups.download', [
-                    'namespace' => $namespace,
-                    'backup' => basename($path),
-                ], absolute: false),
-                'restore_url' => route('admin.posts.backups.restore', [
-                    'namespace' => $namespace,
-                    'backup' => basename($path),
-                ], absolute: false),
-            ])
-            ->all();
-    }
-
-    /**
-     * @return array{
-     *     filename: string,
-     *     path: string,
-     *     created_at: string,
-     *     size_bytes: int,
-     *     size_human: string,
-     *     download_url: string,
-     *     restore_url: string
-     * }|null
-     */
-    private function backupRecordFor(PostNamespace $namespace, string $filename): ?array
-    {
-        return collect($this->backupsForNamespace($namespace))
-            ->first(fn (array $backup): bool => $backup['filename'] === basename($filename));
-    }
-
-    private function formatBytes(int $bytes): string
-    {
-        if ($bytes < 1024) {
-            return $bytes.' B';
-        }
-
-        if ($bytes < 1024 * 1024) {
-            return round($bytes / 1024, 1).' KB';
-        }
-
-        return round($bytes / (1024 * 1024), 1).' MB';
     }
 }
