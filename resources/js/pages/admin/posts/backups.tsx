@@ -1,6 +1,7 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
 import { Archive, Download, RotateCcw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import CreateBackupDialog from '@/components/create-backup-dialog';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -34,9 +35,30 @@ type Backup = {
     created_at: string;
     size_bytes: number;
     size_human: string;
+    description: string | null;
     download_url: string;
     restore_url: string;
 };
+
+function BackupDescriptionCell({
+    description,
+}: {
+    description: string | null;
+}) {
+    if (!description) {
+        return (
+            <div className="rounded-lg border border-dashed border-border/80 bg-muted/35 px-3 py-2 text-xs font-medium tracking-[0.14em] text-muted-foreground uppercase">
+                No note
+            </div>
+        );
+    }
+
+    return (
+        <div className="rounded-lg border border-amber-200/70 bg-amber-50/70 px-3 py-2 text-sm leading-6 text-amber-950 dark:border-amber-900/70 dark:bg-amber-950/25 dark:text-amber-100">
+            {description}
+        </div>
+    );
+}
 
 function RestoreBackupDialog({
     backup,
@@ -66,6 +88,14 @@ function RestoreBackupDialog({
                         using the selected backup. Treat this as a destructive
                         operation.
                     </p>
+                    {backup.description && (
+                        <p>
+                            Backup note:{' '}
+                            <span className="font-medium">
+                                {backup.description}
+                            </span>
+                        </p>
+                    )}
                     <p>
                         Type{' '}
                         <span className="font-semibold">{namespaceName}</span>{' '}
@@ -188,14 +218,12 @@ export default function Backups({
                                 </p>
                             </div>
                         </div>
-                        <Form action={create_backup_url} method="post">
-                            {({ processing }) => (
-                                <Button type="submit" disabled={processing}>
-                                    <Archive className="size-4" />
-                                    Create Backup
-                                </Button>
-                            )}
-                        </Form>
+                        <CreateBackupDialog
+                            action={create_backup_url}
+                            namespaceName={namespace.name}
+                            triggerLabel="Create Backup"
+                            triggerSize="default"
+                        />
                     </div>
                 </div>
 
@@ -305,6 +333,9 @@ export default function Backups({
                                             File
                                         </th>
                                         <th className="px-4 py-3 text-left font-medium">
+                                            Description
+                                        </th>
+                                        <th className="px-4 py-3 text-left font-medium">
                                             Created
                                         </th>
                                         <th className="px-4 py-3 text-left font-medium">
@@ -339,6 +370,13 @@ export default function Backups({
                                             </td>
                                             <td className="px-4 py-3 font-medium">
                                                 {backup.filename}
+                                            </td>
+                                            <td className="px-4 py-3 align-top">
+                                                <BackupDescriptionCell
+                                                    description={
+                                                        backup.description
+                                                    }
+                                                />
                                             </td>
                                             <td
                                                 className="px-4 py-3 text-muted-foreground"

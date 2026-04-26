@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\NamespaceController;
 use App\Http\Controllers\Admin\PostController;
 use Illuminate\Support\Facades\Route;
@@ -9,6 +10,12 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
 
     Route::patch('namespaces/reorder', [NamespaceController::class, 'reorder'])->name('namespaces.reorder');
     Route::resource('namespaces', NamespaceController::class)->except(['index', 'show']);
+    Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
+    Route::post('backups/create', [BackupController::class, 'storeMany'])->name('backups.storeMany');
+    Route::post('backups/delete', [BackupController::class, 'destroyMany'])->name('backups.destroyMany');
+    Route::post('backups/restore', [BackupController::class, 'restoreMany'])->name('backups.restoreMany');
+    Route::get('backups/{backup}', [BackupController::class, 'download'])->name('backups.download');
+    Route::post('backups/{backup}/restore', [BackupController::class, 'restore'])->name('backups.restore');
 
     Route::prefix('posts')->name('posts.')->group(function () {
         Route::get('/', [PostController::class, 'index'])->name('index');

@@ -6,6 +6,10 @@ use App\Models\PostNamespace;
 
 class NamespaceBackupArchive
 {
+    public const BACKUP_MANIFEST = '_backup.yaml';
+
+    public const NAMESPACE_MANIFEST = '_namespace.yaml';
+
     public static function directory(): string
     {
         return storage_path('app/private/backups');

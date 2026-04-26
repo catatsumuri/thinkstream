@@ -14,6 +14,7 @@ class NamespaceBackupCommand extends Command
     protected $signature = 'namespace:backup
                              {namespace : Namespace slug or ID}
                              {--output= : Output zip path (defaults to storage/app/private/backups/namespace-id-path-timestamp.zip)}
+                             {--description= : Optional backup note stored in the archive manifest}
                              {--with-revisions : Include post revision history in the backup}';
 
     protected $description = 'Backup a namespace and its posts as a zip archive';
@@ -56,6 +57,12 @@ class NamespaceBackupCommand extends Command
         }
 
         $withRevisions = (bool) $this->option('with-revisions');
+        $backupDescription = trim((string) $this->option('description'));
+
+        $zip->addFromString(NamespaceBackupArchive::BACKUP_MANIFEST, Yaml::dump([
+            'description' => $backupDescription !== '' ? $backupDescription : null,
+        ], 4));
+
         $postCount = $this->addNamespaceToZip($zip, $namespace, '', $withRevisions);
 
         $zip->close();
@@ -79,7 +86,7 @@ class NamespaceBackupCommand extends Command
             'sort_order' => $namespace->sort_order,
         ];
 
-        $zip->addFromString($prefix.'_namespace.yaml', Yaml::dump($namespaceData, 4));
+        $zip->addFromString($prefix.NamespaceBackupArchive::NAMESPACE_MANIFEST, Yaml::dump($namespaceData, 4));
 
         foreach ($this->imagePathsForNamespace($namespace) as $imagePath) {
             $this->addPublicFileToZip($zip, $imagePath);
