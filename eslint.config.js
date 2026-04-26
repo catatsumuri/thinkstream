@@ -110,7 +110,6 @@ export default [
             '.worktrees/**',
             '.tmp/**',
             'docs/**',
-            'knowledge-base-inertia/**',
             'mdx/**',
             'output/**',
             'storage/**',
