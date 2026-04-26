@@ -999,6 +999,83 @@ test('admin namespace page shows backup count and backup management button when 
     }
 });
 
+test('admin namespaces index shows the management summary header', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $root = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+        'parent_id' => null,
+    ]);
+
+    PostNamespace::factory()->create([
+        'slug' => 'laravel',
+        'name' => 'Laravel',
+        'parent_id' => $root->id,
+        'is_published' => false,
+    ]);
+
+    Post::factory()->for($root, 'namespace')->create([
+        'slug' => 'intro',
+        'title' => 'Intro',
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.index', absolute: false))->resize(1440, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertSee('Admin content structure')
+        ->assertSee('Namespaces')
+        ->assertSee('Root namespaces')
+        ->assertSee('All namespaces')
+        ->assertSee('Posts in tree')
+        ->assertSee('Needs attention')
+        ->assertSee('Restore Zip')
+        ->assertSee('New Namespace');
+});
+
+test('admin namespace page shows unscheduled published posts as published', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    Post::factory()->for($namespace, 'namespace')->create([
+        'slug' => 'published-post',
+        'title' => 'Published Post',
+        'is_draft' => false,
+        'published_at' => null,
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.namespace', $namespace, absolute: false))->resize(1440, 900);
+
+    $page->assertNoJavaScriptErrors();
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const row = [...document.querySelectorAll('tbody tr')].find((element) =>
+                element.textContent?.includes('Published Post')
+            );
+
+            if (! row) {
+                return null;
+            }
+
+            return row.querySelectorAll('td')[3]?.textContent?.replace(/\s+/g, ' ').trim() ?? null;
+        })()
+    JS))->toBe('Published');
+});
+
 test('admin post edit warns before leaving with unsaved changes', function () {
     $user = User::factory()->create([
         'email' => 'test@example.com',

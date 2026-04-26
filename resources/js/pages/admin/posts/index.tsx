@@ -38,6 +38,7 @@ import { startTransition, useEffect, useRef, useState } from 'react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
     Dialog,
     DialogClose,
@@ -102,6 +103,67 @@ type RestoreLog = {
     type: 'info' | 'success' | 'error';
     message: string;
 };
+
+type NamespaceSummary = {
+    childCount: number;
+    draftCount: number;
+    publishedCount: number;
+    rootCount: number;
+    totalCount: number;
+    totalPosts: number;
+};
+
+function summarizeNamespaces(namespaces: Namespace[]): NamespaceSummary {
+    let totalCount = 0;
+    let childCount = 0;
+    let totalPosts = 0;
+    let publishedCount = 0;
+    let draftCount = 0;
+
+    function visit(nodes: Namespace[], depth = 0): void {
+        nodes.forEach((namespace) => {
+            totalCount += 1;
+            totalPosts += namespace.posts_count;
+
+            if (depth > 0) {
+                childCount += 1;
+            }
+
+            if (namespace.is_published) {
+                publishedCount += 1;
+            } else {
+                draftCount += 1;
+            }
+
+            visit(namespace.children, depth + 1);
+        });
+    }
+
+    visit(namespaces);
+
+    return {
+        childCount,
+        draftCount,
+        publishedCount,
+        rootCount: namespaces.length,
+        totalCount,
+        totalPosts,
+    };
+}
+
+function sortLabel(sort: Sort): string {
+    const columnLabels: Record<string, string> = {
+        is_published: 'Status',
+        name: 'Name',
+        posts_count: 'Post count',
+        sort_order: 'Manual order',
+    };
+
+    const label = columnLabels[sort.column] ?? sort.column;
+    const direction = sort.direction === 'asc' ? 'ascending' : 'descending';
+
+    return `${label}, ${direction}`;
+}
 
 function DeleteNamespaceDialog({ namespace }: { namespace: Namespace }) {
     const [confirmation, setConfirmation] = useState('');
@@ -384,9 +446,11 @@ function RestorePreviewPanel({
 function RestoreNamespacesDialog({
     restoreUploadUrl,
     restorePreview,
+    triggerClassName,
 }: {
     restoreUploadUrl: string;
     restorePreview: RestorePreview | null;
+    triggerClassName?: string;
 }) {
     const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
     const [isDraggingBackup, setIsDraggingBackup] = useState(false);
@@ -472,7 +536,7 @@ function RestoreNamespacesDialog({
     return (
         <Dialog open={open} onOpenChange={handleOpenChange}>
             <DialogTrigger asChild>
-                <Button variant="outline">
+                <Button variant="outline" className={triggerClassName}>
                     <Upload className="size-4" />
                     Restore Zip
                 </Button>
@@ -600,6 +664,209 @@ function RestoreNamespacesDialog({
                 )}
             </DialogContent>
         </Dialog>
+    );
+}
+
+function NamespacesHeaderPanel({
+    namespaces,
+    reorderMode,
+    restoreUploadUrl,
+    restorePreview,
+    sort,
+    onToggleReorder,
+}: {
+    namespaces: Namespace[];
+    reorderMode: boolean;
+    restoreUploadUrl: string;
+    restorePreview: RestorePreview | null;
+    sort: Sort;
+    onToggleReorder: () => void;
+}) {
+    const summary = summarizeNamespaces(namespaces);
+    const hasNamespaces = namespaces.length > 0;
+
+    const metrics = [
+        {
+            label: 'Root namespaces',
+            value: summary.rootCount.toLocaleString(),
+            hint: `${summary.childCount.toLocaleString()} nested`,
+        },
+        {
+            label: 'All namespaces',
+            value: summary.totalCount.toLocaleString(),
+            hint: `${summary.publishedCount.toLocaleString()} published`,
+        },
+        {
+            label: 'Posts in tree',
+            value: summary.totalPosts.toLocaleString(),
+            hint: hasNamespaces
+                ? 'Across all visible namespaces'
+                : 'No content yet',
+        },
+        {
+            label: 'Needs attention',
+            value: summary.draftCount.toLocaleString(),
+            hint:
+                summary.draftCount === 0
+                    ? 'All namespaces published'
+                    : 'Draft namespaces remaining',
+        },
+    ];
+
+    return (
+        <section className="relative overflow-hidden rounded-[1.75rem] border border-border/70 bg-gradient-to-br from-amber-50 via-background to-sky-50 p-6 shadow-sm sm:p-7 dark:from-amber-950/20 dark:via-background dark:to-sky-950/20">
+            <div className="pointer-events-none absolute inset-0">
+                <div className="absolute top-0 right-0 h-40 w-40 rounded-full bg-amber-200/30 blur-3xl dark:bg-amber-500/10" />
+                <div className="absolute bottom-0 left-0 h-40 w-40 rounded-full bg-sky-200/30 blur-3xl dark:bg-sky-500/10" />
+            </div>
+
+            <div className="relative flex flex-col gap-6">
+                <div className="flex flex-col gap-6 xl:flex-row xl:items-start xl:justify-between">
+                    <div className="max-w-3xl space-y-4">
+                        <div className="inline-flex w-fit items-center rounded-full border border-amber-200/70 bg-background/80 px-3 py-1 text-xs font-medium text-amber-700 shadow-sm dark:border-amber-900/70 dark:text-amber-300">
+                            Admin content structure
+                        </div>
+
+                        <div className="space-y-3">
+                            <div className="flex flex-wrap items-center gap-3">
+                                <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
+                                    Namespaces
+                                </h1>
+                                <span
+                                    className={cn(
+                                        'inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-medium',
+                                        reorderMode
+                                            ? 'bg-foreground text-background'
+                                            : 'bg-background/80 text-muted-foreground ring-1 ring-border/70',
+                                    )}
+                                >
+                                    {reorderMode ? (
+                                        <>
+                                            <Check className="size-3.5" />
+                                            Reorder mode
+                                        </>
+                                    ) : (
+                                        <>
+                                            <ArrowUpDown className="size-3.5" />
+                                            Sorted by {sortLabel(sort)}
+                                        </>
+                                    )}
+                                </span>
+                            </div>
+
+                            <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-base">
+                                Root namespaces, child trees, and publishing
+                                state are managed from here. Keep the top-level
+                                structure readable, then drill into each
+                                namespace for post-level work.
+                            </p>
+                        </div>
+
+                        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                            {metrics.map((metric) => (
+                                <Card
+                                    key={metric.label}
+                                    className="gap-0 border-border/60 bg-background/80 py-0 shadow-none backdrop-blur"
+                                >
+                                    <CardContent className="space-y-1 px-4 py-4">
+                                        <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                            {metric.label}
+                                        </p>
+                                        <p className="text-2xl font-semibold tracking-tight">
+                                            {metric.value}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground">
+                                            {metric.hint}
+                                        </p>
+                                    </CardContent>
+                                </Card>
+                            ))}
+                        </div>
+                    </div>
+
+                    <Card className="w-full max-w-xl gap-0 border-border/70 bg-background/88 py-0 shadow-lg shadow-black/5 backdrop-blur xl:w-[24rem]">
+                        <CardContent className="space-y-4 px-5 py-5">
+                            <div className="space-y-1">
+                                <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">
+                                    Controls
+                                </p>
+                                <h2 className="text-lg font-semibold">
+                                    Primary actions
+                                </h2>
+                                <p className="text-sm leading-6 text-muted-foreground">
+                                    Create a new root namespace, reorder the
+                                    current tree, or restore a zip backup into
+                                    the hierarchy.
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col gap-3">
+                                <Button asChild size="lg" className="w-full">
+                                    <Link href={namespaceCreate.url()}>
+                                        <FolderPlus className="size-4" />
+                                        New Namespace
+                                    </Link>
+                                </Button>
+
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    <Button
+                                        variant={
+                                            reorderMode
+                                                ? 'secondary'
+                                                : 'outline'
+                                        }
+                                        size="lg"
+                                        onClick={onToggleReorder}
+                                        className="w-full"
+                                    >
+                                        {reorderMode ? (
+                                            <>
+                                                <Check className="size-4" />
+                                                Done
+                                            </>
+                                        ) : (
+                                            <>
+                                                <ArrowUpDown className="size-4" />
+                                                Reorder
+                                            </>
+                                        )}
+                                    </Button>
+
+                                    <RestoreNamespacesDialog
+                                        restoreUploadUrl={restoreUploadUrl}
+                                        restorePreview={restorePreview}
+                                        triggerClassName="w-full"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl border border-dashed border-border/70 bg-muted/40 p-4 text-sm text-muted-foreground">
+                                {reorderMode ? (
+                                    <p>
+                                        Drag root namespaces to change their top
+                                        level order. Child namespaces keep their
+                                        local tree under each parent.
+                                    </p>
+                                ) : hasNamespaces ? (
+                                    <p>
+                                        Expand a row to inspect child
+                                        namespaces. Sorting changes the current
+                                        view, while reorder mode returns to the
+                                        manual structure.
+                                    </p>
+                                ) : (
+                                    <p>
+                                        Start with a single namespace for your
+                                        first content area, then branch into
+                                        child namespaces as the catalog grows.
+                                    </p>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
+        </section>
     );
 }
 
@@ -941,154 +1208,161 @@ export default function Index({
             <Head title="Namespaces" />
 
             <div className="space-y-6 p-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold">Namespaces</h1>
-                        <p className="text-sm text-muted-foreground">
-                            Manage namespaces and their posts
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <RestoreNamespacesDialog
-                            restoreUploadUrl={restore_upload_url}
-                            restorePreview={restore_preview}
-                        />
-                        <Button
-                            variant={reorderMode ? 'secondary' : 'outline'}
-                            onClick={handleReorderToggle}
-                        >
-                            {reorderMode ? (
-                                <>
-                                    <Check className="size-4" />
-                                    Done
-                                </>
-                            ) : (
-                                <>
-                                    <ArrowUpDown className="size-4" />
-                                    Reorder
-                                </>
-                            )}
-                        </Button>
-                        <Button asChild>
-                            <Link href={namespaceCreate.url()}>
-                                <FolderPlus className="size-4" />
-                                New Namespace
-                            </Link>
-                        </Button>
-                    </div>
-                </div>
+                <NamespacesHeaderPanel
+                    namespaces={namespaces}
+                    reorderMode={reorderMode}
+                    restoreUploadUrl={restore_upload_url}
+                    restorePreview={restore_preview}
+                    sort={sort}
+                    onToggleReorder={handleReorderToggle}
+                />
 
                 {namespaces.length === 0 ? (
-                    <div className="rounded-xl border border-dashed p-12 text-center">
-                        <p className="text-muted-foreground">
-                            No namespaces yet.
-                        </p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Create a namespace to start adding posts.
-                        </p>
-                        <Button asChild className="mt-4">
-                            <Link href={namespaceCreate.url()}>
-                                <FolderPlus className="size-4" />
-                                Create your first namespace
-                            </Link>
-                        </Button>
-                    </div>
+                    <Card className="border-dashed py-0 shadow-none">
+                        <CardContent className="flex flex-col items-center px-6 py-14 text-center">
+                            <div className="rounded-full border bg-muted/60 p-4">
+                                <FolderPlus className="size-6 text-muted-foreground" />
+                            </div>
+                            <h2 className="mt-5 text-xl font-semibold">
+                                No namespaces yet
+                            </h2>
+                            <p className="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+                                Create a root namespace to define your first
+                                content area, then branch into child namespaces
+                                when the structure becomes deeper.
+                            </p>
+                            <Button asChild className="mt-6">
+                                <Link href={namespaceCreate.url()}>
+                                    <FolderPlus className="size-4" />
+                                    Create your first namespace
+                                </Link>
+                            </Button>
+                        </CardContent>
+                    </Card>
                 ) : (
                     <DndContext
                         sensors={sensors}
                         collisionDetection={closestCenter}
                         onDragEnd={handleDragEnd}
                     >
-                        <div className="rounded-xl border">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b bg-muted/50">
-                                        <th className="w-8 px-2 py-3" />
-                                        <th className="px-4 py-3 text-left">
-                                            {reorderMode ? (
-                                                <span className="font-medium">
-                                                    Namespace
-                                                </span>
-                                            ) : (
-                                                <SortableHeader
-                                                    column="name"
-                                                    label="Namespace"
-                                                    sort={sort}
-                                                />
-                                            )}
-                                        </th>
-                                        <th className="px-4 py-3 text-left font-medium">
-                                            Slug
-                                        </th>
-                                        <th className="px-4 py-3 text-left">
-                                            {reorderMode ? (
-                                                <span className="font-medium">
-                                                    Status
-                                                </span>
-                                            ) : (
-                                                <SortableHeader
-                                                    column="is_published"
-                                                    label="Status"
-                                                    sort={sort}
-                                                />
-                                            )}
-                                        </th>
-                                        <th className="px-4 py-3 text-left">
-                                            {reorderMode ? (
-                                                <span className="font-medium">
-                                                    Posts
-                                                </span>
-                                            ) : (
-                                                <SortableHeader
-                                                    column="posts_count"
-                                                    label="Posts"
-                                                    sort={sort}
-                                                />
-                                            )}
-                                        </th>
-                                        <th className="px-4 py-3 text-right font-medium">
-                                            Actions
-                                        </th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <SortableContext
-                                        items={namespaces.map((ns) => ns.id)}
-                                        strategy={verticalListSortingStrategy}
-                                    >
-                                        {namespaces.flatMap((ns) => [
-                                            <SortableRow
-                                                key={ns.id}
-                                                namespace={ns}
-                                                isDndActive={reorderMode}
-                                                isExpanded={expandedIds.has(
-                                                    ns.id,
+                        <Card className="gap-0 py-0 shadow-sm">
+                            <div className="flex flex-col gap-2 border-b px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+                                <div>
+                                    <h2 className="text-lg font-semibold">
+                                        Namespace tree
+                                    </h2>
+                                    <p className="text-sm text-muted-foreground">
+                                        {reorderMode
+                                            ? 'Drag and drop root namespaces to set the manual order.'
+                                            : 'Browse the top-level structure, expand children, and open a namespace for deeper editing.'}
+                                    </p>
+                                </div>
+                                <div className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                                    {reorderMode
+                                        ? 'Manual ordering active'
+                                        : `Current sort: ${sortLabel(sort)}`}
+                                </div>
+                            </div>
+
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="border-b bg-muted/50">
+                                            <th className="w-8 px-2 py-3" />
+                                            <th className="px-4 py-3 text-left">
+                                                {reorderMode ? (
+                                                    <span className="font-medium">
+                                                        Namespace
+                                                    </span>
+                                                ) : (
+                                                    <SortableHeader
+                                                        column="name"
+                                                        label="Namespace"
+                                                        sort={sort}
+                                                    />
                                                 )}
-                                                onToggle={() =>
-                                                    toggleExpand(ns.id)
-                                                }
-                                            />,
-                                            ...(!reorderMode &&
-                                            expandedIds.has(ns.id)
-                                                ? ns.children.map((child) => (
-                                                      <ChildRow
-                                                          key={child.id}
-                                                          namespace={child}
-                                                          depth={1}
-                                                          expandedIds={
-                                                              expandedIds
-                                                          }
-                                                          onToggle={
-                                                              toggleExpand
-                                                          }
-                                                      />
-                                                  ))
-                                                : []),
-                                        ])}
-                                    </SortableContext>
-                                </tbody>
-                            </table>
-                        </div>
+                                            </th>
+                                            <th className="px-4 py-3 text-left font-medium">
+                                                Slug
+                                            </th>
+                                            <th className="px-4 py-3 text-left">
+                                                {reorderMode ? (
+                                                    <span className="font-medium">
+                                                        Status
+                                                    </span>
+                                                ) : (
+                                                    <SortableHeader
+                                                        column="is_published"
+                                                        label="Status"
+                                                        sort={sort}
+                                                    />
+                                                )}
+                                            </th>
+                                            <th className="px-4 py-3 text-left">
+                                                {reorderMode ? (
+                                                    <span className="font-medium">
+                                                        Posts
+                                                    </span>
+                                                ) : (
+                                                    <SortableHeader
+                                                        column="posts_count"
+                                                        label="Posts"
+                                                        sort={sort}
+                                                    />
+                                                )}
+                                            </th>
+                                            <th className="px-4 py-3 text-right font-medium">
+                                                Actions
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <SortableContext
+                                            items={namespaces.map(
+                                                (ns) => ns.id,
+                                            )}
+                                            strategy={
+                                                verticalListSortingStrategy
+                                            }
+                                        >
+                                            {namespaces.flatMap((ns) => [
+                                                <SortableRow
+                                                    key={ns.id}
+                                                    namespace={ns}
+                                                    isDndActive={reorderMode}
+                                                    isExpanded={expandedIds.has(
+                                                        ns.id,
+                                                    )}
+                                                    onToggle={() =>
+                                                        toggleExpand(ns.id)
+                                                    }
+                                                />,
+                                                ...(!reorderMode &&
+                                                expandedIds.has(ns.id)
+                                                    ? ns.children.map(
+                                                          (child) => (
+                                                              <ChildRow
+                                                                  key={child.id}
+                                                                  namespace={
+                                                                      child
+                                                                  }
+                                                                  depth={1}
+                                                                  expandedIds={
+                                                                      expandedIds
+                                                                  }
+                                                                  onToggle={
+                                                                      toggleExpand
+                                                                  }
+                                                              />
+                                                          ),
+                                                      )
+                                                    : []),
+                                            ])}
+                                        </SortableContext>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </Card>
                     </DndContext>
                 )}
             </div>
