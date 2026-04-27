@@ -1235,19 +1235,25 @@ test('admin post edit switches markdown editor tabs on mobile', function () {
         (() => {
             const writePanel = document.querySelector('[data-test="markdown-editor-write-panel"]');
             const previewPanel = document.querySelector('[data-test="markdown-editor-preview-panel"]');
+            const syncPreviewButton = document.querySelector('[data-test="markdown-editor-sync-preview"]');
+            const syncEditorButton = document.querySelector('[data-test="markdown-editor-sync-editor"]');
 
-            if (! writePanel || ! previewPanel) {
+            if (! writePanel || ! previewPanel || ! syncPreviewButton || ! syncEditorButton) {
                 return null;
             }
 
             return {
                 writeHidden: writePanel.classList.contains('hidden'),
                 previewHidden: previewPanel.classList.contains('hidden'),
+                syncPreviewHidden: getComputedStyle(syncPreviewButton).display === 'none',
+                syncEditorHidden: getComputedStyle(syncEditorButton).display === 'none',
             };
         })()
     JS))->toBe([
         'writeHidden' => false,
         'previewHidden' => true,
+        'syncPreviewHidden' => true,
+        'syncEditorHidden' => true,
     ]);
 
     $page->click('[data-test="markdown-editor-preview-tab"]')->wait(0.2);

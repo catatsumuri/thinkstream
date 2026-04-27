@@ -1,5 +1,5 @@
 import { router, usePage } from '@inertiajs/react';
-import { Code2, Eye } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Code2, Eye } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import InputError from '@/components/input-error';
 import MarkdownContent from '@/components/markdown-content';
@@ -137,6 +137,42 @@ export default function MarkdownEditor({
         }
     };
 
+    const syncLeftToRight = () => {
+        const textarea = textareaRef.current;
+        const preview = previewRef.current;
+        if (!textarea || !preview) {
+            return;
+        }
+
+        const scrollableHeight = textarea.scrollHeight - textarea.clientHeight;
+
+        if (scrollableHeight <= 0) {
+            return;
+        }
+
+        const ratio = textarea.scrollTop / scrollableHeight;
+        preview.scrollTop =
+            ratio * (preview.scrollHeight - preview.clientHeight);
+    };
+
+    const syncRightToLeft = () => {
+        const textarea = textareaRef.current;
+        const preview = previewRef.current;
+        if (!textarea || !preview) {
+            return;
+        }
+
+        const scrollableHeight = preview.scrollHeight - preview.clientHeight;
+
+        if (scrollableHeight <= 0) {
+            return;
+        }
+
+        const ratio = preview.scrollTop / scrollableHeight;
+        textarea.scrollTop =
+            ratio * (textarea.scrollHeight - textarea.clientHeight);
+    };
+
     const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
         const imageItem = Array.from(e.clipboardData.items).find((item) =>
             item.type.startsWith('image/'),
@@ -210,9 +246,21 @@ export default function MarkdownEditor({
                             activeTab !== 'write' && 'hidden lg:block',
                         )}
                     >
-                        <p className="border-b border-border px-4 py-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                            Markdown
-                        </p>
+                        <div className="flex items-center justify-between border-b border-border px-4 py-2">
+                            <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                Markdown
+                            </p>
+                            <button
+                                type="button"
+                                data-test="markdown-editor-sync-preview"
+                                onClick={syncLeftToRight}
+                                title="Sync preview to this position"
+                                className="hidden items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:flex"
+                            >
+                                <ArrowRight className="size-3" />
+                                Scroll Sync
+                            </button>
+                        </div>
                         <textarea
                             ref={textareaRef}
                             id={name}
@@ -242,9 +290,21 @@ export default function MarkdownEditor({
                             activeTab !== 'preview' && 'hidden lg:block',
                         )}
                     >
-                        <p className="border-b border-border px-4 py-2 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
-                            Preview
-                        </p>
+                        <div className="flex items-center justify-between border-b border-border px-4 py-2">
+                            <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                                Preview
+                            </p>
+                            <button
+                                type="button"
+                                data-test="markdown-editor-sync-editor"
+                                onClick={syncRightToLeft}
+                                title="Sync editor to this position"
+                                className="hidden items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground lg:flex"
+                            >
+                                <ArrowLeft className="size-3" />
+                                Scroll Sync
+                            </button>
+                        </div>
                         <div
                             ref={previewRef}
                             className="h-[50vh] overflow-y-auto px-4 pb-4 text-sm lg:h-[65vh]"
