@@ -21,6 +21,7 @@ test('authenticated users can visit the dashboard', function () {
         ->assertInertia(fn ($page) => $page
             ->component('dashboard')
             ->where('top_posts', [])
+            ->where('top_referrers', [])
         );
 });
 
@@ -52,5 +53,49 @@ test('dashboard shows top 10 posts ordered by page views', function () {
             ->where('top_posts.0.canonical_url', route('posts.path', ['path' => $topPosts->last()->full_path], false))
             ->where('top_posts.9.title', $topPosts->get(2)->title)
             ->where('top_posts.9.page_views', 30)
+        );
+});
+
+test('dashboard groups top referrers by host and keeps malformed referrers readable', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+    ]);
+
+    Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
+        'title' => 'Laravel',
+        'slug' => 'laravel',
+        'full_path' => 'guides/laravel',
+        'page_views' => 40,
+        'http_referer' => 'https://example.com/docs/laravel',
+    ]);
+    Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
+        'title' => 'PHP',
+        'slug' => 'php',
+        'full_path' => 'guides/php',
+        'page_views' => 15,
+        'http_referer' => 'https://example.com/docs/php',
+    ]);
+    Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
+        'title' => 'Odd',
+        'slug' => 'odd',
+        'full_path' => 'guides/odd',
+        'page_views' => 25,
+        'http_referer' => 'not a valid url',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('top_referrers', 2)
+            ->where('top_referrers.0.host', 'example.com')
+            ->where('top_referrers.0.post_count', 2)
+            ->where('top_referrers.0.total_views', 55)
+            ->where('top_referrers.1.host', 'not a valid url')
+            ->where('top_referrers.1.post_count', 1)
+            ->where('top_referrers.1.total_views', 25)
         );
 });

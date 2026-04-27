@@ -27,11 +27,12 @@ class BackupController extends Controller
 
         $namespaces = PostNamespace::query()
             ->orderByRaw('sort_order IS NULL, sort_order ASC, name ASC')
-            ->get(['id', 'slug', 'full_path', 'name']);
+            ->get(['id', 'parent_id', 'slug', 'full_path', 'name']);
 
         return Inertia::render('admin/backups/index', [
             'namespaces' => $namespaces->map(fn (PostNamespace $namespace): array => [
                 'id' => $namespace->id,
+                'parent_id' => $namespace->parent_id,
                 'name' => $namespace->name,
                 'slug' => $namespace->slug,
                 'full_path' => $namespace->full_path,

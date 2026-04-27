@@ -118,18 +118,30 @@ export default function DocsHeaderActions({
             />
 
             {authUser ? (
-                <div className="hidden flex-wrap items-center gap-2 sm:flex">
-                    <Button asChild variant="default" size="sm">
-                        <Link
-                            href={manageHref}
-                            className="inline-flex items-center gap-1.5"
-                        >
+                <>
+                    <Button
+                        asChild
+                        variant="default"
+                        size="icon"
+                        className="size-9 sm:hidden"
+                    >
+                        <Link href={manageHref} aria-label="Manage">
                             <ArrowRightLeft className="size-4" />
-                            <span className="hidden lg:inline">Manage</span>
                         </Link>
                     </Button>
-                    <ViewContextBadge label="Site View" variant="site" />
-                </div>
+                    <div className="hidden flex-wrap items-center gap-2 sm:flex">
+                        <Button asChild variant="default" size="sm">
+                            <Link
+                                href={manageHref}
+                                className="inline-flex items-center gap-1.5"
+                            >
+                                <ArrowRightLeft className="size-4" />
+                                <span className="hidden lg:inline">Manage</span>
+                            </Link>
+                        </Button>
+                        <ViewContextBadge label="Site View" variant="site" />
+                    </div>
+                </>
             ) : (
                 <Button asChild variant="outline" size="sm">
                     <Link

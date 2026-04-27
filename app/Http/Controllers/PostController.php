@@ -154,11 +154,20 @@ class PostController extends Controller
             ->orderBy('id')
             ->get(['id', 'slug', 'full_path', 'title', 'published_at']);
 
+        $resolvedCoverImageUrl = $namespace->resolvedCoverImageUrl($ancestors);
+
         return Inertia::render('posts/namespace', [
             'breadcrumbs' => $this->breadcrumbs($ancestors),
-            'children' => $namespace->sortNamespaces($children),
+            'children' => $namespace->sortNamespaces($children)->map(fn (PostNamespace $child): array => [
+                ...$child->only(['id', 'name', 'slug', 'full_path', 'description']),
+                'posts_count' => $child->posts_count,
+                'cover_image_url' => $child->cover_image ? $child->cover_image_url : $resolvedCoverImageUrl,
+            ])->values()->all(),
             'navRoot' => $this->buildNavigationNode($rootNamespace),
-            'namespace' => $namespace->only(['id', 'slug', 'full_path', 'name', 'description', 'cover_image_url', 'is_published']),
+            'namespace' => [
+                ...$namespace->only(['id', 'slug', 'full_path', 'name', 'description', 'is_published']),
+                'cover_image_url' => $resolvedCoverImageUrl,
+            ],
             'posts' => $namespace->sortPosts($posts),
             'preview' => $preview,
         ]);
@@ -200,9 +209,12 @@ class PostController extends Controller
 
         return Inertia::render('posts/show', [
             'breadcrumbs' => $this->breadcrumbs($ancestors),
-            'cardImage' => $this->resolveCardImage($post, $namespace),
+            'cardImage' => $this->resolveCardImage($post, $namespace, $ancestors),
             'navRoot' => $this->buildNavigationNode($rootNamespace),
-            'namespace' => $namespace->only(['id', 'slug', 'full_path', 'name', 'cover_image_url']),
+            'namespace' => [
+                ...$namespace->only(['id', 'slug', 'full_path', 'name']),
+                'cover_image_url' => $namespace->resolvedCoverImageUrl($ancestors),
+            ],
             'postUrl' => route('posts.path', ['path' => $post->full_path]),
             'post' => [
                 ...$post->only(['id', 'slug', 'full_path', 'title', 'content', 'published_at', 'updated_at', 'reference_title', 'reference_url']),
@@ -249,7 +261,10 @@ class PostController extends Controller
         return false;
     }
 
-    private function resolveCardImage(Post $post, PostNamespace $namespace): ?string
+    /**
+     * @param  Collection<int, PostNamespace>|null  $ancestors
+     */
+    private function resolveCardImage(Post $post, PostNamespace $namespace, ?Collection $ancestors = null): ?string
     {
         // 1. First image in post content
         if (preg_match('/!\[[^\]]*\]\(([^)]+)\)/', $post->content, $matches)) {
@@ -258,17 +273,11 @@ class PostController extends Controller
             return str_starts_with($url, 'http') ? $url : url($url);
         }
 
-        // 2. Namespace cover image
-        if ($namespace->cover_image_url) {
-            return url($namespace->cover_image_url);
-        }
+        // 2. Namespace cover image, falling back through ancestors
+        $coverImageUrl = $namespace->resolvedCoverImageUrl($ancestors);
 
-        // 3. Parent namespace cover image
-        if ($namespace->parent_id) {
-            $parent = PostNamespace::select(['id', 'cover_image'])->find($namespace->parent_id);
-            if ($parent?->cover_image_url) {
-                return url($parent->cover_image_url);
-            }
+        if ($coverImageUrl !== null) {
+            return url($coverImageUrl);
         }
 
         return null;
@@ -540,7 +549,7 @@ class PostController extends Controller
 
         while ($currentParentId) {
             $ancestor = PostNamespace::query()
-                ->select(['id', 'parent_id', 'name', 'full_path', 'is_published', 'post_order'])
+                ->select(['id', 'parent_id', 'name', 'full_path', 'cover_image', 'is_published', 'post_order'])
                 ->findOrFail($currentParentId);
 
             $ancestors->prepend($ancestor);
