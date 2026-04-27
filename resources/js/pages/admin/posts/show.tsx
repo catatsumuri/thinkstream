@@ -16,6 +16,8 @@ import {
     History,
     PanelLeftClose,
     PanelLeftOpen,
+    PanelRightClose,
+    PanelRightOpen,
     Pencil,
     Trash2,
     Unlink,
@@ -158,6 +160,7 @@ export default function Show({
     const { currentUrl } = useCurrentUrl();
     const isBelowDesktop = useBelowDesktop();
     const [navOverride, setNavOverride] = useState<boolean | null>(null);
+    const [rightOverride, setRightOverride] = useState<boolean | null>(null);
     const [rightTab, setRightTab] = useState<'toc' | 'info'>('info');
     const tocPosts = useMemo(
         () => [{ slug: post.slug, content: post.content }],
@@ -219,16 +222,23 @@ export default function Show({
     const hasHeadings = (entry?.headings.length ?? 0) > 0;
     const hasNav = navRoot.children.length > 0 || navRoot.posts.length > 0;
     const navVisible = navOverride ?? true;
+    const rightVisible = rightOverride ?? true;
     const showDesktopNav = !isBelowDesktop && hasNav;
 
     let gridCols = '';
 
-    if (showDesktopNav && navVisible) {
+    if (showDesktopNav && navVisible && rightVisible) {
         gridCols = 'lg:grid-cols-[240px_1fr_280px]';
-    } else if (showDesktopNav && !navVisible) {
+    } else if (showDesktopNav && navVisible && !rightVisible) {
+        gridCols = 'lg:grid-cols-[240px_1fr_40px]';
+    } else if (showDesktopNav && !navVisible && rightVisible) {
         gridCols = 'lg:grid-cols-[40px_1fr_280px]';
-    } else {
+    } else if (showDesktopNav && !navVisible && !rightVisible) {
+        gridCols = 'lg:grid-cols-[40px_1fr_40px]';
+    } else if (rightVisible) {
         gridCols = 'lg:grid-cols-[1fr_280px]';
+    } else {
+        gridCols = 'lg:grid-cols-[1fr_40px]';
     }
 
     setLayoutProps({
@@ -457,354 +467,399 @@ export default function Show({
                     </section>
 
                     <aside className="hidden self-start lg:sticky lg:top-20 lg:block">
-                        <div className="mb-4 flex gap-1 rounded-lg bg-muted/50 p-0.5">
-                            <button
-                                type="button"
-                                onClick={() => setRightTab('info')}
-                                className={cn(
-                                    'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                                    rightTab === 'info'
-                                        ? 'bg-card text-foreground shadow-sm'
-                                        : 'text-muted-foreground hover:text-foreground',
-                                )}
-                            >
-                                Info
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setRightTab('toc')}
-                                className={cn(
-                                    'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                                    rightTab === 'toc'
-                                        ? 'bg-card text-foreground shadow-sm'
-                                        : 'text-muted-foreground hover:text-foreground',
-                                )}
-                            >
-                                TOC
-                            </button>
-                        </div>
-
-                        <div className={cn(rightTab !== 'toc' && 'hidden')}>
-                            {hasHeadings ? (
-                                <TableOfContents
-                                    sticky
-                                    posts={[
-                                        {
-                                            id: post.id,
-                                            title: post.title,
-                                            slug: post.slug,
-                                            headings: entry!.headings,
-                                        },
-                                    ]}
-                                />
-                            ) : (
-                                <p className="px-1 text-xs text-muted-foreground">
-                                    No headings
-                                </p>
-                            )}
-                        </div>
-
-                        <div
-                            className={cn(
-                                'space-y-4',
-                                rightTab !== 'info' && 'hidden',
-                            )}
-                        >
-                            <div
-                                data-test="post-show-status-card"
-                                className="overflow-hidden rounded-xl border border-border bg-card"
-                            >
-                                <div className="border-b border-border px-4 py-3">
-                                    <h3 className="text-sm font-semibold">
-                                        Status
-                                    </h3>
-                                </div>
-                                <div className="p-4">
-                                    <div className="flex items-center gap-3">
-                                        <div
-                                            className={cn(
-                                                'flex size-9 items-center justify-center rounded-lg',
-                                                post.is_draft
-                                                    ? 'bg-amber-100 dark:bg-amber-900/30'
-                                                    : isScheduled
-                                                      ? 'bg-blue-100 dark:bg-blue-900/30'
-                                                      : 'bg-green-100 dark:bg-green-900/30',
-                                            )}
-                                        >
-                                            {post.is_draft ? (
-                                                <EyeOff className="size-4 text-amber-700 dark:text-amber-400" />
-                                            ) : (
-                                                <Eye
-                                                    className={cn(
-                                                        'size-4',
-                                                        isScheduled
-                                                            ? 'text-blue-700 dark:text-blue-400'
-                                                            : 'text-green-700 dark:text-green-400',
-                                                    )}
-                                                />
-                                            )}
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-medium">
-                                                {post.is_draft
-                                                    ? 'Draft'
-                                                    : isScheduled
-                                                      ? 'Scheduled'
-                                                      : 'Published'}
-                                            </p>
-                                            <p className="text-xs text-muted-foreground">
-                                                {post.is_draft
-                                                    ? 'Not visible to readers'
-                                                    : isScheduled
-                                                      ? `Visible from ${new Date(post.published_at!).toLocaleDateString()}`
-                                                      : post.published_at
-                                                        ? `Since ${new Date(post.published_at).toLocaleDateString()}`
-                                                        : 'Visible to everyone'}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="overflow-hidden rounded-xl border border-border bg-card">
-                                <div className="border-b border-border px-4 py-3">
-                                    <h3 className="text-sm font-semibold">
-                                        Info
-                                    </h3>
-                                </div>
-                                <div className="divide-y divide-border">
-                                    <div className="flex items-center justify-between px-4 py-3">
-                                        <span className="text-sm text-muted-foreground">
-                                            Views
-                                        </span>
-                                        <span className="text-sm font-medium">
-                                            {post.page_views.toLocaleString()}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between px-4 py-3">
-                                        <span className="text-sm text-muted-foreground">
-                                            Created
-                                        </span>
-                                        <span className="text-sm font-medium">
-                                            {new Date(
-                                                post.created_at,
-                                            ).toLocaleDateString()}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between px-4 py-3">
-                                        <span className="text-sm text-muted-foreground">
-                                            Path
-                                        </span>
-                                        <span className="max-w-32 truncate font-mono text-xs text-muted-foreground">
-                                            /{post.full_path}
-                                        </span>
-                                    </div>
-                                    <div className="flex items-center justify-between gap-3 px-4 py-3">
-                                        <span className="text-sm text-muted-foreground">
-                                            Referer
-                                        </span>
-                                        {post.http_referer &&
-                                        post.http_referer_url ? (
-                                            <a
-                                                href={post.http_referer_url}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="max-w-32 truncate text-right text-xs text-muted-foreground underline-offset-4 hover:underline"
-                                            >
-                                                {post.http_referer}
-                                            </a>
-                                        ) : post.http_referer ? (
-                                            <span className="max-w-32 truncate text-right text-xs text-muted-foreground">
-                                                {post.http_referer}
-                                            </span>
-                                        ) : (
-                                            <span className="text-sm font-medium">
-                                                -
-                                            </span>
+                        {rightVisible ? (
+                            <>
+                                <div className="mb-4 flex items-center gap-1 rounded-lg bg-muted/50 p-0.5">
+                                    <button
+                                        type="button"
+                                        onClick={() => setRightTab('info')}
+                                        className={cn(
+                                            'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                                            rightTab === 'info'
+                                                ? 'bg-card text-foreground shadow-sm'
+                                                : 'text-muted-foreground hover:text-foreground',
                                         )}
-                                    </div>
+                                    >
+                                        Info
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setRightTab('toc')}
+                                        className={cn(
+                                            'flex-1 rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                                            rightTab === 'toc'
+                                                ? 'bg-card text-foreground shadow-sm'
+                                                : 'text-muted-foreground hover:text-foreground',
+                                        )}
+                                    >
+                                        TOC
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setRightOverride(false)}
+                                        data-test="post-show-right-panel-close"
+                                        aria-label="Close panel"
+                                        aria-expanded={rightVisible}
+                                        className="ml-auto rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                        title="Close panel"
+                                    >
+                                        <PanelRightClose size={13} />
+                                    </button>
                                 </div>
-                            </div>
 
-                            {post.tags.length > 0 && (
                                 <div
-                                    data-test="post-show-tags-card"
-                                    className="overflow-hidden rounded-xl border border-border bg-card"
-                                >
-                                    <div className="border-b border-border px-4 py-3">
-                                        <h3 className="text-sm font-semibold">
-                                            Tags
-                                        </h3>
-                                    </div>
-                                    <div className="flex flex-wrap gap-1.5 p-4">
-                                        {post.tags.map((tag) => (
-                                            <span
-                                                key={tag}
-                                                className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground"
-                                            >
-                                                {tag}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="overflow-hidden rounded-xl border border-border bg-card">
-                                <div className="flex items-center justify-between border-b border-border px-4 py-3">
-                                    <h3 className="text-sm font-semibold">
-                                        Actions
-                                    </h3>
-                                    <ViewContextBadge
-                                        label="Admin View"
-                                        variant="admin"
-                                    />
-                                </div>
-                                <div className="space-y-1 p-2">
-                                    {post.is_syncing ? (
-                                        <span
-                                            data-test="manage-post-edit-link"
-                                            title="Editing disabled while syncing"
-                                            className="flex w-full cursor-not-allowed items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground/40"
-                                        >
-                                            <Pencil className="size-4" />
-                                            <span>Edit</span>
-                                        </span>
-                                    ) : (
-                                        <Link
-                                            data-test="manage-post-edit-link"
-                                            href={edit.url({
-                                                namespace: namespace.id,
-                                                post: post.slug,
-                                            })}
-                                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
-                                        >
-                                            <Pencil className="size-4 text-muted-foreground" />
-                                            <span>Edit</span>
-                                        </Link>
+                                    className={cn(
+                                        rightTab !== 'toc' && 'hidden',
                                     )}
-                                    {post.is_syncing ? (
-                                        <>
-                                            <div className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-blue-600 dark:text-blue-400">
-                                                <FolderSync className="size-4 shrink-0" />
-                                                <span className="truncate font-mono text-xs">
-                                                    {post.sync_file_path}
+                                >
+                                    {hasHeadings ? (
+                                        <TableOfContents
+                                            sticky
+                                            posts={[
+                                                {
+                                                    id: post.id,
+                                                    title: post.title,
+                                                    slug: post.slug,
+                                                    headings: entry!.headings,
+                                                },
+                                            ]}
+                                        />
+                                    ) : (
+                                        <p className="px-1 text-xs text-muted-foreground">
+                                            No headings
+                                        </p>
+                                    )}
+                                </div>
+
+                                <div
+                                    className={cn(
+                                        'space-y-4',
+                                        rightTab !== 'info' && 'hidden',
+                                    )}
+                                >
+                                    <div
+                                        data-test="post-show-status-card"
+                                        className="overflow-hidden rounded-xl border border-border bg-card"
+                                    >
+                                        <div className="border-b border-border px-4 py-3">
+                                            <h3 className="text-sm font-semibold">
+                                                Status
+                                            </h3>
+                                        </div>
+                                        <div className="p-4">
+                                            <div className="flex items-center gap-3">
+                                                <div
+                                                    className={cn(
+                                                        'flex size-9 items-center justify-center rounded-lg',
+                                                        post.is_draft
+                                                            ? 'bg-amber-100 dark:bg-amber-900/30'
+                                                            : isScheduled
+                                                              ? 'bg-blue-100 dark:bg-blue-900/30'
+                                                              : 'bg-green-100 dark:bg-green-900/30',
+                                                    )}
+                                                >
+                                                    {post.is_draft ? (
+                                                        <EyeOff className="size-4 text-amber-700 dark:text-amber-400" />
+                                                    ) : (
+                                                        <Eye
+                                                            className={cn(
+                                                                'size-4',
+                                                                isScheduled
+                                                                    ? 'text-blue-700 dark:text-blue-400'
+                                                                    : 'text-green-700 dark:text-green-400',
+                                                            )}
+                                                        />
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-medium">
+                                                        {post.is_draft
+                                                            ? 'Draft'
+                                                            : isScheduled
+                                                              ? 'Scheduled'
+                                                              : 'Published'}
+                                                    </p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {post.is_draft
+                                                            ? 'Not visible to readers'
+                                                            : isScheduled
+                                                              ? `Visible from ${new Date(post.published_at!).toLocaleDateString()}`
+                                                              : post.published_at
+                                                                ? `Since ${new Date(post.published_at).toLocaleDateString()}`
+                                                                : 'Visible to everyone'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="overflow-hidden rounded-xl border border-border bg-card">
+                                        <div className="border-b border-border px-4 py-3">
+                                            <h3 className="text-sm font-semibold">
+                                                Info
+                                            </h3>
+                                        </div>
+                                        <div className="divide-y divide-border">
+                                            <div className="flex items-center justify-between px-4 py-3">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Views
+                                                </span>
+                                                <span className="text-sm font-medium">
+                                                    {post.page_views.toLocaleString()}
                                                 </span>
                                             </div>
-                                            <button
-                                                type="button"
-                                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
-                                                onClick={() => {
-                                                    if (
-                                                        window.confirm(
-                                                            'Delete the sync file and re-enable web editing?',
-                                                        )
-                                                    ) {
-                                                        router.delete(
-                                                            destroySyncFile.url(
-                                                                {
-                                                                    namespace:
-                                                                        namespace.id,
-                                                                    post: post.slug,
-                                                                },
-                                                            ),
-                                                        );
-                                                    }
-                                                }}
-                                            >
-                                                <Unlink className="size-4" />
-                                                <span>Remove sync file</span>
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <button
-                                            type="button"
-                                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
-                                            onClick={() =>
-                                                router.post(
-                                                    storeSyncFile.url({
+                                            <div className="flex items-center justify-between px-4 py-3">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Created
+                                                </span>
+                                                <span className="text-sm font-medium">
+                                                    {new Date(
+                                                        post.created_at,
+                                                    ).toLocaleDateString()}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between px-4 py-3">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Path
+                                                </span>
+                                                <span className="max-w-32 truncate font-mono text-xs text-muted-foreground">
+                                                    /{post.full_path}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center justify-between gap-3 px-4 py-3">
+                                                <span className="text-sm text-muted-foreground">
+                                                    Referer
+                                                </span>
+                                                {post.http_referer &&
+                                                post.http_referer_url ? (
+                                                    <a
+                                                        href={
+                                                            post.http_referer_url
+                                                        }
+                                                        target="_blank"
+                                                        rel="noreferrer"
+                                                        className="max-w-32 truncate text-right text-xs text-muted-foreground underline-offset-4 hover:underline"
+                                                    >
+                                                        {post.http_referer}
+                                                    </a>
+                                                ) : post.http_referer ? (
+                                                    <span className="max-w-32 truncate text-right text-xs text-muted-foreground">
+                                                        {post.http_referer}
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-sm font-medium">
+                                                        -
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {post.tags.length > 0 && (
+                                        <div
+                                            data-test="post-show-tags-card"
+                                            className="overflow-hidden rounded-xl border border-border bg-card"
+                                        >
+                                            <div className="border-b border-border px-4 py-3">
+                                                <h3 className="text-sm font-semibold">
+                                                    Tags
+                                                </h3>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1.5 p-4">
+                                                {post.tags.map((tag) => (
+                                                    <span
+                                                        key={tag}
+                                                        className="rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground"
+                                                    >
+                                                        {tag}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    <div className="overflow-hidden rounded-xl border border-border bg-card">
+                                        <div className="flex items-center justify-between border-b border-border px-4 py-3">
+                                            <h3 className="text-sm font-semibold">
+                                                Actions
+                                            </h3>
+                                            <ViewContextBadge
+                                                label="Admin View"
+                                                variant="admin"
+                                            />
+                                        </div>
+                                        <div className="space-y-1 p-2">
+                                            {post.is_syncing ? (
+                                                <span
+                                                    data-test="manage-post-edit-link"
+                                                    title="Editing disabled while syncing"
+                                                    className="flex w-full cursor-not-allowed items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground/40"
+                                                >
+                                                    <Pencil className="size-4" />
+                                                    <span>Edit</span>
+                                                </span>
+                                            ) : (
+                                                <Link
+                                                    data-test="manage-post-edit-link"
+                                                    href={edit.url({
                                                         namespace: namespace.id,
                                                         post: post.slug,
-                                                    }),
-                                                )
-                                            }
-                                        >
-                                            <FolderSync className="size-4 text-muted-foreground" />
-                                            <span>Start Sync</span>
-                                        </button>
-                                    )}
-                                    <a
-                                        href={`/${post.full_path}`}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
-                                    >
-                                        <ExternalLink className="size-4 text-muted-foreground" />
-                                        <span>View Site</span>
-                                    </a>
-                                    <Link
-                                        data-test="manage-post-revisions-link"
-                                        href={revisions.url({
-                                            namespace: namespace.id,
-                                            post: post.slug,
-                                        })}
-                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
-                                    >
-                                        <History className="size-4 text-muted-foreground" />
-                                        <span>Revisions</span>
-                                    </Link>
-                                    <Dialog>
-                                        <DialogTrigger asChild>
-                                            <button
-                                                type="button"
-                                                data-test="manage-post-delete-trigger"
-                                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+                                                    })}
+                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+                                                >
+                                                    <Pencil className="size-4 text-muted-foreground" />
+                                                    <span>Edit</span>
+                                                </Link>
+                                            )}
+                                            {post.is_syncing ? (
+                                                <>
+                                                    <div className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-blue-600 dark:text-blue-400">
+                                                        <FolderSync className="size-4 shrink-0" />
+                                                        <span className="truncate font-mono text-xs">
+                                                            {
+                                                                post.sync_file_path
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+                                                        onClick={() => {
+                                                            if (
+                                                                window.confirm(
+                                                                    'Delete the sync file and re-enable web editing?',
+                                                                )
+                                                            ) {
+                                                                router.delete(
+                                                                    destroySyncFile.url(
+                                                                        {
+                                                                            namespace:
+                                                                                namespace.id,
+                                                                            post: post.slug,
+                                                                        },
+                                                                    ),
+                                                                );
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Unlink className="size-4" />
+                                                        <span>
+                                                            Remove sync file
+                                                        </span>
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <button
+                                                    type="button"
+                                                    className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+                                                    onClick={() =>
+                                                        router.post(
+                                                            storeSyncFile.url({
+                                                                namespace:
+                                                                    namespace.id,
+                                                                post: post.slug,
+                                                            }),
+                                                        )
+                                                    }
+                                                >
+                                                    <FolderSync className="size-4 text-muted-foreground" />
+                                                    <span>Start Sync</span>
+                                                </button>
+                                            )}
+                                            <a
+                                                href={`/${post.full_path}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
                                             >
-                                                <Trash2 className="size-4" />
-                                                <span>Delete</span>
-                                            </button>
-                                        </DialogTrigger>
-                                        <DialogContent>
-                                            <DialogTitle>
-                                                Delete &ldquo;{post.title}
-                                                &rdquo;?
-                                            </DialogTitle>
-                                            <DialogDescription>
-                                                This action cannot be undone.
-                                                The post and all its revisions
-                                                will be permanently deleted.
-                                            </DialogDescription>
-                                            <Form
-                                                {...destroy.form({
+                                                <ExternalLink className="size-4 text-muted-foreground" />
+                                                <span>View Site</span>
+                                            </a>
+                                            <Link
+                                                data-test="manage-post-revisions-link"
+                                                href={revisions.url({
                                                     namespace: namespace.id,
                                                     post: post.slug,
                                                 })}
+                                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
                                             >
-                                                {({ processing }) => (
-                                                    <DialogFooter className="gap-2">
-                                                        <DialogClose asChild>
-                                                            <Button variant="secondary">
-                                                                Cancel
-                                                            </Button>
-                                                        </DialogClose>
-                                                        <Button
-                                                            variant="destructive"
-                                                            disabled={
-                                                                processing
-                                                            }
-                                                            asChild
-                                                        >
-                                                            <button type="submit">
-                                                                Delete
-                                                            </button>
-                                                        </Button>
-                                                    </DialogFooter>
-                                                )}
-                                            </Form>
-                                        </DialogContent>
-                                    </Dialog>
+                                                <History className="size-4 text-muted-foreground" />
+                                                <span>Revisions</span>
+                                            </Link>
+                                            <Dialog>
+                                                <DialogTrigger asChild>
+                                                    <button
+                                                        type="button"
+                                                        data-test="manage-post-delete-trigger"
+                                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+                                                    >
+                                                        <Trash2 className="size-4" />
+                                                        <span>Delete</span>
+                                                    </button>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <DialogTitle>
+                                                        Delete &ldquo;
+                                                        {post.title}
+                                                        &rdquo;?
+                                                    </DialogTitle>
+                                                    <DialogDescription>
+                                                        This action cannot be
+                                                        undone. The post and all
+                                                        its revisions will be
+                                                        permanently deleted.
+                                                    </DialogDescription>
+                                                    <Form
+                                                        {...destroy.form({
+                                                            namespace:
+                                                                namespace.id,
+                                                            post: post.slug,
+                                                        })}
+                                                    >
+                                                        {({ processing }) => (
+                                                            <DialogFooter className="gap-2">
+                                                                <DialogClose
+                                                                    asChild
+                                                                >
+                                                                    <Button variant="secondary">
+                                                                        Cancel
+                                                                    </Button>
+                                                                </DialogClose>
+                                                                <Button
+                                                                    variant="destructive"
+                                                                    disabled={
+                                                                        processing
+                                                                    }
+                                                                    asChild
+                                                                >
+                                                                    <button type="submit">
+                                                                        Delete
+                                                                    </button>
+                                                                </Button>
+                                                            </DialogFooter>
+                                                        )}
+                                                    </Form>
+                                                </DialogContent>
+                                            </Dialog>
+                                        </div>
+                                    </div>
                                 </div>
+                            </>
+                        ) : (
+                            <div className="flex justify-center">
+                                <button
+                                    type="button"
+                                    onClick={() => setRightOverride(true)}
+                                    data-test="post-show-right-panel-open"
+                                    aria-label="Open panel"
+                                    aria-expanded={rightVisible}
+                                    className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                    title="Open panel"
+                                >
+                                    <PanelRightOpen size={16} />
+                                </button>
                             </div>
-                        </div>
+                        )}
                     </aside>
                 </div>
             </div>

@@ -1391,3 +1391,67 @@ test('admin post details show scheduled status and tags in the info panel', func
         'hasReleaseTag' => true,
     ]);
 });
+
+test('admin post details can collapse and reopen the right info panel', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->create([
+        'slug' => 'release-plan',
+        'title' => 'Release Plan',
+        'content' => "# Plan\n\n## Next steps\n\nShip it.",
+        'is_draft' => false,
+        'published_at' => now()->addDay(),
+    ]);
+
+    $post->tags()->attach(Tag::firstOrCreate(['name' => 'laravel'])->id);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.show', [
+        'namespace' => $namespace->id,
+        'post' => $post->slug,
+    ], absolute: false))->resize(1440, 900);
+
+    $page->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="post-show-status-card"]')
+        ->assertPresent('[data-test="post-show-right-panel-close"]')
+        ->assertAttribute(
+            '[data-test="post-show-right-panel-close"]',
+            'aria-label',
+            'Close panel',
+        )
+        ->assertAttribute(
+            '[data-test="post-show-right-panel-close"]',
+            'aria-expanded',
+            'true',
+        );
+
+    $page->click('[data-test="post-show-right-panel-close"]')->wait(0.2);
+
+    $page->assertNoJavaScriptErrors()
+        ->assertMissing('[data-test="post-show-status-card"]')
+        ->assertPresent('[data-test="post-show-right-panel-open"]')
+        ->assertAttribute(
+            '[data-test="post-show-right-panel-open"]',
+            'aria-label',
+            'Open panel',
+        )
+        ->assertAttribute(
+            '[data-test="post-show-right-panel-open"]',
+            'aria-expanded',
+            'false',
+        );
+
+    $page->click('[data-test="post-show-right-panel-open"]')->wait(0.2);
+
+    $page->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="post-show-status-card"]')
+        ->assertPresent('[data-test="post-show-tags-card"]');
+});
