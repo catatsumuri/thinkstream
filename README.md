@@ -101,6 +101,45 @@ Important details:
 
 Admin routes live in `routes/admin.php`.
 
+## Sync mode
+
+Sync mode lets you edit post content from a local `.md` file instead of the web UI. Changes are picked up automatically on each poll cycle.
+
+### How it works
+
+1. Open a post in the admin and click **Start Sync** on the show page. This writes the post's current content to `THINKSTREAM_SYNC_DIR/{full_path}.md` and enables sync mode. Web editing is disabled while sync mode is active.
+2. Run the watcher:
+   ```bash
+   vendor/bin/sail artisan sync:watch
+   ```
+3. Edit the local `.md` file. The watcher polls for changes (default: every 1 second) and updates the post in the database.
+4. To stop syncing, click **Remove sync file** on the show page, or delete the file from the sync directory. The next poll cycle disables sync mode for that post.
+
+### Constraints
+
+- **Existing posts only.** Files in the sync directory are matched to posts by `full_path`. If no matching post exists, the file is silently ignored. Sync does not create new posts or namespaces.
+- **One file per post.** The mapping is `SYNC_DIR/{post.full_path}.md`.
+
+### File format
+
+```md
+---
+title: My Post
+tags: [php, laravel]
+---
+
+Content goes here.
+```
+
+Only `title` and `tags` are read from the frontmatter. Everything after the closing `---` is treated as the post body.
+
+### Configuration
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `THINKSTREAM_SYNC_DIR` | `storage/app/private/sync` | Directory the watcher reads from |
+| `THINKSTREAM_SYNC_POLL_INTERVAL` | `1` | Poll interval in seconds |
+
 ## Markdown support
 
 Markdown support exists to make authored content publishable inside this content model.
@@ -163,6 +202,8 @@ This is convenient for development, but the seed data should be treated as demo 
 | `routes/web.php` | Public routes, reserved path protection, wildcard resolver |
 | `routes/admin.php` | Admin namespace and post management routes |
 | `routes/console.php` | Import command definition |
+| `app/Console/Commands/SyncWatchCommand.php` | Sync watcher Artisan command |
+| `app/Services/SyncFileParser.php` | YAML frontmatter + Markdown parser for sync files |
 | `resources/js/pages/posts/*.tsx` | Public Inertia pages |
 | `resources/js/pages/admin/**/*.tsx` | Admin Inertia pages |
 | `resources/js/lib/markdown-syntax-manifest.ts` | Markdown syntax freeze manifest |

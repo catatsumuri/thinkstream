@@ -29,6 +29,9 @@ class Post extends Model
         'published_at',
         'reference_title',
         'reference_url',
+        'is_syncing',
+        'sync_file_path',
+        'last_synced_at',
     ];
 
     protected function casts(): array
@@ -37,6 +40,8 @@ class Post extends Model
             'is_draft' => 'boolean',
             'page_views' => 'integer',
             'published_at' => 'datetime',
+            'is_syncing' => 'boolean',
+            'last_synced_at' => 'datetime',
         ];
     }
 

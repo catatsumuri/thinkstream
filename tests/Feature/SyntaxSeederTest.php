@@ -2,6 +2,7 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Support\NamespaceBackupArchive;
 use Database\Seeders\DatabaseSeeder;
 use Database\Seeders\RoutingCheckSeeder;
 use Database\Seeders\SyntaxSeeder;
@@ -15,7 +16,7 @@ uses(RefreshDatabase::class);
 
 function withinIsolatedNamespaceBackupDirectory(callable $callback): mixed
 {
-    $backupDirectory = storage_path('app/private/backups');
+    $backupDirectory = NamespaceBackupArchive::directory();
     $stashedBackupDirectory = storage_path('framework/testing/backups-'.Str::uuid());
     $hadExistingBackups = is_dir($backupDirectory);
 

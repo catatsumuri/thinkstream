@@ -25,6 +25,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\Yaml\Yaml;
 
 class PostController extends Controller
 {
@@ -416,6 +417,8 @@ class PostController extends Controller
                     'reference_url',
                 ]),
                 'http_referer_url' => $this->safeExternalUrl($post->http_referer),
+                'is_syncing' => $post->is_syncing,
+                'sync_file_path' => $post->sync_file_path,
                 'tags' => $post->tags->pluck('name')->values()->all(),
             ],
         ]);
@@ -559,6 +562,8 @@ class PostController extends Controller
                     'published_at',
                     'reference_title',
                     'reference_url',
+                    'is_syncing',
+                    'sync_file_path',
                 ]),
                 'tags' => $post->tags->pluck('name')->values()->all(),
             ],
@@ -569,6 +574,8 @@ class PostController extends Controller
 
     public function update(UpdatePostRequest $request, PostNamespace $namespace, Post $post): RedirectResponse
     {
+        abort_if($post->is_syncing, 403, 'This post is in sync mode. Edit the local file to make changes.');
+
         $data = $request->validated();
         $tags = $data['tags'] ?? [];
         $filteredData = collect($data)->except('tags')->all();
@@ -682,6 +689,61 @@ class PostController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Post deleted.']);
 
         return to_route('admin.posts.namespace', $namespace);
+    }
+
+    public function storeSyncFile(PostNamespace $namespace, Post $post): RedirectResponse
+    {
+        abort_if($post->is_syncing, 409, 'Post is already in sync mode.');
+        abort_if(! $post->full_path, 422, 'Post has no full path.');
+
+        $syncDir = rtrim((string) config('thinkstream.sync.directory', storage_path('app/private/sync')), '/');
+
+        $filePath = $syncDir.'/'.$post->full_path.'.md';
+        $fileDir = dirname($filePath);
+
+        if (! is_dir($fileDir)) {
+            File::makeDirectory($fileDir, 0755, true);
+        }
+
+        $post->load('tags');
+
+        $frontmatter = [
+            'title' => $post->title,
+            'tags' => $post->tags->pluck('name')->all(),
+        ];
+
+        File::put($filePath, "---\n".Yaml::dump($frontmatter)."---\n\n".$post->content);
+
+        $post->forceFill([
+            'is_syncing' => true,
+            'sync_file_path' => $filePath,
+            'last_synced_at' => now(),
+        ])->saveQuietly();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Sync file created.']);
+
+        return redirect()->route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]);
+    }
+
+    public function destroySyncFile(PostNamespace $namespace, Post $post): RedirectResponse
+    {
+        abort_unless($post->is_syncing, 404);
+
+        $path = $post->sync_file_path;
+
+        if ($path && File::exists($path)) {
+            File::delete($path);
+        }
+
+        $post->forceFill([
+            'is_syncing' => false,
+            'sync_file_path' => null,
+            'last_synced_at' => null,
+        ])->saveQuietly();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Sync file deleted. Post is now editable.']);
+
+        return redirect()->route('admin.posts.show', ['namespace' => $namespace, 'post' => $post->slug]);
     }
 
     public function destroyMany(Request $request, PostNamespace $namespace): RedirectResponse

@@ -24,8 +24,13 @@ return new class extends Migration
             $table->timestamp('published_at')->nullable();
             $table->string('reference_title')->nullable();
             $table->string('reference_url', 2048)->nullable();
+            $table->string('http_referer', 2048)->nullable();
+            $table->boolean('is_syncing')->default(false);
+            $table->string('sync_file_path')->nullable();
+            $table->timestamp('last_synced_at')->nullable();
             $table->timestamps();
             $table->unique(['namespace_id', 'slug']);
+            $table->index('is_syncing');
         });
     }
 
