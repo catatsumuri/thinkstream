@@ -148,6 +148,36 @@ test('published namespace sorts child namespaces by post order', function () {
         );
 });
 
+test('navigation sorts posts by published_at ascending when no custom order exists', function () {
+    $namespace = PostNamespace::factory()->create([
+        'is_published' => true,
+        'slug' => 'guides',
+        'full_path' => 'guides',
+    ]);
+    $user = User::factory()->create();
+    $laterPost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'later-post',
+        'full_path' => 'guides/later-post',
+        'is_draft' => false,
+        'published_at' => now(),
+    ]);
+    $earlierPost = Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'slug' => 'earlier-post',
+        'full_path' => 'guides/earlier-post',
+        'is_draft' => false,
+        'published_at' => now()->subDay(),
+    ]);
+
+    $this->get(route('posts.path', ['path' => $namespace->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->where('navRoot.posts.0.full_path', $earlierPost->full_path)
+            ->where('navRoot.posts.1.full_path', $laterPost->full_path)
+        );
+});
+
 test('unpublished ancestor returns 404 on post show page', function () {
     $root = PostNamespace::factory()->create([
         'slug' => 'guides',

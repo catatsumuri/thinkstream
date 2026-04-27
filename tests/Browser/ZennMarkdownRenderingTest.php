@@ -157,6 +157,22 @@ MARKDOWN,
 
 });
 
+test('link text containing a URL with port renders the full URL including port', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => '[http://localhost:8000](http://localhost:8000) です',
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
+
+    $linkText = $page->script(<<<'JS'
+        (() => document.querySelector('.prose a')?.textContent)()
+    JS);
+
+    $page->assertNoJavaScriptErrors();
+    expect($linkText)->toBe('http://localhost:8000');
+});
+
 test('@[github](URL) directive renders as github embed', function () {
     $namespace = PostNamespace::factory()->create(['is_published' => true]);
     $post = Post::factory()->for($namespace, 'namespace')->published()->create([

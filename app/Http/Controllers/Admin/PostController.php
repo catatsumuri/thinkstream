@@ -86,7 +86,7 @@ class PostController extends Controller
 
     public function namespaceIndex(PostNamespace $namespace, NamespaceBackupIndex $backupIndex): Response
     {
-        $posts = $namespace->sortPosts($namespace->posts()->with('tags')->latest()->get([
+        $posts = $namespace->sortPosts($namespace->posts()->with('tags')->orderBy('published_at')->orderBy('id')->get([
             'id',
             'title',
             'slug',

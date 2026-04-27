@@ -43,6 +43,7 @@ import { remarkTabsDirective } from '@/lib/remark-tabs-directive';
 import { remarkTooltipDirective } from '@/lib/remark-tooltip-directive';
 import { remarkTreeDirective } from '@/lib/remark-tree-directive';
 import { remarkUpdateDirective } from '@/lib/remark-update-directive';
+import { remarkFixUrlPorts } from '@/lib/remark-fix-url-ports';
 import { remarkZennDirective } from '@/lib/remark-zenn-directive';
 import { cn } from '@/lib/utils';
 
@@ -259,6 +260,7 @@ export default function MarkdownContent({
                     [remarkGfm, { singleTilde: false }],
                     remarkCodeMeta,
                     remarkDirective,
+                    remarkFixUrlPorts,
                     remarkZennDirective,
                     remarkTabsDirective,
                     remarkCardDirective,
