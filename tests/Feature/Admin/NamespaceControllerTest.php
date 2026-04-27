@@ -7,6 +7,7 @@ use App\Support\ReservedContentPath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Ai\Image;
 
 uses(RefreshDatabase::class);
 
@@ -246,6 +247,21 @@ test('edit form includes ancestor namespaces', function () {
         ->assertInertia(fn ($page) => $page
             ->where('ancestors.0.id', $root->id)
             ->where('ancestors.0.name', 'Inertia.js v3')
+            ->where('namespace.id', $namespace->id)
+        );
+});
+
+test('edit form includes whether ai cover generation is enabled', function () {
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('admin.namespaces.edit', $namespace))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('aiEnabled', true)
             ->where('namespace.id', $namespace->id)
         );
 });
@@ -567,6 +583,62 @@ test('deleting a namespace removes the cover image file', function () {
         ->assertRedirect(route('admin.posts.index'));
 
     Storage::disk('public')->assertMissing($path);
+});
+
+test('generating a namespace cover image is forbidden when ai is disabled', function () {
+    Image::fake();
+
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.namespaces.generate-cover-image', $namespace))
+        ->assertForbidden();
+
+    Image::assertNothingGenerated();
+});
+
+test('generating a namespace cover image stores a new image and replaces the old one', function () {
+    Storage::fake('public');
+    Image::fake();
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create();
+    $oldImage = UploadedFile::fake()->image('old-cover.jpg', 1600, 900);
+    $oldPath = $oldImage->store('namespaces', 'public');
+    $namespace = PostNamespace::factory()->create([
+        'name' => 'Guides',
+        'description' => 'Step-by-step writing guides.',
+        'cover_image' => $oldPath,
+    ]);
+
+    Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'title' => 'Routing',
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $namespace->id,
+        'title' => 'Validation',
+    ]);
+
+    $this->actingAs($user)
+        ->from(route('admin.namespaces.edit', $namespace))
+        ->post(route('admin.namespaces.generate-cover-image', $namespace))
+        ->assertRedirect(route('admin.namespaces.edit', $namespace));
+
+    Image::assertGenerated(fn ($prompt) => $prompt->contains('Guides')
+        && $prompt->contains('Step-by-step writing guides.')
+        && $prompt->contains('Routing')
+        && $prompt->contains('Validation')
+        && $prompt->isLandscape()
+    );
+
+    Storage::disk('public')->assertMissing($oldPath);
+
+    $newPath = $namespace->fresh()->cover_image;
+
+    expect($newPath)->not->toBeNull()->and($newPath)->not->toBe($oldPath);
+    Storage::disk('public')->assertExists($newPath);
 });
 
 test('guests cannot reorder namespaces', function () {

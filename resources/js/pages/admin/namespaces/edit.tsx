@@ -1,8 +1,9 @@
-import { Head, setLayoutProps, useForm } from '@inertiajs/react';
+import { Head, router, setLayoutProps, useForm } from '@inertiajs/react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import CoverImageDropzone from '@/components/cover-image-dropzone';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { dashboard } from '@/routes';
@@ -28,9 +29,11 @@ type Namespace = {
 export default function Edit({
     ancestors,
     namespace,
+    aiEnabled,
 }: {
     ancestors: Ancestor[];
     namespace: Namespace;
+    aiEnabled: boolean;
 }) {
     setLayoutProps({
         breadcrumbs: [
@@ -44,6 +47,19 @@ export default function Edit({
             { title: 'Edit' },
         ],
     });
+
+    const [generating, setGenerating] = useState(false);
+
+    function generateCoverImage() {
+        router.post(
+            NamespaceController.generateCoverImage.url(namespace.id),
+            {},
+            {
+                onStart: () => setGenerating(true),
+                onFinish: () => setGenerating(false),
+            },
+        );
+    }
 
     const { data, setData, post, processing, errors } = useForm<{
         _method: string;
@@ -126,7 +142,22 @@ export default function Edit({
                     </div>
 
                     <div className="grid gap-2">
-                        <Label htmlFor="cover_image">Cover Image</Label>
+                        <div className="flex items-center justify-between gap-3">
+                            <Label htmlFor="cover_image">Cover Image</Label>
+                            {aiEnabled && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    disabled={generating || processing}
+                                    onClick={generateCoverImage}
+                                >
+                                    {generating
+                                        ? 'Generating…'
+                                        : 'Generate with AI'}
+                                </Button>
+                            )}
+                        </div>
                         <CoverImageDropzone
                             id="cover_image"
                             currentImageUrl={namespace.cover_image_url}
