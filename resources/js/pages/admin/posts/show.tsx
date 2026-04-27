@@ -1,22 +1,23 @@
-import { Form, Head, Link, router, setLayoutProps } from '@inertiajs/react';
+import { Form, Head, Link, router, setLayoutProps, usePoll } from '@inertiajs/react';
 import {
     AlertTriangle,
     ExternalLink,
     Eye,
     EyeOff,
     FileText,
+    FolderSync,
     History,
     PanelLeftClose,
     PanelLeftOpen,
     Pencil,
     Trash2,
+    Unlink,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ContentNavNode } from '@/components/content-nav-tree';
 import ContentNavTree from '@/components/content-nav-tree';
 import MarkdownContent from '@/components/markdown-content';
 import TableOfContents from '@/components/table-of-contents';
-import ViewContextBadge from '@/components/view-context-badge';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -27,6 +28,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import ViewContextBadge from '@/components/view-context-badge';
 import { useBelowDesktop } from '@/hooks/use-below-desktop';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
@@ -35,11 +37,13 @@ import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import {
     destroy,
+    destroySyncFile,
     edit,
     index,
     namespace as namespaceRoute,
     revisions,
     show,
+    storeSyncFile,
 } from '@/routes/admin/posts';
 
 function findHeadingOffset(
@@ -130,6 +134,8 @@ type Post = {
     created_at: string;
     reference_title: string | null;
     reference_url: string | null;
+    is_syncing: boolean;
+    sync_file_path: string | null;
     tags: string[];
 };
 
@@ -183,6 +189,16 @@ export default function Show({
 
         router.visit(`${editUrl}?${params.toString()}`);
     };
+
+    const { start: startPoll, stop: stopPoll } = usePoll(3000, {}, { autoStart: false })
+
+    useEffect(() => {
+        if (post.is_syncing) {
+            startPoll()
+        } else {
+            stopPoll()
+        }
+    }, [post.is_syncing, startPoll, stopPoll])
 
     const toc = useMarkdownToc(tocPosts, {
         headingAnchorPlacement: 'gutter',
@@ -286,6 +302,22 @@ export default function Show({
                             </div>
                         )}
 
+                        {post.is_syncing && (
+                            <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800/40 dark:bg-blue-900/20">
+                                <FolderSync className="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                                <div className="text-blue-800 dark:text-blue-400">
+                                    <p className="font-semibold">
+                                        Sync mode active
+                                    </p>
+                                    {post.sync_file_path && (
+                                        <p className="mt-0.5 font-mono text-xs">
+                                            {post.sync_file_path}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
                         {isScheduled && (
                             <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 dark:border-blue-800/40 dark:bg-blue-900/20">
                                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400" />
@@ -361,16 +393,29 @@ export default function Show({
                         </div>
 
                         <div className="flex flex-wrap items-center gap-2 lg:hidden">
-                            <Button asChild variant="outline" size="sm">
-                                <Link
-                                    href={edit.url({
-                                        namespace: namespace.id,
-                                        post: post.slug,
-                                    })}
-                                >
-                                    <Pencil className="size-4" />
-                                    Edit
-                                </Link>
+                            <Button
+                                asChild={!post.is_syncing}
+                                variant="outline"
+                                size="sm"
+                                disabled={post.is_syncing}
+                                title={post.is_syncing ? 'Editing disabled while syncing' : undefined}
+                            >
+                                {post.is_syncing ? (
+                                    <span>
+                                        <Pencil className="size-4" />
+                                        Edit
+                                    </span>
+                                ) : (
+                                    <Link
+                                        href={edit.url({
+                                            namespace: namespace.id,
+                                            post: post.slug,
+                                        })}
+                                    >
+                                        <Pencil className="size-4" />
+                                        Edit
+                                    </Link>
+                                )}
                             </Button>
                             <Button asChild variant="outline" size="sm">
                                 <a
@@ -600,17 +645,78 @@ export default function Show({
                                     />
                                 </div>
                                 <div className="space-y-1 p-2">
-                                    <Link
-                                        data-test="manage-post-edit-link"
-                                        href={edit.url({
-                                            namespace: namespace.id,
-                                            post: post.slug,
-                                        })}
-                                        className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
-                                    >
-                                        <Pencil className="size-4 text-muted-foreground" />
-                                        <span>Edit</span>
-                                    </Link>
+                                    {post.is_syncing ? (
+                                        <span
+                                            data-test="manage-post-edit-link"
+                                            title="Editing disabled while syncing"
+                                            className="flex w-full cursor-not-allowed items-center gap-2 rounded-lg px-3 py-2 text-sm text-muted-foreground/40"
+                                        >
+                                            <Pencil className="size-4" />
+                                            <span>Edit</span>
+                                        </span>
+                                    ) : (
+                                        <Link
+                                            data-test="manage-post-edit-link"
+                                            href={edit.url({
+                                                namespace: namespace.id,
+                                                post: post.slug,
+                                            })}
+                                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+                                        >
+                                            <Pencil className="size-4 text-muted-foreground" />
+                                            <span>Edit</span>
+                                        </Link>
+                                    )}
+                                    {post.is_syncing ? (
+                                        <>
+                                            <div className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-blue-600 dark:text-blue-400">
+                                                <FolderSync className="size-4 shrink-0" />
+                                                <span className="truncate font-mono text-xs">
+                                                    {post.sync_file_path}
+                                                </span>
+                                            </div>
+                                            <button
+                                                type="button"
+                                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-destructive transition-colors hover:bg-destructive/10"
+                                                onClick={() => {
+                                                    if (
+                                                        window.confirm(
+                                                            'Delete the sync file and re-enable web editing?',
+                                                        )
+                                                    ) {
+                                                        router.delete(
+                                                            destroySyncFile.url(
+                                                                {
+                                                                    namespace:
+                                                                        namespace.id,
+                                                                    post: post.slug,
+                                                                },
+                                                            ),
+                                                        );
+                                                    }
+                                                }}
+                                            >
+                                                <Unlink className="size-4" />
+                                                <span>Remove sync file</span>
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+                                            onClick={() =>
+                                                router.post(
+                                                    storeSyncFile.url({
+                                                        namespace: namespace.id,
+                                                        post: post.slug,
+                                                    }),
+                                                )
+                                            }
+                                        >
+                                            <FolderSync className="size-4 text-muted-foreground" />
+                                            <span>Start Sync</span>
+                                        </button>
+                                    )}
                                     <a
                                         href={`/${post.full_path}`}
                                         target="_blank"

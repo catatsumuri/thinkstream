@@ -13,7 +13,7 @@ class NamespaceBackupCommand extends Command
 {
     protected $signature = 'namespace:backup
                              {namespace : Namespace slug or ID}
-                             {--output= : Output zip path (defaults to storage/app/private/backups/namespace-id-path-timestamp.zip)}
+                             {--output= : Output zip path (defaults to THINKSTREAM_BACKUP_DIR/namespace-id-path-timestamp.zip)}
                              {--description= : Optional backup note stored in the archive manifest}
                              {--with-revisions : Include post revision history in the backup}';
 

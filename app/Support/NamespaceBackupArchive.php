@@ -12,7 +12,7 @@ class NamespaceBackupArchive
 
     public static function directory(): string
     {
-        return storage_path('app/private/backups');
+        return rtrim((string) config('thinkstream.backup.directory', storage_path('app/private/backups')), '/');
     }
 
     public static function defaultPath(PostNamespace $namespace, ?string $timestamp = null): string

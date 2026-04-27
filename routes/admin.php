@@ -37,6 +37,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::get('/{namespace}/{post:slug}/edit', [PostController::class, 'edit'])->name('edit')->scopeBindings();
         Route::put('/{namespace}/{post:slug}', [PostController::class, 'update'])->name('update')->scopeBindings();
         Route::delete('/{namespace}/{post:slug}', [PostController::class, 'destroy'])->name('destroy')->scopeBindings();
+        Route::post('/{namespace}/{post:slug}/sync-file', [PostController::class, 'storeSyncFile'])->name('storeSyncFile')->scopeBindings();
+        Route::delete('/{namespace}/{post:slug}/sync-file', [PostController::class, 'destroySyncFile'])->name('destroySyncFile')->scopeBindings();
         Route::get('/{namespace}/{post:slug}/revisions', [PostController::class, 'revisions'])->name('revisions')->scopeBindings();
         Route::post('/{namespace}/{post:slug}/revisions/{revision}/restore', [PostController::class, 'restore'])->name('revisions.restore')->scopeBindings();
         Route::post('/{namespace}/{post:slug}/image', [PostController::class, 'uploadImage'])->name('uploadImage')->scopeBindings();

@@ -6,6 +6,7 @@ import {
     Expand,
     Eye,
     EyeOff,
+    FolderSync,
     Link2,
     Minimize2,
     Save,
@@ -48,6 +49,8 @@ type Post = {
     reference_title: string | null;
     reference_url: string | null;
     tags: string[];
+    is_syncing: boolean;
+    sync_file_path: string | null;
 };
 
 export default function Edit({
@@ -215,6 +218,23 @@ export default function Edit({
                                 />
                             )}
 
+                            {post.is_syncing && (
+                                <div className="flex items-start gap-3 border-b border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-800 dark:bg-blue-950/40">
+                                    <FolderSync className="mt-0.5 size-4 shrink-0 text-blue-600 dark:text-blue-400" />
+                                    <div>
+                                        <p className="text-sm font-medium text-blue-800 dark:text-blue-200">
+                                            Sync mode active — editing disabled
+                                        </p>
+                                        {post.sync_file_path && (
+                                            <p className="mt-0.5 font-mono text-xs text-blue-600 dark:text-blue-400">
+                                                {post.sync_file_path}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            <fieldset disabled={post.is_syncing} className="contents">
                             <div className="flex flex-col xl:flex-row">
                                 {/* Main content */}
                                 <main className="min-w-0 flex-1 px-4 py-6 lg:px-8 lg:py-8">
@@ -589,35 +609,38 @@ export default function Edit({
                                 </aside>
                             </div>
 
-                            <div className="fixed right-6 bottom-6 z-50">
-                                <Button
-                                    data-test="save-post-button"
-                                    type="submit"
-                                    disabled={
-                                        processing ||
-                                        (!hasUnsavedChanges && !saved)
-                                    }
-                                    size="lg"
-                                    className={`gap-2.5 rounded-full px-6 shadow-xl transition-all hover:scale-105 active:scale-95 disabled:scale-100 disabled:shadow-none ${saved ? 'bg-green-600 shadow-green-600/30 hover:bg-green-600' : hasUnsavedChanges ? 'shadow-primary/30' : 'bg-muted text-muted-foreground hover:bg-muted'}`}
-                                >
-                                    {saved ? (
-                                        <>
-                                            <Check className="size-4.5" />
-                                            Saved
-                                        </>
-                                    ) : hasUnsavedChanges ? (
-                                        <>
-                                            <Save className="size-4.5" />
-                                            Unsaved · Save Changes
-                                        </>
-                                    ) : (
-                                        <>
-                                            <Save className="size-4.5" />
-                                            Save Changes
-                                        </>
-                                    )}
-                                </Button>
-                            </div>
+                            {!post.is_syncing && (
+                                <div className="fixed right-6 bottom-6 z-50">
+                                    <Button
+                                        data-test="save-post-button"
+                                        type="submit"
+                                        disabled={
+                                            processing ||
+                                            (!hasUnsavedChanges && !saved)
+                                        }
+                                        size="lg"
+                                        className={`gap-2.5 rounded-full px-6 shadow-xl transition-all hover:scale-105 active:scale-95 disabled:scale-100 disabled:shadow-none ${saved ? 'bg-green-600 shadow-green-600/30 hover:bg-green-600' : hasUnsavedChanges ? 'shadow-primary/30' : 'bg-muted text-muted-foreground hover:bg-muted'}`}
+                                    >
+                                        {saved ? (
+                                            <>
+                                                <Check className="size-4.5" />
+                                                Saved
+                                            </>
+                                        ) : hasUnsavedChanges ? (
+                                            <>
+                                                <Save className="size-4.5" />
+                                                Unsaved · Save Changes
+                                            </>
+                                        ) : (
+                                            <>
+                                                <Save className="size-4.5" />
+                                                Save Changes
+                                            </>
+                                        )}
+                                    </Button>
+                                </div>
+                            )}
+                            </fieldset>
                         </>
                     )}
                 </Form>

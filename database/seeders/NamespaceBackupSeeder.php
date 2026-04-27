@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Support\NamespaceBackupArchive;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Artisan;
 use Symfony\Component\Yaml\Yaml;
@@ -11,7 +12,7 @@ class NamespaceBackupSeeder extends Seeder
 {
     public function run(): void
     {
-        $backupDir = storage_path('app/private/backups');
+        $backupDir = NamespaceBackupArchive::directory();
 
         $zips = glob($backupDir.'/*.zip');
 
