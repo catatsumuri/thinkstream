@@ -1,4 +1,11 @@
-import { Form, Head, Link, router, setLayoutProps, usePoll } from '@inertiajs/react';
+import {
+    Form,
+    Head,
+    Link,
+    router,
+    setLayoutProps,
+    usePoll,
+} from '@inertiajs/react';
 import {
     AlertTriangle,
     ExternalLink,
@@ -190,15 +197,19 @@ export default function Show({
         router.visit(`${editUrl}?${params.toString()}`);
     };
 
-    const { start: startPoll, stop: stopPoll } = usePoll(3000, {}, { autoStart: false })
+    const { start: startPoll, stop: stopPoll } = usePoll(
+        3000,
+        {},
+        { autoStart: false },
+    );
 
     useEffect(() => {
         if (post.is_syncing) {
-            startPoll()
+            startPoll();
         } else {
-            stopPoll()
+            stopPoll();
         }
-    }, [post.is_syncing, startPoll, stopPoll])
+    }, [post.is_syncing, startPoll, stopPoll]);
 
     const toc = useMarkdownToc(tocPosts, {
         headingAnchorPlacement: 'gutter',
@@ -398,7 +409,11 @@ export default function Show({
                                 variant="outline"
                                 size="sm"
                                 disabled={post.is_syncing}
-                                title={post.is_syncing ? 'Editing disabled while syncing' : undefined}
+                                title={
+                                    post.is_syncing
+                                        ? 'Editing disabled while syncing'
+                                        : undefined
+                                }
                             >
                                 {post.is_syncing ? (
                                     <span>
