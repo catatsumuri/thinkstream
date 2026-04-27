@@ -66,6 +66,38 @@ class PostNamespace extends Model
         return $this->cover_image ? Storage::url($this->cover_image) : null;
     }
 
+    /**
+     * Resolve cover image URL, falling back to the nearest ancestor that has one.
+     *
+     * @param  Collection<int, PostNamespace>|null  $ancestors  Already-loaded ancestors (closest last), avoids extra queries.
+     */
+    public function resolvedCoverImageUrl(?Collection $ancestors = null): ?string
+    {
+        if ($this->cover_image) {
+            return $this->cover_image_url;
+        }
+
+        if ($ancestors !== null) {
+            foreach ($ancestors->reverse() as $ancestor) {
+                if ($ancestor->cover_image) {
+                    return $ancestor->cover_image_url;
+                }
+            }
+
+            return null;
+        }
+
+        $current = $this->parent;
+        while ($current) {
+            if ($current->cover_image) {
+                return $current->cover_image_url;
+            }
+            $current = $current->parent;
+        }
+
+        return null;
+    }
+
     public function getRouteKeyName(): string
     {
         return 'id';

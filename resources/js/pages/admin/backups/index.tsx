@@ -22,6 +22,7 @@ import { index as backupsIndex } from '@/routes/admin/backups';
 
 type NamespaceSummary = {
     id: number;
+    parent_id: number | null;
     name: string;
     slug: string;
     full_path: string;
@@ -188,11 +189,12 @@ export default function AdminBackupsIndex({
         ],
     });
 
+    const rootNamespaces = namespaces.filter((n) => n.parent_id === null);
     const allSelected =
         backups.length > 0 && selectedKeys.length === backups.length;
     const allNamespacesSelected =
-        namespaces.length > 0 &&
-        selectedNamespaceIds.length === namespaces.length;
+        rootNamespaces.length > 0 &&
+        selectedNamespaceIds.length === rootNamespaces.length;
     const namespacesWithBackups = namespaces.filter(
         (namespace) => namespace.backup_count > 0,
     ).length;
@@ -222,7 +224,7 @@ export default function AdminBackupsIndex({
     }
 
     function toggleAllNamespaces(checked: boolean) {
-        setSelectedNamespaceIds(checked ? namespaces.map((n) => n.id) : []);
+        setSelectedNamespaceIds(checked ? rootNamespaces.map((n) => n.id) : []);
     }
 
     return (
@@ -308,8 +310,8 @@ export default function AdminBackupsIndex({
                                 />
                                 <span className="text-sm text-muted-foreground">
                                     {selectedNamespaceIds.length > 0
-                                        ? `${selectedNamespaceIds.length} of ${namespaces.length} selected`
-                                        : 'Select namespaces'}
+                                        ? `${selectedNamespaceIds.length} of ${rootNamespaces.length} root namespaces selected`
+                                        : 'Select root namespaces'}
                                 </span>
                             </div>
 
@@ -438,65 +440,88 @@ export default function AdminBackupsIndex({
                         </div>
 
                         <div className="divide-y">
-                            {namespaces.map((namespace) => (
-                                <div
-                                    key={namespace.id}
-                                    className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between"
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <Checkbox
-                                            checked={selectedNamespaceIds.includes(
-                                                namespace.id,
+                            {namespaces.map((namespace) => {
+                                const isRoot = namespace.parent_id === null;
+                                const depth =
+                                    namespace.full_path.split('/').length - 1;
+
+                                return (
+                                    <div
+                                        key={namespace.id}
+                                        className="flex flex-col gap-4 p-4 md:flex-row md:items-center md:justify-between"
+                                        style={{
+                                            paddingLeft: `${16 + depth * 24}px`,
+                                        }}
+                                    >
+                                        <div className="flex items-start gap-3">
+                                            {isRoot ? (
+                                                <Checkbox
+                                                    checked={selectedNamespaceIds.includes(
+                                                        namespace.id,
+                                                    )}
+                                                    onCheckedChange={(
+                                                        checked,
+                                                    ) =>
+                                                        toggleNamespaceId(
+                                                            namespace.id,
+                                                            Boolean(checked),
+                                                        )
+                                                    }
+                                                    aria-label={`Select ${namespace.name}`}
+                                                    className="mt-0.5"
+                                                />
+                                            ) : (
+                                                <div className="mt-0.5 size-4 shrink-0" />
                                             )}
-                                            onCheckedChange={(checked) =>
-                                                toggleNamespaceId(
-                                                    namespace.id,
-                                                    Boolean(checked),
-                                                )
-                                            }
-                                            aria-label={`Select ${namespace.name}`}
-                                            className="mt-0.5"
-                                        />
-                                        <div className="space-y-1">
-                                            <Link
-                                                href={namespace.namespace_url}
-                                                className="font-medium hover:underline"
+                                            <div className="space-y-1">
+                                                <Link
+                                                    href={
+                                                        namespace.namespace_url
+                                                    }
+                                                    className="font-medium hover:underline"
+                                                >
+                                                    {namespace.name}
+                                                </Link>
+                                                <p className="text-sm text-muted-foreground">
+                                                    /{namespace.full_path}
+                                                </p>
+                                                <p className="text-sm text-muted-foreground">
+                                                    {namespace.backup_count}{' '}
+                                                    backup
+                                                    {namespace.backup_count ===
+                                                    1
+                                                        ? ''
+                                                        : 's'}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                asChild
                                             >
-                                                {namespace.name}
-                                            </Link>
-                                            <p className="text-sm text-muted-foreground">
-                                                /{namespace.full_path}
-                                            </p>
-                                            <p className="text-sm text-muted-foreground">
-                                                {namespace.backup_count} backup
-                                                {namespace.backup_count === 1
-                                                    ? ''
-                                                    : 's'}
-                                            </p>
+                                                <Link
+                                                    href={
+                                                        namespace.management_url
+                                                    }
+                                                >
+                                                    <FolderOpen className="size-4" />
+                                                    Open Namespace
+                                                </Link>
+                                            </Button>
+
+                                            <CreateBackupDialog
+                                                action={
+                                                    namespace.create_backup_url
+                                                }
+                                                namespaceName={namespace.name}
+                                            />
                                         </div>
                                     </div>
-
-                                    <div className="flex flex-wrap gap-2">
-                                        <Button
-                                            variant="outline"
-                                            size="sm"
-                                            asChild
-                                        >
-                                            <Link
-                                                href={namespace.management_url}
-                                            >
-                                                <FolderOpen className="size-4" />
-                                                Open Namespace
-                                            </Link>
-                                        </Button>
-
-                                        <CreateBackupDialog
-                                            action={namespace.create_backup_url}
-                                            namespaceName={namespace.name}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </TabsContent>
 

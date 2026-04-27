@@ -74,3 +74,30 @@ test('admin backups page separates create and restore actions into tabs', functi
         File::delete([$backupPath]);
     }
 });
+
+test('admin backups bulk create only allows selecting root namespaces', function () {
+    $user = User::factory()->create([
+        'email' => 'roots@example.com',
+    ]);
+
+    $root = PostNamespace::factory()->create([
+        'slug' => 'root',
+        'full_path' => 'root',
+        'name' => 'Root',
+    ]);
+    PostNamespace::factory()->create([
+        'parent_id' => $root->id,
+        'slug' => 'child',
+        'full_path' => 'root/child',
+        'name' => 'Child',
+    ]);
+
+    $this->actingAs($user);
+
+    visit(route('admin.backups.index', absolute: false))
+        ->resize(1440, 900)
+        ->assertNoJavaScriptErrors()
+        ->assertSee('Select root namespaces')
+        ->assertPresent('[aria-label="Select Root"]')
+        ->assertMissing('[aria-label="Select Child"]');
+});

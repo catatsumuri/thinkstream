@@ -1,5 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
-import { BarChart3, ExternalLink, Eye, FileText } from 'lucide-react';
+import { BarChart3, ExternalLink, Eye, FileText, Globe } from 'lucide-react';
 import {
     Card,
     CardContent,
@@ -7,6 +7,7 @@ import {
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { dashboard } from '@/routes';
 
 type TopPost = {
@@ -19,7 +20,19 @@ type TopPost = {
     admin_url: string;
 };
 
-export default function Dashboard({ top_posts }: { top_posts: TopPost[] }) {
+type TopReferrer = {
+    host: string;
+    post_count: number;
+    total_views: number;
+};
+
+export default function Dashboard({
+    top_posts,
+    top_referrers,
+}: {
+    top_posts: TopPost[];
+    top_referrers: TopReferrer[];
+}) {
     const totalViews = top_posts.reduce(
         (sum, post) => sum + post.page_views,
         0,
@@ -46,63 +59,127 @@ export default function Dashboard({ top_posts }: { top_posts: TopPost[] }) {
                     </Card>
 
                     <Card className="shadow-none">
-                        <CardHeader>
-                            <CardDescription>Top Posts</CardDescription>
-                            <CardTitle>View Top 10</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            {top_posts.length === 0 ? (
-                                <div className="rounded-xl border border-dashed px-6 py-10 text-center text-sm text-muted-foreground">
-                                    No tracked page views yet.
+                        <Tabs defaultValue="posts">
+                            <CardHeader>
+                                <div className="flex items-center justify-between gap-4">
+                                    <div>
+                                        <CardDescription>
+                                            Analytics
+                                        </CardDescription>
+                                        <CardTitle>Top 10</CardTitle>
+                                    </div>
+                                    <TabsList>
+                                        <TabsTrigger value="posts">
+                                            <FileText />
+                                            Posts
+                                        </TabsTrigger>
+                                        <TabsTrigger value="referrers">
+                                            <Globe />
+                                            Referrers
+                                        </TabsTrigger>
+                                    </TabsList>
                                 </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    {top_posts.map((post, index) => (
-                                        <div
-                                            key={post.id}
-                                            className="flex flex-col gap-3 rounded-xl border px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
-                                        >
-                                            <div className="flex min-w-0 items-start gap-4">
-                                                <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
-                                                    {index + 1}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <Link
-                                                        href={post.admin_url}
-                                                        className="inline-flex items-center gap-2 font-medium hover:underline"
-                                                    >
-                                                        <FileText className="size-4 shrink-0 text-muted-foreground" />
-                                                        <span className="truncate">
-                                                            {post.title}
-                                                        </span>
-                                                    </Link>
-                                                    <p className="mt-1 truncate text-sm text-muted-foreground">
-                                                        /{post.full_path}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <div className="flex items-center justify-between gap-4 sm:justify-end">
-                                                <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm font-medium">
-                                                    <Eye className="size-4 text-muted-foreground" />
-                                                    {post.page_views.toLocaleString()}
-                                                </div>
-                                                {post.canonical_url ? (
-                                                    <Link
-                                                        href={
-                                                            post.canonical_url
-                                                        }
-                                                        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
-                                                    >
-                                                        Canonical
-                                                        <ExternalLink className="size-4" />
-                                                    </Link>
-                                                ) : null}
-                                            </div>
+                            </CardHeader>
+                            <CardContent>
+                                <TabsContent value="posts">
+                                    {top_posts.length === 0 ? (
+                                        <div className="rounded-xl border border-dashed px-6 py-10 text-center text-sm text-muted-foreground">
+                                            No tracked page views yet.
                                         </div>
-                                    ))}
-                                </div>
-                            )}
-                        </CardContent>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {top_posts.map((post, index) => (
+                                                <div
+                                                    key={post.id}
+                                                    className="flex flex-col gap-3 rounded-xl border px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                                                >
+                                                    <div className="flex min-w-0 items-start gap-4">
+                                                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-sm font-semibold text-muted-foreground">
+                                                            {index + 1}
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <Link
+                                                                href={
+                                                                    post.admin_url
+                                                                }
+                                                                className="inline-flex items-center gap-2 font-medium hover:underline"
+                                                            >
+                                                                <FileText className="size-4 shrink-0 text-muted-foreground" />
+                                                                <span className="truncate">
+                                                                    {post.title}
+                                                                </span>
+                                                            </Link>
+                                                            <p className="mt-1 truncate text-sm text-muted-foreground">
+                                                                /
+                                                                {post.full_path}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4 sm:justify-end">
+                                                        <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm font-medium">
+                                                            <Eye className="size-4 text-muted-foreground" />
+                                                            {post.page_views.toLocaleString()}
+                                                        </div>
+                                                        {post.canonical_url ? (
+                                                            <Link
+                                                                href={
+                                                                    post.canonical_url
+                                                                }
+                                                                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+                                                            >
+                                                                Canonical
+                                                                <ExternalLink className="size-4" />
+                                                            </Link>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </TabsContent>
+
+                                <TabsContent value="referrers">
+                                    {top_referrers.length === 0 ? (
+                                        <div className="rounded-xl border border-dashed px-6 py-10 text-center text-sm text-muted-foreground">
+                                            No referrer data yet.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-2">
+                                            {top_referrers.map((referrer) => (
+                                                <div
+                                                    key={referrer.host}
+                                                    className="flex items-center justify-between gap-4 rounded-xl border px-4 py-3"
+                                                >
+                                                    <div className="flex min-w-0 items-center gap-3">
+                                                        <div className="rounded-lg bg-muted p-2 text-muted-foreground">
+                                                            <Globe className="size-4" />
+                                                        </div>
+                                                        <span className="truncate text-sm font-medium">
+                                                            {referrer.host}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex shrink-0 items-center gap-3">
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {
+                                                                referrer.post_count
+                                                            }{' '}
+                                                            {referrer.post_count ===
+                                                            1
+                                                                ? 'post'
+                                                                : 'posts'}
+                                                        </span>
+                                                        <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm font-medium">
+                                                            <Eye className="size-4 text-muted-foreground" />
+                                                            {referrer.total_views.toLocaleString()}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </TabsContent>
+                            </CardContent>
+                        </Tabs>
                     </Card>
                 </div>
             </div>

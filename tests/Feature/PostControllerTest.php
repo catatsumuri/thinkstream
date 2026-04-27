@@ -642,3 +642,127 @@ test('public post show has empty tags when none are set', function () {
             ->where('post.tags', [])
         );
 });
+
+test('namespace page inherits parent cover image when child has none', function () {
+    $parent = PostNamespace::factory()->create([
+        'slug' => 'parent',
+        'full_path' => 'parent',
+        'cover_image' => 'namespaces/parent.webp',
+        'is_published' => true,
+    ]);
+    $child = PostNamespace::factory()->create([
+        'parent_id' => $parent->id,
+        'slug' => 'child',
+        'full_path' => 'parent/child',
+        'cover_image' => null,
+        'is_published' => true,
+    ]);
+
+    $this->get(route('posts.path', ['path' => 'parent/child']))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/namespace')
+            ->where('namespace.cover_image_url', fn ($url) => str_contains($url, 'parent.webp'))
+        );
+});
+
+test('namespace page uses own cover image over parent', function () {
+    $parent = PostNamespace::factory()->create([
+        'slug' => 'parent',
+        'full_path' => 'parent',
+        'cover_image' => 'namespaces/parent.webp',
+        'is_published' => true,
+    ]);
+    $child = PostNamespace::factory()->create([
+        'parent_id' => $parent->id,
+        'slug' => 'child',
+        'full_path' => 'parent/child',
+        'cover_image' => 'namespaces/child.webp',
+        'is_published' => true,
+    ]);
+
+    $this->get(route('posts.path', ['path' => 'parent/child']))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/namespace')
+            ->where('namespace.cover_image_url', fn ($url) => str_contains($url, 'child.webp'))
+        );
+});
+
+test('child namespaces in namespace page inherit parent cover image', function () {
+    $parent = PostNamespace::factory()->create([
+        'slug' => 'parent',
+        'full_path' => 'parent',
+        'cover_image' => 'namespaces/parent.webp',
+        'is_published' => true,
+    ]);
+    PostNamespace::factory()->create([
+        'parent_id' => $parent->id,
+        'slug' => 'child',
+        'full_path' => 'parent/child',
+        'cover_image' => null,
+        'is_published' => true,
+    ]);
+
+    $this->get(route('posts.path', ['path' => 'parent']))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/namespace')
+            ->where('children.0.cover_image_url', fn ($url) => str_contains($url, 'parent.webp'))
+        );
+});
+
+test('post page namespace inherits grandparent cover image', function () {
+    $grandparent = PostNamespace::factory()->create([
+        'slug' => 'grandparent',
+        'full_path' => 'grandparent',
+        'cover_image' => 'namespaces/grandparent.webp',
+        'is_published' => true,
+    ]);
+    $parent = PostNamespace::factory()->create([
+        'parent_id' => $grandparent->id,
+        'slug' => 'parent',
+        'full_path' => 'grandparent/parent',
+        'cover_image' => null,
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($parent, 'namespace')->published()->create([
+        'slug' => 'my-post',
+        'full_path' => 'grandparent/parent/my-post',
+    ]);
+
+    $this->get(route('posts.path', ['path' => 'grandparent/parent/my-post']))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/show')
+            ->where('namespace.cover_image_url', fn ($url) => str_contains($url, 'grandparent.webp'))
+        );
+});
+
+test('post page social card image inherits grandparent cover image', function () {
+    $grandparent = PostNamespace::factory()->create([
+        'slug' => 'grandparent',
+        'full_path' => 'grandparent',
+        'cover_image' => 'namespaces/grandparent.webp',
+        'is_published' => true,
+    ]);
+    $parent = PostNamespace::factory()->create([
+        'parent_id' => $grandparent->id,
+        'slug' => 'parent',
+        'full_path' => 'grandparent/parent',
+        'cover_image' => null,
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($parent, 'namespace')->published()->create([
+        'slug' => 'my-post',
+        'full_path' => 'grandparent/parent/my-post',
+        'content' => 'No inline image here.',
+    ]);
+
+    $this->get(route('posts.path', ['path' => 'grandparent/parent/my-post']))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/show')
+            ->where('cardImage', fn ($url) => str_contains($url, 'grandparent.webp'))
+        );
+});

@@ -1,13 +1,27 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { AlertTriangle, ChevronRight, ImageOff } from 'lucide-react';
+import {
+    AlertTriangle,
+    BookOpen,
+    ChevronRight,
+    ImageOff,
+    X,
+} from 'lucide-react';
 import { useState } from 'react';
 import type { ContentNavNode } from '@/components/content-nav-tree';
 import ContentNavTree from '@/components/content-nav-tree';
 import DocsHeaderActions from '@/components/docs-header-actions';
 import MarkdownPageActions from '@/components/markdown-page-actions';
+import { Button } from '@/components/ui/button';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
+import {
+    Sheet,
+    SheetClose,
+    SheetContent,
+    SheetHeader,
+    SheetTitle,
+} from '@/components/ui/sheet';
+import { useBelowDesktop } from '@/hooks/use-below-desktop';
 import { useCurrentUrl } from '@/hooks/use-current-url';
-import { useIsMobile } from '@/hooks/use-mobile';
 import { namespace as adminNamespaceRoute } from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
 import { markdown as contentPathMarkdown } from '@/routes/posts/path';
@@ -54,9 +68,10 @@ export default function Namespace({
         thinkstream: { markdown_pages: { enabled: boolean } };
     }>().props;
     const { currentUrl } = useCurrentUrl();
-    const isMobile = useIsMobile();
+    const isBelowDesktop = useBelowDesktop();
+    const [mobileNavOpen, setMobileNavOpen] = useState(false);
     const [navOverride, setNavOverride] = useState<boolean | null>(null);
-    const navVisible = navOverride ?? !isMobile;
+    const navVisible = navOverride ?? !isBelowDesktop;
     const markdownPagesEnabled = thinkstream.markdown_pages.enabled;
     const markdownUrl = contentPathMarkdown.url({ path: namespace.full_path });
 
@@ -132,8 +147,11 @@ export default function Namespace({
                             hasNav
                             navVisible={navVisible}
                             onToggleNav={() =>
-                                setNavOverride((prev) => !(prev ?? !isMobile))
+                                setNavOverride(
+                                    (prev) => !(prev ?? !isBelowDesktop),
+                                )
                             }
+                            onOpenMobileNav={() => setMobileNavOpen(true)}
                         />
                     </div>
 
@@ -146,6 +164,36 @@ export default function Namespace({
                         </div>
                     </div>
                 </header>
+
+                <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+                    <SheetContent side="left" className="w-[280px] p-0">
+                        <SheetHeader className="border-b border-border/60 px-4 py-3">
+                            <SheetTitle className="flex items-center gap-2 text-base">
+                                <BookOpen className="size-4 text-primary" />
+                                {navRoot.name}
+                            </SheetTitle>
+                        </SheetHeader>
+                        <div className="flex-1 overflow-y-auto overscroll-contain p-4">
+                            <ContentNavTree
+                                currentPath={namespace.full_path}
+                                root={navRoot}
+                                onNavigate={() => setMobileNavOpen(false)}
+                            />
+                        </div>
+                        <div className="border-t border-border/60 p-3">
+                            <SheetClose asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="w-full justify-start gap-2 text-muted-foreground"
+                                >
+                                    <X className="size-3.5" />
+                                    Close
+                                </Button>
+                            </SheetClose>
+                        </div>
+                    </SheetContent>
+                </Sheet>
 
                 <div
                     data-test="namespace-layout"

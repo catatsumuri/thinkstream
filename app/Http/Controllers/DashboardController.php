@@ -42,8 +42,33 @@ class DashboardController extends Controller
             ->values()
             ->all();
 
+        $topReferrers = Post::query()
+            ->whereNotNull('http_referer')
+            ->where('page_views', '>', 0)
+            ->get(['http_referer', 'page_views'])
+            ->groupBy(fn (Post $post): string => $this->referrerHost($post))
+            ->map(fn ($group, string $host): array => [
+                'host' => $host,
+                'post_count' => $group->count(),
+                'total_views' => $group->sum('page_views'),
+            ])
+            ->sortByDesc('total_views')
+            ->take(10)
+            ->values()
+            ->all();
+
         return Inertia::render('dashboard', [
             'top_posts' => $topPosts,
+            'top_referrers' => $topReferrers,
         ]);
+    }
+
+    private function referrerHost(Post $post): string
+    {
+        $host = parse_url($post->http_referer, PHP_URL_HOST);
+
+        return is_string($host) && $host !== ''
+            ? $host
+            : $post->http_referer;
     }
 }
