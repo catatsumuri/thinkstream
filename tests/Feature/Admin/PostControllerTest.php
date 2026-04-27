@@ -307,23 +307,23 @@ test('namespace post list includes child namespaces', function () {
         );
 });
 
-test('namespace post list defaults to latest posts when no custom order exists', function () {
+test('namespace post list orders by published_at ascending when no custom order exists', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create();
-    $olderPost = Post::factory()->for($user)->create([
+    $laterPost = Post::factory()->for($user)->create([
         'namespace_id' => $namespace->id,
-        'created_at' => now()->subDay(),
+        'published_at' => now(),
     ]);
-    $newerPost = Post::factory()->for($user)->create([
+    $earlierPost = Post::factory()->for($user)->create([
         'namespace_id' => $namespace->id,
-        'created_at' => now(),
+        'published_at' => now()->subDay(),
     ]);
 
     $this->actingAs($user)
         ->get(route('admin.posts.namespace', $namespace))
         ->assertInertia(fn ($page) => $page
-            ->where('posts.0.id', $newerPost->id)
-            ->where('posts.1.id', $olderPost->id)
+            ->where('posts.0.id', $earlierPost->id)
+            ->where('posts.1.id', $laterPost->id)
         );
 });
 
