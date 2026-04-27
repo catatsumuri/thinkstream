@@ -16,6 +16,8 @@ import {
     History,
     PanelLeftClose,
     PanelLeftOpen,
+    PanelRightClose,
+    PanelRightOpen,
     Pencil,
     Trash2,
     Unlink,
@@ -158,6 +160,7 @@ export default function Show({
     const { currentUrl } = useCurrentUrl();
     const isBelowDesktop = useBelowDesktop();
     const [navOverride, setNavOverride] = useState<boolean | null>(null);
+    const [rightOverride, setRightOverride] = useState<boolean | null>(null);
     const [rightTab, setRightTab] = useState<'toc' | 'info'>('info');
     const tocPosts = useMemo(
         () => [{ slug: post.slug, content: post.content }],
@@ -219,16 +222,23 @@ export default function Show({
     const hasHeadings = (entry?.headings.length ?? 0) > 0;
     const hasNav = navRoot.children.length > 0 || navRoot.posts.length > 0;
     const navVisible = navOverride ?? true;
+    const rightVisible = rightOverride ?? true;
     const showDesktopNav = !isBelowDesktop && hasNav;
 
     let gridCols = '';
 
-    if (showDesktopNav && navVisible) {
+    if (showDesktopNav && navVisible && rightVisible) {
         gridCols = 'lg:grid-cols-[240px_1fr_280px]';
-    } else if (showDesktopNav && !navVisible) {
+    } else if (showDesktopNav && navVisible && !rightVisible) {
+        gridCols = 'lg:grid-cols-[240px_1fr_40px]';
+    } else if (showDesktopNav && !navVisible && rightVisible) {
         gridCols = 'lg:grid-cols-[40px_1fr_280px]';
-    } else {
+    } else if (showDesktopNav && !navVisible && !rightVisible) {
+        gridCols = 'lg:grid-cols-[40px_1fr_40px]';
+    } else if (rightVisible) {
         gridCols = 'lg:grid-cols-[1fr_280px]';
+    } else {
+        gridCols = 'lg:grid-cols-[1fr_40px]';
     }
 
     setLayoutProps({
@@ -457,7 +467,9 @@ export default function Show({
                     </section>
 
                     <aside className="hidden self-start lg:sticky lg:top-20 lg:block">
-                        <div className="mb-4 flex gap-1 rounded-lg bg-muted/50 p-0.5">
+                        {rightVisible ? (
+                        <>
+                        <div className="mb-4 flex items-center gap-1 rounded-lg bg-muted/50 p-0.5">
                             <button
                                 type="button"
                                 onClick={() => setRightTab('info')}
@@ -481,6 +493,17 @@ export default function Show({
                                 )}
                             >
                                 TOC
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setRightOverride(false)}
+                                data-test="post-show-right-panel-close"
+                                aria-label="Close panel"
+                                aria-expanded={rightVisible}
+                                className="ml-auto rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                title="Close panel"
+                            >
+                                <PanelRightClose size={13} />
                             </button>
                         </div>
 
@@ -805,6 +828,22 @@ export default function Show({
                                 </div>
                             </div>
                         </div>
+                        </>
+                        ) : (
+                            <div className="flex justify-center">
+                                <button
+                                    type="button"
+                                    onClick={() => setRightOverride(true)}
+                                    data-test="post-show-right-panel-open"
+                                    aria-label="Open panel"
+                                    aria-expanded={rightVisible}
+                                    className="rounded-md p-2 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                                    title="Open panel"
+                                >
+                                    <PanelRightOpen size={16} />
+                                </button>
+                            </div>
+                        )}
                     </aside>
                 </div>
             </div>
