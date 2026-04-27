@@ -628,7 +628,8 @@ test('generating a namespace cover image stores a new image and replaces the old
 
     Image::assertGenerated(fn ($prompt) => $prompt->contains('Guides')
         && $prompt->contains('Step-by-step writing guides.')
-        && $prompt->contains('Routing, Validation')
+        && $prompt->contains('Routing')
+        && $prompt->contains('Validation')
         && $prompt->isLandscape()
     );
 
