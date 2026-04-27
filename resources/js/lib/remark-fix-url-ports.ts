@@ -12,28 +12,24 @@ import { visit } from 'unist-util-visit';
 
 export function remarkFixUrlPorts() {
     return (tree: Root) => {
-        visit(
-            tree,
-            'textDirective',
-            (node: TextDirective, index, parent) => {
-                if (
-                    parent === undefined ||
-                    index === undefined ||
-                    !/^\d+$/.test(node.name) ||
-                    node.children.length !== 0
-                ) {
-                    return;
-                }
+        visit(tree, 'textDirective', (node: TextDirective, index, parent) => {
+            if (
+                parent === undefined ||
+                index === undefined ||
+                !/^\d+$/.test(node.name) ||
+                node.children.length !== 0
+            ) {
+                return;
+            }
 
-                const text: Text = {
-                    type: 'text',
-                    value: ':' + node.name,
-                };
+            const text: Text = {
+                type: 'text',
+                value: ':' + node.name,
+            };
 
-                parent.children.splice(index, 1, text);
+            parent.children.splice(index, 1, text);
 
-                return index;
-            },
-        );
+            return index;
+        });
     };
 }
