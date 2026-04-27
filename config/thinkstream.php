@@ -17,4 +17,8 @@ return [
         'poll_interval' => (int) env('THINKSTREAM_SYNC_POLL_INTERVAL', 1),
     ],
 
+    'ai' => [
+        'enabled' => (bool) env('THINKSTREAM_AI_ENABLED', false),
+    ],
+
 ];

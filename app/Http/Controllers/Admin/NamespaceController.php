@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response as InertiaResponse;
+use Laravel\Ai\Image;
+use RuntimeException;
 
 class NamespaceController extends Controller
 {
@@ -77,6 +79,7 @@ class NamespaceController extends Controller
         return Inertia::render('admin/namespaces/edit', [
             'ancestors' => $this->ancestorOptions($namespace),
             'namespace' => $namespace,
+            'aiEnabled' => config('thinkstream.ai.enabled'),
         ]);
     }
 
@@ -94,6 +97,42 @@ class NamespaceController extends Controller
         $namespace->update($data);
 
         return to_route('admin.posts.namespace', $namespace);
+    }
+
+    public function generateCoverImage(PostNamespace $namespace): RedirectResponse
+    {
+        abort_unless(config('thinkstream.ai.enabled'), 403);
+
+        $postTitles = $namespace->posts()->limit(10)->pluck('title')->implode(', ');
+
+        $subject = $postTitles !== ''
+            ? "topics: {$postTitles}"
+            : "section: {$namespace->name}";
+
+        $description = $namespace->description !== null && $namespace->description !== ''
+            ? " It covers: {$namespace->description}."
+            : '';
+
+        $prompt = "Wide landscape cover image for a documentation section called \"{$namespace->name}\".{$description} Visually represent these {$subject}. Professional, clean, abstract, suitable for a technical documentation website.";
+
+        $image = Image::of($prompt)->landscape()->generate();
+        $newCoverImage = $image->storePublicly('namespaces', 'public');
+
+        if ($newCoverImage === false) {
+            throw new RuntimeException('Failed to store the generated namespace cover image.');
+        }
+
+        $previousCoverImage = $namespace->cover_image;
+
+        $namespace->update([
+            'cover_image' => $newCoverImage,
+        ]);
+
+        if ($previousCoverImage) {
+            Storage::disk('public')->delete($previousCoverImage);
+        }
+
+        return back();
     }
 
     public function destroy(PostNamespace $namespace): RedirectResponse
