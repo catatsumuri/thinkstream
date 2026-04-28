@@ -19,26 +19,7 @@ import {
     Wand2,
     X,
 } from 'lucide-react';
-import MarkdownContent from '@/components/markdown-content';
-import { createMarkdownComponents } from '@/lib/markdown-components';
-import { useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Spinner } from '@/components/ui/spinner';
-import {
-    Dialog,
-    DialogClose,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogTitle,
-    DialogTrigger,
-} from '@/components/ui/dialog';
-import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
-import { timeAgo } from '@/lib/time';
-import { dashboard } from '@/routes';
+import { useState } from 'react';
 import {
     destroyMany as thinkstreamDestroyMany,
     index as thinkstreamIndex,
@@ -49,6 +30,25 @@ import {
     structureThoughts as thinkstreamStructureThoughts,
     update as thinkstreamUpdate,
 } from '@/actions/App/Http/Controllers/Admin/ThinkstreamController';
+import MarkdownContent from '@/components/markdown-content';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
+import { createMarkdownComponents } from '@/lib/markdown-components';
+import { timeAgo } from '@/lib/time';
+import { cn } from '@/lib/utils';
+import { dashboard } from '@/routes';
 
 const thoughtMarkdownComponents = createMarkdownComponents();
 
@@ -105,36 +105,24 @@ export default function ThinkstreamShow({
     const [scrapUrl, setScrapUrl] = useState<string | null>(null);
     const [deleteCanvasOnSave, setDeleteCanvasOnSave] = useState(false);
 
-    const structureIdsRef = useRef<number[]>([]);
     const {
+        setData: setStructureData,
         post: structurePost,
         processing: structuring,
-        transform: transformStructure,
     } = useHttp({ ids: [] as number[] });
-    transformStructure(() => ({ ids: structureIdsRef.current }));
 
     const { post: refineTitlePost, processing: refiningTitle } = useHttp({});
 
-    const saveContentRef = useRef('');
-    const saveTitleRef = useRef('');
-    const saveDeleteCanvasRef = useRef(false);
-    const savePageIdRef = useRef<number | null>(null);
     const {
+        setData: setSaveData,
         post: savePost,
         processing: saving,
-        transform: transformSave,
     } = useHttp({
         content: '',
         title: '',
         delete_canvas: false,
         page_id: null as number | null,
     });
-    transformSave(() => ({
-        content: saveContentRef.current,
-        title: saveTitleRef.current,
-        delete_canvas: saveDeleteCanvasRef.current,
-        page_id: savePageIdRef.current,
-    }));
 
     setLayoutProps({
         breadcrumbs: [
@@ -178,7 +166,10 @@ export default function ThinkstreamShow({
     }
 
     function structureThoughts() {
-        structureIdsRef.current = Array.from(selected);
+        const ids = Array.from(selected);
+
+        setStructureData('ids', ids);
+
         structurePost(thinkstreamStructureThoughts.url(page.id), {
             onSuccess: (response) => {
                 const { title, content, message } = response as {
@@ -198,15 +189,20 @@ export default function ThinkstreamShow({
         if (!structuredContent) {
             return;
         }
-        saveContentRef.current = structuredContent;
-        saveTitleRef.current = structuredTitle ?? pageTitle;
-        saveDeleteCanvasRef.current = deleteCanvasOnSave;
-        savePageIdRef.current = deleteCanvasOnSave ? page.id : null;
+
+        const pageId = deleteCanvasOnSave ? page.id : null;
+
+        setSaveData('content', structuredContent);
+        setSaveData('title', structuredTitle ?? pageTitle);
+        setSaveData('delete_canvas', deleteCanvasOnSave);
+        setSaveData('page_id', pageId);
+
         savePost(thinkstreamSaveToScrap.url(), {
             onSuccess: (response) => {
                 const { url } = response as { url: string };
                 setScrapUrl(url);
-                if (saveDeleteCanvasRef.current) {
+
+                if (pageId !== null) {
                     router.visit(url);
                 }
             },
@@ -216,7 +212,13 @@ export default function ThinkstreamShow({
     function toggleSelected(id: number) {
         setSelected((prev) => {
             const next = new Set(prev);
-            next.has(id) ? next.delete(id) : next.add(id);
+
+            if (next.has(id)) {
+                next.delete(id);
+            } else {
+                next.add(id);
+            }
+
             return next;
         });
     }
@@ -457,6 +459,7 @@ export default function ThinkstreamShow({
                             {thoughts.map((thought) => {
                                 const isSelected = selected.has(thought.id);
                                 const isEditing = editingId === thought.id;
+
                                 return (
                                     <Card
                                         key={thought.id}
