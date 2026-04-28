@@ -1,6 +1,7 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
     Archive,
+    Brain,
     Globe,
     LayoutGrid,
     Menu,
@@ -8,6 +9,7 @@ import {
     Search,
 } from 'lucide-react';
 import { index as adminPostsIndex } from '@/actions/App/Http/Controllers/Admin/PostController';
+import { index as adminThinkstreamIndex } from '@/actions/App/Http/Controllers/Admin/ThinkstreamController';
 import AppLogo from '@/components/app-logo';
 import AppLogoIcon from '@/components/app-logo-icon';
 import { Breadcrumbs } from '@/components/breadcrumbs';
@@ -61,6 +63,11 @@ const mainNavItems: NavItem[] = [
         icon: NotebookPen,
     },
     {
+        title: 'Thinkstream',
+        href: adminThinkstreamIndex.url(),
+        icon: Brain,
+    },
+    {
         title: 'Backups',
         href: adminBackupsIndex.url(),
         icon: Archive,
@@ -84,12 +91,16 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const { currentUrl, isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
     const postsIndexUrl = adminPostsIndex.url();
     const backupsIndexUrl = adminBackupsIndex.url();
+    const thinkstreamIndexUrl = adminThinkstreamIndex.url();
     const isPostsActive =
         currentUrl === postsIndexUrl ||
         currentUrl.startsWith(`${postsIndexUrl}/`);
     const isBackupsActive =
         currentUrl === backupsIndexUrl ||
         currentUrl.startsWith(`${backupsIndexUrl}/`);
+    const isThinkstreamActive =
+        currentUrl === thinkstreamIndexUrl ||
+        currentUrl.startsWith(`${thinkstreamIndexUrl}/`);
     const resolvedMainNavItems = mainNavItems.map((item) => ({
         ...item,
         isActive:
@@ -97,7 +108,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                 ? isPostsActive
                 : item.href === backupsIndexUrl
                   ? isBackupsActive
-                  : item.isActive,
+                  : item.href === thinkstreamIndexUrl
+                    ? isThinkstreamActive
+                    : item.isActive,
     }));
 
     return (

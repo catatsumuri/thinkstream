@@ -14,6 +14,7 @@ use App\Models\PostNamespace;
 use App\Models\PostRevision;
 use App\Models\Tag;
 use App\Support\AiCostCalculator;
+use App\Support\ContentPathConflict;
 use App\Support\NamespaceBackupIndex;
 use App\Support\NamespaceRestoreArchive;
 use Illuminate\Http\JsonResponse;
@@ -404,7 +405,14 @@ class PostController extends Controller
         $post->load('tags');
 
         return Inertia::render('admin/posts/show', [
-            'namespace' => $namespace,
+            'namespace' => [
+                'id' => $namespace->id,
+                'name' => $namespace->name,
+                'slug' => $namespace->slug,
+                'full_path' => $namespace->full_path,
+                'is_system' => (bool) $namespace->is_system,
+            ],
+            'availableMoveNamespaces' => $this->availableMoveNamespaces($namespace),
             'navRoot' => $this->buildNavigationTree($rootNamespace),
             'post' => [
                 ...$post->only([
@@ -427,6 +435,67 @@ class PostController extends Controller
                 'tags' => $post->tags->pluck('name')->values()->all(),
             ],
         ]);
+    }
+
+    public function moveToNamespace(Request $request, PostNamespace $namespace, Post $post): RedirectResponse
+    {
+        $availableNamespaceIds = PostNamespace::query()
+            ->where(fn ($query) => $query->where('is_system', false)->orWhereNull('is_system'))
+            ->whereKeyNot($namespace->id)
+            ->pluck('id')
+            ->all();
+
+        $data = $request->validate([
+            'target_namespace_id' => ['required', 'integer', Rule::in($availableNamespaceIds)],
+        ]);
+
+        $targetNamespace = PostNamespace::query()
+            ->select(['id', 'slug', 'full_path', 'name'])
+            ->findOrFail($data['target_namespace_id']);
+
+        $newSlug = $this->resolveAvailableSlugForNamespace($post, $targetNamespace->id);
+
+        $post->update([
+            'namespace_id' => $targetNamespace->id,
+            'slug' => $newSlug,
+            'full_path' => trim(implode('/', array_filter([$targetNamespace->full_path, $newSlug])), '/'),
+        ]);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Post moved to namespace.']);
+
+        return to_route('admin.posts.show', ['namespace' => $targetNamespace, 'post' => $post->slug]);
+    }
+
+    /**
+     * @return array<int, array{id: int, name: string, full_path: string}>
+     */
+    private function availableMoveNamespaces(PostNamespace $currentNamespace): array
+    {
+        return PostNamespace::query()
+            ->where(fn ($query) => $query->where('is_system', false)->orWhereNull('is_system'))
+            ->whereKeyNot($currentNamespace->id)
+            ->orderBy('full_path')
+            ->get(['id', 'name', 'full_path'])
+            ->map(fn (PostNamespace $namespace) => [
+                'id' => $namespace->id,
+                'name' => $namespace->name,
+                'full_path' => $namespace->full_path,
+            ])
+            ->all();
+    }
+
+    private function resolveAvailableSlugForNamespace(Post $post, int $targetNamespaceId): string
+    {
+        $baseSlug = $post->slug;
+        $slug = $baseSlug;
+        $counter = 2;
+
+        while (ContentPathConflict::findPostConflict($targetNamespaceId, $slug, $post) !== null) {
+            $slug = "{$baseSlug}-{$counter}";
+            $counter++;
+        }
+
+        return $slug;
     }
 
     private function safeExternalUrl(?string $url): ?string
@@ -585,6 +654,11 @@ class PostController extends Controller
         $data = $request->validated();
         $tags = $data['tags'] ?? [];
         $filteredData = collect($data)->except('tags')->all();
+
+        if ($namespace->is_system) {
+            $filteredData['is_draft'] = true;
+            unset($filteredData['published_at']);
+        }
 
         $hasChanges = $post->title !== ($filteredData['title'] ?? $post->title)
             || $post->content !== ($filteredData['content'] ?? $post->content);

@@ -1,4 +1,5 @@
 import { Head, Link } from '@inertiajs/react';
+import { timeAgo } from '@/lib/time';
 import { home } from '@/routes';
 import { path as contentPath } from '@/routes/posts';
 
@@ -73,10 +74,15 @@ export default function TagShow({
                                                     <span className="font-medium">
                                                         {post.title}
                                                     </span>
-                                                    <span className="shrink-0 text-xs text-muted-foreground">
-                                                        {new Date(
+                                                    <span
+                                                        className="shrink-0 text-xs text-muted-foreground"
+                                                        title={new Date(
                                                             post.published_at,
                                                         ).toLocaleDateString()}
+                                                    >
+                                                        {timeAgo(
+                                                            post.published_at,
+                                                        )}
                                                     </span>
                                                 </Link>
                                             </li>

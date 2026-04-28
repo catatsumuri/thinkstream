@@ -3,10 +3,22 @@
 use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\NamespaceController;
 use App\Http\Controllers\Admin\PostController;
+use App\Http\Controllers\Admin\ThinkstreamController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () {
     Route::redirect('/', '/admin/posts')->name('index');
+
+    Route::get('thinkstream', [ThinkstreamController::class, 'index'])->name('thinkstream.index');
+    Route::post('thinkstream', [ThinkstreamController::class, 'storePage'])->name('thinkstream.storePage');
+    Route::post('thinkstream/save-to-scrap', [ThinkstreamController::class, 'saveToScrap'])->name('thinkstream.saveToScrap');
+    Route::delete('thinkstream/{page}', [ThinkstreamController::class, 'destroyPage'])->name('thinkstream.destroyPage');
+    Route::get('thinkstream/{page}', [ThinkstreamController::class, 'show'])->name('thinkstream.show');
+    Route::post('thinkstream/{page}', [ThinkstreamController::class, 'store'])->name('thinkstream.store');
+    Route::post('thinkstream/{page}/refine-title', [ThinkstreamController::class, 'refineTitle'])->name('thinkstream.refineTitle');
+    Route::patch('thinkstream/{page}/thoughts/{thought}', [ThinkstreamController::class, 'update'])->name('thinkstream.update');
+    Route::post('thinkstream/{page}/delete', [ThinkstreamController::class, 'destroyMany'])->name('thinkstream.destroyMany');
+    Route::post('thinkstream/{page}/structure', [ThinkstreamController::class, 'structureThoughts'])->name('thinkstream.structureThoughts');
 
     Route::patch('namespaces/reorder', [NamespaceController::class, 'reorder'])->name('namespaces.reorder');
     Route::resource('namespaces', NamespaceController::class)->except(['index', 'show']);
@@ -36,6 +48,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::post('/{namespace}', [PostController::class, 'store'])->name('store');
         Route::get('/{namespace}/{post:slug}', [PostController::class, 'show'])->name('show')->scopeBindings();
         Route::get('/{namespace}/{post:slug}/edit', [PostController::class, 'edit'])->name('edit')->scopeBindings();
+        Route::post('/{namespace}/{post:slug}/move-to-namespace', [PostController::class, 'moveToNamespace'])->name('moveToNamespace')->scopeBindings();
         Route::put('/{namespace}/{post:slug}', [PostController::class, 'update'])->name('update')->scopeBindings();
         Route::delete('/{namespace}/{post:slug}', [PostController::class, 'destroy'])->name('destroy')->scopeBindings();
         Route::post('/{namespace}/{post:slug}/sync-file', [PostController::class, 'storeSyncFile'])->name('storeSyncFile')->scopeBindings();

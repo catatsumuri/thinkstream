@@ -1,4 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
+import { timeAgo } from '@/lib/time';
 import {
     AlertTriangle,
     BookOpen,
@@ -609,9 +610,13 @@ export default function Show({
                                     className="text-xs text-muted-foreground/60"
                                 >
                                     Last updated:{' '}
-                                    {postDateFormatter.format(
-                                        new Date(post.updated_at),
-                                    )}
+                                    <span
+                                        title={postDateFormatter.format(
+                                            new Date(post.updated_at),
+                                        )}
+                                    >
+                                        {timeAgo(post.updated_at)}
+                                    </span>
                                 </time>
                             </footer>
                         </article>

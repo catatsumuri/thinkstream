@@ -42,6 +42,7 @@ type Namespace = {
     slug: string;
     full_path: string;
     name: string;
+    is_system: boolean;
 };
 
 type Post = {
@@ -514,143 +515,173 @@ export default function Edit({
                                                         type="hidden"
                                                         name="is_draft"
                                                         value={
-                                                            isDraft ? '1' : '0'
+                                                            namespace.is_system
+                                                                ? '1'
+                                                                : isDraft
+                                                                  ? '1'
+                                                                  : '0'
                                                         }
                                                     />
-                                                    <div className="flex items-center justify-between">
+                                                    {namespace.is_system ? (
                                                         <div className="flex items-center gap-3">
-                                                            <div
-                                                                className={cn(
-                                                                    'flex size-9 items-center justify-center rounded-lg',
-                                                                    isDraft
-                                                                        ? 'bg-amber-100 dark:bg-amber-900/30'
-                                                                        : 'bg-green-100 dark:bg-green-900/30',
-                                                                )}
-                                                            >
-                                                                {isDraft ? (
-                                                                    <EyeOff className="size-4 text-amber-700 dark:text-amber-400" />
-                                                                ) : (
-                                                                    <Eye className="size-4 text-green-700 dark:text-green-400" />
-                                                                )}
+                                                            <div className="flex size-9 items-center justify-center rounded-lg bg-violet-100 dark:bg-violet-900/30">
+                                                                <EyeOff className="size-4 text-violet-600 dark:text-violet-400" />
                                                             </div>
                                                             <div>
                                                                 <p className="text-sm font-medium">
-                                                                    {isDraft
-                                                                        ? 'Draft'
-                                                                        : 'Published'}
+                                                                    Always
+                                                                    private
                                                                 </p>
                                                                 <p className="text-xs text-muted-foreground">
-                                                                    {isDraft
-                                                                        ? 'Not visible'
-                                                                        : 'Visible to everyone'}
+                                                                    System
+                                                                    namespace —
+                                                                    cannot be
+                                                                    published
                                                                 </p>
                                                             </div>
                                                         </div>
-                                                        <Switch
-                                                            checked={!isDraft}
-                                                            onCheckedChange={(
-                                                                checked,
-                                                            ) => {
-                                                                setIsDraft(
-                                                                    !checked,
-                                                                );
-
-                                                                if (!checked) {
-                                                                    setRelativeTimeHint(
-                                                                        null,
-                                                                    );
-                                                                }
-                                                            }}
-                                                        />
-                                                    </div>
-
-                                                    {!isDraft && (
-                                                        <div className="mt-4 border-t border-border pt-4">
-                                                            <div className="flex items-center justify-between">
-                                                                <div className="flex items-center gap-2">
-                                                                    <Calendar className="size-4 text-muted-foreground" />
-                                                                    <Label className="text-sm font-normal">
-                                                                        Schedule
-                                                                    </Label>
-                                                                </div>
-                                                                <Switch
-                                                                    id="schedule_toggle"
-                                                                    checked={
-                                                                        scheduleEnabled
-                                                                    }
-                                                                    onCheckedChange={(
-                                                                        checked,
-                                                                    ) => {
-                                                                        setScheduleEnabled(
-                                                                            checked,
-                                                                        );
-
-                                                                        if (
-                                                                            !checked
-                                                                        ) {
-                                                                            setPublishedAt(
-                                                                                '',
-                                                                            );
-                                                                            setRelativeTimeHint(
-                                                                                null,
-                                                                            );
-                                                                        }
-                                                                    }}
-                                                                />
-                                                            </div>
-                                                            <input
-                                                                type="hidden"
-                                                                name="published_at"
-                                                                value={
-                                                                    scheduleEnabled
-                                                                        ? publishedAt
-                                                                        : ''
-                                                                }
-                                                            />
-                                                            {scheduleEnabled && (
-                                                                <div className="mt-3 space-y-2">
-                                                                    <Input
-                                                                        id="published_at"
-                                                                        type="datetime-local"
-                                                                        className="text-sm"
-                                                                        value={
-                                                                            publishedAt
-                                                                        }
-                                                                        onChange={(
-                                                                            e,
-                                                                        ) => {
-                                                                            const nextValue =
-                                                                                e
-                                                                                    .target
-                                                                                    .value;
-                                                                            setPublishedAt(
-                                                                                nextValue,
-                                                                            );
-                                                                            setRelativeTimeHint(
-                                                                                getRelativeTimeHint(
-                                                                                    nextValue,
-                                                                                    Date.now(),
-                                                                                ),
-                                                                            );
-                                                                        }}
-                                                                    />
-                                                                    {relativeTimeHint && (
-                                                                        <p className="text-xs text-muted-foreground">
-                                                                            {
-                                                                                relativeTimeHint
-                                                                            }
-                                                                        </p>
+                                                    ) : (
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="flex items-center gap-3">
+                                                                <div
+                                                                    className={cn(
+                                                                        'flex size-9 items-center justify-center rounded-lg',
+                                                                        isDraft
+                                                                            ? 'bg-amber-100 dark:bg-amber-900/30'
+                                                                            : 'bg-green-100 dark:bg-green-900/30',
+                                                                    )}
+                                                                >
+                                                                    {isDraft ? (
+                                                                        <EyeOff className="size-4 text-amber-700 dark:text-amber-400" />
+                                                                    ) : (
+                                                                        <Eye className="size-4 text-green-700 dark:text-green-400" />
                                                                     )}
                                                                 </div>
-                                                            )}
-                                                            <InputError
-                                                                message={
-                                                                    errors.published_at
+                                                                <div>
+                                                                    <p className="text-sm font-medium">
+                                                                        {isDraft
+                                                                            ? 'Draft'
+                                                                            : 'Published'}
+                                                                    </p>
+                                                                    <p className="text-xs text-muted-foreground">
+                                                                        {isDraft
+                                                                            ? 'Not visible'
+                                                                            : 'Visible to everyone'}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                            <Switch
+                                                                checked={
+                                                                    !isDraft
                                                                 }
+                                                                onCheckedChange={(
+                                                                    checked,
+                                                                ) => {
+                                                                    setIsDraft(
+                                                                        !checked,
+                                                                    );
+
+                                                                    if (
+                                                                        !checked
+                                                                    ) {
+                                                                        setRelativeTimeHint(
+                                                                            null,
+                                                                        );
+                                                                    }
+                                                                }}
                                                             />
                                                         </div>
                                                     )}
-                                                    {isDraft && (
+
+                                                    {!namespace.is_system &&
+                                                        !isDraft && (
+                                                            <div className="mt-4 border-t border-border pt-4">
+                                                                <div className="flex items-center justify-between">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <Calendar className="size-4 text-muted-foreground" />
+                                                                        <Label className="text-sm font-normal">
+                                                                            Schedule
+                                                                        </Label>
+                                                                    </div>
+                                                                    <Switch
+                                                                        id="schedule_toggle"
+                                                                        checked={
+                                                                            scheduleEnabled
+                                                                        }
+                                                                        onCheckedChange={(
+                                                                            checked,
+                                                                        ) => {
+                                                                            setScheduleEnabled(
+                                                                                checked,
+                                                                            );
+
+                                                                            if (
+                                                                                !checked
+                                                                            ) {
+                                                                                setPublishedAt(
+                                                                                    '',
+                                                                                );
+                                                                                setRelativeTimeHint(
+                                                                                    null,
+                                                                                );
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                </div>
+                                                                <input
+                                                                    type="hidden"
+                                                                    name="published_at"
+                                                                    value={
+                                                                        scheduleEnabled
+                                                                            ? publishedAt
+                                                                            : ''
+                                                                    }
+                                                                />
+                                                                {scheduleEnabled && (
+                                                                    <div className="mt-3 space-y-2">
+                                                                        <Input
+                                                                            id="published_at"
+                                                                            type="datetime-local"
+                                                                            className="text-sm"
+                                                                            value={
+                                                                                publishedAt
+                                                                            }
+                                                                            onChange={(
+                                                                                e,
+                                                                            ) => {
+                                                                                const nextValue =
+                                                                                    e
+                                                                                        .target
+                                                                                        .value;
+                                                                                setPublishedAt(
+                                                                                    nextValue,
+                                                                                );
+                                                                                setRelativeTimeHint(
+                                                                                    getRelativeTimeHint(
+                                                                                        nextValue,
+                                                                                        Date.now(),
+                                                                                    ),
+                                                                                );
+                                                                            }}
+                                                                        />
+                                                                        {relativeTimeHint && (
+                                                                            <p className="text-xs text-muted-foreground">
+                                                                                {
+                                                                                    relativeTimeHint
+                                                                                }
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                                <InputError
+                                                                    message={
+                                                                        errors.published_at
+                                                                    }
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    {(namespace.is_system ||
+                                                        isDraft) && (
                                                         <input
                                                             type="hidden"
                                                             name="published_at"

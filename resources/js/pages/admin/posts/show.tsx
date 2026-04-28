@@ -49,6 +49,7 @@ import {
     destroySyncFile,
     edit,
     index,
+    moveToNamespace,
     namespace as namespaceRoute,
     revisions,
     show,
@@ -127,6 +128,13 @@ type Namespace = {
     name: string;
     slug: string;
     full_path: string;
+    is_system: boolean;
+};
+
+type MoveNamespaceOption = {
+    id: number;
+    name: string;
+    full_path: string;
 };
 
 type Post = {
@@ -149,10 +157,12 @@ type Post = {
 };
 
 export default function Show({
+    availableMoveNamespaces,
     namespace,
     navRoot,
     post,
 }: {
+    availableMoveNamespaces: MoveNamespaceOption[];
     namespace: Namespace;
     navRoot: ContentNavNode;
     post: Post;
@@ -786,6 +796,128 @@ export default function Show({
                                                 <History className="size-4 text-muted-foreground" />
                                                 <span>Revisions</span>
                                             </Link>
+                                            {namespace.is_system &&
+                                                availableMoveNamespaces.length >
+                                                    0 && (
+                                                    <Dialog>
+                                                        <DialogTrigger asChild>
+                                                            <button
+                                                                type="button"
+                                                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+                                                            >
+                                                                <FolderSync className="size-4 text-muted-foreground" />
+                                                                <span>
+                                                                    Move to
+                                                                    Namespace
+                                                                </span>
+                                                            </button>
+                                                        </DialogTrigger>
+                                                        <DialogContent>
+                                                            <DialogTitle>
+                                                                Move &ldquo;
+                                                                {post.title}
+                                                                &rdquo;
+                                                            </DialogTitle>
+                                                            <DialogDescription>
+                                                                Move this post
+                                                                into an existing
+                                                                namespace. If
+                                                                the slug is
+                                                                already taken
+                                                                there, a numeric
+                                                                suffix will be
+                                                                added
+                                                                automatically.
+                                                            </DialogDescription>
+                                                            <Form
+                                                                action={moveToNamespace(
+                                                                    {
+                                                                        namespace:
+                                                                            namespace.id,
+                                                                        post: post.slug,
+                                                                    },
+                                                                )}
+                                                                className="space-y-4"
+                                                            >
+                                                                {({
+                                                                    processing,
+                                                                    errors,
+                                                                }) => (
+                                                                    <>
+                                                                        <div className="space-y-2">
+                                                                            <label
+                                                                                htmlFor="target_namespace_id"
+                                                                                className="text-sm font-medium"
+                                                                            >
+                                                                                Target
+                                                                                namespace
+                                                                            </label>
+                                                                            <select
+                                                                                id="target_namespace_id"
+                                                                                name="target_namespace_id"
+                                                                                defaultValue=""
+                                                                                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                                                                            >
+                                                                                <option
+                                                                                    value=""
+                                                                                    disabled
+                                                                                >
+                                                                                    Choose
+                                                                                    a
+                                                                                    namespace
+                                                                                </option>
+                                                                                {availableMoveNamespaces.map(
+                                                                                    (
+                                                                                        targetNamespace,
+                                                                                    ) => (
+                                                                                        <option
+                                                                                            key={
+                                                                                                targetNamespace.id
+                                                                                            }
+                                                                                            value={
+                                                                                                targetNamespace.id
+                                                                                            }
+                                                                                        >
+                                                                                            {
+                                                                                                targetNamespace.full_path
+                                                                                            }
+                                                                                        </option>
+                                                                                    ),
+                                                                                )}
+                                                                            </select>
+                                                                            {errors.target_namespace_id && (
+                                                                                <p className="text-sm text-destructive">
+                                                                                    {
+                                                                                        errors.target_namespace_id
+                                                                                    }
+                                                                                </p>
+                                                                            )}
+                                                                        </div>
+                                                                        <DialogFooter className="gap-2">
+                                                                            <DialogClose
+                                                                                asChild
+                                                                            >
+                                                                                <Button variant="secondary">
+                                                                                    Cancel
+                                                                                </Button>
+                                                                            </DialogClose>
+                                                                            <Button
+                                                                                disabled={
+                                                                                    processing
+                                                                                }
+                                                                                asChild
+                                                                            >
+                                                                                <button type="submit">
+                                                                                    Move
+                                                                                </button>
+                                                                            </Button>
+                                                                        </DialogFooter>
+                                                                    </>
+                                                                )}
+                                                            </Form>
+                                                        </DialogContent>
+                                                    </Dialog>
+                                                )}
                                             <Dialog>
                                                 <DialogTrigger asChild>
                                                     <button

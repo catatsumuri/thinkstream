@@ -38,11 +38,13 @@ function withinIsolatedNamespaceBackupDirectory(callable $callback): mixed
     }
 }
 
-test('database seeder creates only the syntax namespace', function () {
+test('database seeder creates the system and syntax namespaces', function () {
     withinIsolatedNamespaceBackupDirectory(function (): void {
         $this->seed(DatabaseSeeder::class);
 
-        expect(PostNamespace::query()->pluck('slug')->all())->toBe(['syntax']);
+        expect(
+            PostNamespace::query()->orderBy('slug')->pluck('slug')->all()
+        )->toBe(['scrap', 'syntax']);
     });
 });
 

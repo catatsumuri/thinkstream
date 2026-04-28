@@ -30,6 +30,7 @@ import {
     Folder,
     FolderPlus,
     GripVertical,
+    Inbox,
     Pencil,
     Upload,
     Trash2,
@@ -61,6 +62,7 @@ type Namespace = {
     full_path: string;
     name: string;
     is_published: boolean;
+    is_system: boolean;
     posts_count: number;
     children: Namespace[];
 };
@@ -129,10 +131,12 @@ function summarizeNamespaces(namespaces: Namespace[]): NamespaceSummary {
                 childCount += 1;
             }
 
-            if (namespace.is_published) {
-                publishedCount += 1;
-            } else {
-                draftCount += 1;
+            if (!namespace.is_system) {
+                if (namespace.is_published) {
+                    publishedCount += 1;
+                } else {
+                    draftCount += 1;
+                }
             }
 
             visit(namespace.children, depth + 1);
@@ -163,6 +167,45 @@ function sortLabel(sort: Sort): string {
     const direction = sort.direction === 'asc' ? 'ascending' : 'descending';
 
     return `${label}, ${direction}`;
+}
+
+function SystemRow({ namespace }: { namespace: Namespace }) {
+    return (
+        <tr className="border-b bg-violet-50/50 dark:bg-violet-950/10">
+            <td className="w-8 px-2 py-3" />
+            <td className="px-4 py-3 font-medium">
+                <div className="flex items-center gap-1.5">
+                    <Inbox className="size-3.5 shrink-0 text-violet-500" />
+                    <Link
+                        href={namespaceRoute.url(namespace.id)}
+                        className="text-primary hover:underline"
+                    >
+                        {namespace.name}
+                    </Link>
+                </div>
+            </td>
+            <td className="px-4 py-3 text-muted-foreground">
+                /{namespace.slug}
+            </td>
+            <td className="px-4 py-3">
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-700 dark:bg-violet-900/30 dark:text-violet-400">
+                    <Inbox className="size-3" />
+                    System
+                </span>
+            </td>
+            <td className="px-4 py-3 text-muted-foreground">
+                {namespace.posts_count}
+            </td>
+            <td className="px-4 py-3 text-right">
+                <Button variant="outline" size="sm" asChild>
+                    <Link href={namespaceRoute.url(namespace.id)}>
+                        <Folder className="size-4" />
+                        Browse
+                    </Link>
+                </Button>
+            </td>
+        </tr>
+    );
 }
 
 function DeleteNamespaceDialog({ namespace }: { namespace: Namespace }) {
@@ -1139,6 +1182,9 @@ export default function Index({
     const [reorderMode, setReorderMode] = useState(false);
     const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
+    const systemNamespaces = namespaces.filter((ns) => ns.is_system);
+    const regularNamespaces = namespaces.filter((ns) => !ns.is_system);
+
     function toggleExpand(id: number) {
         setExpandedIds((prev) => {
             const next = new Set(prev);
@@ -1171,11 +1217,13 @@ export default function Index({
             return;
         }
 
-        const oldIndex = namespaces.findIndex((ns) => ns.id === active.id);
-        const newIndex = namespaces.findIndex((ns) => ns.id === over.id);
-        const reordered = arrayMove(namespaces, oldIndex, newIndex);
+        const oldIndex = regularNamespaces.findIndex(
+            (ns) => ns.id === active.id,
+        );
+        const newIndex = regularNamespaces.findIndex((ns) => ns.id === over.id);
+        const reordered = arrayMove(regularNamespaces, oldIndex, newIndex);
 
-        setNamespaces(reordered);
+        setNamespaces([...systemNamespaces, ...reordered]);
         router.patch(
             NamespaceController.reorder.url(),
             { ids: reordered.map((ns) => ns.id) },
@@ -1317,15 +1365,21 @@ export default function Index({
                                         </tr>
                                     </thead>
                                     <tbody>
+                                        {systemNamespaces.map((ns) => (
+                                            <SystemRow
+                                                key={ns.id}
+                                                namespace={ns}
+                                            />
+                                        ))}
                                         <SortableContext
-                                            items={namespaces.map(
+                                            items={regularNamespaces.map(
                                                 (ns) => ns.id,
                                             )}
                                             strategy={
                                                 verticalListSortingStrategy
                                             }
                                         >
-                                            {namespaces.flatMap((ns) => [
+                                            {regularNamespaces.flatMap((ns) => [
                                                 <SortableRow
                                                     key={ns.id}
                                                     namespace={ns}
