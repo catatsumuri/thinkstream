@@ -58,6 +58,18 @@ return [
             'secret_access_key' => env('AWS_SECRET_ACCESS_KEY'),
             'session_token' => env('AWS_SESSION_TOKEN'),
             'use_default_credential_provider' => env('AWS_USE_DEFAULT_CREDENTIALS', true),
+            'models' => [
+                'text' => [
+                    'cheapest' => 'us.anthropic.claude-haiku-4-5-20251001-v1:0',
+                    'smartest' => 'us.anthropic.claude-opus-4-6-v1',
+                ],
+            ],
+            'pricing' => [
+                'us.anthropic.claude-haiku-4-5-20251001-v1:0' => ['input_per_1m' => 0.25, 'output_per_1m' => 1.25],
+                'us.anthropic.claude-sonnet-4-5-20250929-v1:0' => ['input_per_1m' => 3.00, 'output_per_1m' => 15.00],
+                'us.anthropic.claude-opus-4-6-v1' => ['input_per_1m' => 15.00, 'output_per_1m' => 75.00],
+                'amazon.nova-canvas-v1:0' => ['per_image' => 0.04],
+            ],
         ],
 
         'anthropic' => [

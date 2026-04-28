@@ -1,5 +1,6 @@
 <?php
 
+use App\Ai\Agents\CoverImagePromptAgent;
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\User;
@@ -587,6 +588,7 @@ test('deleting a namespace removes the cover image file', function () {
 
 test('generating a namespace cover image is forbidden when ai is disabled', function () {
     Image::fake();
+    config()->set('thinkstream.ai.enabled', false);
 
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create();
@@ -601,6 +603,9 @@ test('generating a namespace cover image is forbidden when ai is disabled', func
 test('generating a namespace cover image stores a new image and replaces the old one', function () {
     Storage::fake('public');
     Image::fake();
+    CoverImagePromptAgent::fake([
+        'An abstract landscape illustration representing technical guides about routing and validation.',
+    ])->preventStrayPrompts();
     config()->set('thinkstream.ai.enabled', true);
 
     $user = User::factory()->create();
@@ -624,12 +629,21 @@ test('generating a namespace cover image stores a new image and replaces the old
     $this->actingAs($user)
         ->from(route('admin.namespaces.edit', $namespace))
         ->post(route('admin.namespaces.generate-cover-image', $namespace))
-        ->assertRedirect(route('admin.namespaces.edit', $namespace));
+        ->assertRedirect(route('admin.namespaces.edit', $namespace))
+        ->assertInertiaFlash('toast', [
+            'type' => 'success',
+            'message' => 'Cover image generated. (cost: $0.0400)',
+        ]);
 
-    Image::assertGenerated(fn ($prompt) => $prompt->contains('Guides')
-        && $prompt->contains('Step-by-step writing guides.')
-        && $prompt->contains('Routing')
-        && $prompt->contains('Validation')
+    CoverImagePromptAgent::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, 'Section name: Guides')
+        && str_contains($prompt->prompt, 'Description: Step-by-step writing guides.')
+        && str_contains($prompt->prompt, 'Post titles:')
+        && str_contains($prompt->prompt, 'Routing')
+        && str_contains($prompt->prompt, 'Validation')
+    );
+
+    Image::assertGenerated(fn ($prompt) => $prompt->contains('An abstract landscape illustration representing technical guides about routing and validation.')
+        && $prompt->contains('Do not include any text, letters, words, or characters in the image.')
         && $prompt->isLandscape()
     );
 
