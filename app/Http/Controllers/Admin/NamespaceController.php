@@ -2,13 +2,16 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Ai\Agents\CoverImagePromptAgent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\StoreNamespaceRequest;
 use App\Http\Requests\Admin\UpdateNamespaceRequest;
 use App\Models\PostNamespace;
+use App\Support\AiCostCalculator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -105,18 +108,22 @@ class NamespaceController extends Controller
 
         $postTitles = $namespace->posts()->limit(10)->pluck('title')->implode(', ');
 
-        $subject = $postTitles !== ''
-            ? "topics: {$postTitles}"
-            : "section: {$namespace->name}";
+        $metadata = "Section name: {$namespace->name}";
 
-        $description = $namespace->description !== null && $namespace->description !== ''
-            ? " It covers: {$namespace->description}."
-            : '';
+        if ($namespace->description !== null && $namespace->description !== '') {
+            $metadata .= "\nDescription: {$namespace->description}";
+        }
 
-        $prompt = "Wide landscape cover image for a documentation section called \"{$namespace->name}\".{$description} Visually represent these {$subject}. Professional, clean, abstract, suitable for a technical documentation website.";
+        if ($postTitles !== '') {
+            $metadata .= "\nPost titles: {$postTitles}";
+        }
 
-        $image = Image::of($prompt)->landscape()->generate();
-        $newCoverImage = $image->storePublicly('namespaces', 'public');
+        $agentResponse = (new CoverImagePromptAgent)->prompt($metadata);
+
+        $prompt = "Wide landscape cover image for a technical documentation website. {$agentResponse->text} Professional, clean, abstract. Do not include any text, letters, words, or characters in the image.";
+
+        $imageResponse = Image::of($prompt)->landscape()->generate();
+        $newCoverImage = $imageResponse->storePublicly('namespaces', 'public');
 
         if ($newCoverImage === false) {
             throw new RuntimeException('Failed to store the generated namespace cover image.');
@@ -131,6 +138,25 @@ class NamespaceController extends Controller
         if ($previousCoverImage) {
             Storage::disk('public')->delete($previousCoverImage);
         }
+
+        $cost = AiCostCalculator::sum(
+            AiCostCalculator::forText($agentResponse->meta, $agentResponse->usage),
+            AiCostCalculator::forImage($imageResponse->meta),
+        );
+
+        Log::info('Cover image generated', [
+            'namespace_id' => $namespace->id,
+            'agent_model' => $agentResponse->meta->model,
+            'agent_usage' => $agentResponse->usage->toArray(),
+            'image_model' => $imageResponse->meta->model,
+            'cost_usd' => $cost,
+        ]);
+
+        $message = $cost !== null
+            ? __('Cover image generated. (cost: $:cost)', ['cost' => number_format($cost, 4)])
+            : __('Cover image generated.');
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
 
         return back();
     }
