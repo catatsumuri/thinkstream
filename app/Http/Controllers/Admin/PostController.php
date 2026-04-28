@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Ai\Agents\MarkdownStructureAgent;
+use App\Ai\Agents\TranslateSelectionAgent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RestorePostRevisionRequest;
 use App\Http\Requests\Admin\StorePostRequest;
@@ -11,14 +13,17 @@ use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\PostRevision;
 use App\Models\Tag;
+use App\Support\AiCostCalculator;
 use App\Support\NamespaceBackupIndex;
 use App\Support\NamespaceRestoreArchive;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\StreamedEvent;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Inertia\Inertia;
@@ -569,6 +574,7 @@ class PostController extends Controller
             ],
             'availableTags' => Tag::orderBy('name')->pluck('name')->all(),
             'slugPrefix' => trim($namespace->full_path, '/').'/',
+            'aiEnabled' => config('thinkstream.ai.enabled'),
         ]);
     }
 
@@ -665,6 +671,68 @@ class PostController extends Controller
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Revision restored.']);
 
         return to_route('admin.posts.revisions', ['namespace' => $namespace, 'post' => $post->slug]);
+    }
+
+    public function structureMarkdown(Request $request, PostNamespace $namespace, Post $post): JsonResponse
+    {
+        abort_unless(config('thinkstream.ai.enabled'), 403);
+
+        $validated = $request->validate([
+            'content' => ['required', 'string', 'max:50000'],
+        ]);
+
+        $agentResponse = (new MarkdownStructureAgent)->prompt($validated['content']);
+
+        $cost = AiCostCalculator::forText($agentResponse->meta, $agentResponse->usage);
+
+        Log::info('Markdown structured with AI', [
+            'post_id' => $post->id,
+            'agent_model' => $agentResponse->meta->model,
+            'agent_usage' => $agentResponse->usage->toArray(),
+            'cost_usd' => $cost,
+        ]);
+
+        $message = $cost !== null
+            ? __('Content structured. (cost: $:cost)', ['cost' => number_format($cost, 4)])
+            : __('Content structured.');
+
+        return response()->json([
+            'content' => $agentResponse['content'],
+            'message' => $message,
+        ]);
+    }
+
+    public function translateMarkdown(Request $request, PostNamespace $namespace, Post $post): JsonResponse
+    {
+        abort_unless(config('thinkstream.ai.enabled'), 403);
+
+        $validated = $request->validate([
+            'content' => ['required', 'string', 'max:50000'],
+        ]);
+
+        $locale = (string) config('app.locale', 'en');
+        $targetLanguage = \Locale::getDisplayLanguage($locale, 'en') ?: $locale;
+
+        $agentResponse = (new TranslateSelectionAgent($targetLanguage))->prompt($validated['content']);
+
+        $cost = AiCostCalculator::forText($agentResponse->meta, $agentResponse->usage);
+
+        Log::info('Markdown translated with AI', [
+            'post_id' => $post->id,
+            'target_language' => $targetLanguage,
+            'agent_model' => $agentResponse->meta->model,
+            'agent_usage' => $agentResponse->usage->toArray(),
+            'cost_usd' => $cost,
+        ]);
+
+        $message = $cost !== null
+            ? __('Translated to :language. (cost: $:cost)', ['language' => $targetLanguage, 'cost' => number_format($cost, 4)])
+            : __('Translated to :language.', ['language' => $targetLanguage]);
+
+        return response()->json([
+            'content' => $agentResponse['content'],
+            'message' => $message,
+        ]);
     }
 
     public function uploadNamespaceImage(UploadPostImageRequest $request, PostNamespace $namespace): RedirectResponse

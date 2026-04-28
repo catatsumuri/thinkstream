@@ -102,9 +102,13 @@ class NamespaceController extends Controller
         return to_route('admin.posts.namespace', $namespace);
     }
 
-    public function generateCoverImage(PostNamespace $namespace): RedirectResponse
+    public function generateCoverImage(Request $request, PostNamespace $namespace): RedirectResponse
     {
         abort_unless(config('thinkstream.ai.enabled'), 403);
+
+        $validated = $request->validate([
+            'additional_prompt' => ['nullable', 'string', 'max:500'],
+        ]);
 
         $postTitles = $namespace->posts()->limit(10)->pluck('title')->implode(', ');
 
@@ -116,6 +120,12 @@ class NamespaceController extends Controller
 
         if ($postTitles !== '') {
             $metadata .= "\nPost titles: {$postTitles}";
+        }
+
+        $additionalPrompt = trim($validated['additional_prompt'] ?? '');
+
+        if ($additionalPrompt !== '') {
+            $metadata .= "\nAdditional style guidance from user: {$additionalPrompt}";
         }
 
         $agentResponse = (new CoverImagePromptAgent)->prompt($metadata);
