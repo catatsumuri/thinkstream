@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $this->call([
+            ScrapNamespaceSeeder::class,
             SyntaxSeeder::class,
             NamespaceBackupSeeder::class,
             // RoutingCheckSeeder::class, // for testing

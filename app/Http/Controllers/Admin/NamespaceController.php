@@ -88,6 +88,8 @@ class NamespaceController extends Controller
 
     public function update(UpdateNamespaceRequest $request, PostNamespace $namespace): RedirectResponse
     {
+        abort_if($namespace->is_system, 403);
+
         $data = $request->safe()->except('cover_image');
 
         if ($request->hasFile('cover_image')) {
@@ -173,6 +175,8 @@ class NamespaceController extends Controller
 
     public function destroy(PostNamespace $namespace): RedirectResponse
     {
+        abort_if($namespace->is_system, 403);
+
         $namespace->deleteRecursively();
 
         return to_route('admin.posts.index');

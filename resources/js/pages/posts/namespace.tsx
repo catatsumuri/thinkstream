@@ -1,4 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
+import { timeAgo } from '@/lib/time';
 import {
     AlertTriangle,
     BookOpen,
@@ -344,11 +345,19 @@ export default function Namespace({
                                                     </p>
                                                 </div>
                                                 <div className="shrink-0 text-sm text-muted-foreground">
-                                                    {post.published_at
-                                                        ? new Date(
-                                                              post.published_at,
-                                                          ).toLocaleDateString()
-                                                        : 'Draft'}
+                                                    {post.published_at ? (
+                                                        <span
+                                                            title={new Date(
+                                                                post.published_at,
+                                                            ).toLocaleDateString()}
+                                                        >
+                                                            {timeAgo(
+                                                                post.published_at,
+                                                            )}
+                                                        </span>
+                                                    ) : (
+                                                        'Draft'
+                                                    )}
                                                 </div>
                                             </Link>
                                         ))}

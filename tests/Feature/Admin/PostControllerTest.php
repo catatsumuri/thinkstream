@@ -1234,6 +1234,33 @@ test('authenticated users can view a post details page', function () {
         );
 });
 
+test('admin post details page includes move namespace options for system namespaces', function () {
+    $user = User::factory()->create();
+    $scrap = PostNamespace::factory()->create([
+        'slug' => 'scrap',
+        'full_path' => 'scrap',
+        'is_system' => true,
+    ]);
+    $target = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+        'is_system' => false,
+        'name' => 'Guides',
+    ]);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $scrap->id,
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.show', [$scrap, $post]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/show')
+            ->where('availableMoveNamespaces.0.id', $target->id)
+            ->where('availableMoveNamespaces.0.full_path', 'guides')
+        );
+});
+
 test('admin post details page does not expose unsafe referer links', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create();
@@ -1409,6 +1436,97 @@ test('post details are scoped to their namespace', function () {
     $this->actingAs($user)
         ->get(route('admin.posts.show', [$wrongNamespace, $post]))
         ->assertNotFound();
+});
+
+test('authenticated users can move a post to an existing namespace', function () {
+    $user = User::factory()->create();
+    $sourceNamespace = PostNamespace::factory()->create([
+        'slug' => 'scrap',
+        'full_path' => 'scrap',
+        'is_system' => true,
+    ]);
+    $targetNamespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+        'is_system' => false,
+    ]);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $sourceNamespace->id,
+        'slug' => 'artisan-note',
+        'full_path' => 'scrap/artisan-note',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.moveToNamespace', [$sourceNamespace, $post]), [
+            'target_namespace_id' => $targetNamespace->id,
+        ])
+        ->assertRedirect(route('admin.posts.show', [$targetNamespace, 'artisan-note']))
+        ->assertSessionHas('inertia.flash_data.toast', [
+            'type' => 'success',
+            'message' => 'Post moved to namespace.',
+        ]);
+
+    $post->refresh();
+    expect($post->namespace_id)->toBe($targetNamespace->id);
+    expect($post->slug)->toBe('artisan-note');
+    expect($post->full_path)->toBe('guides/artisan-note');
+});
+
+test('moving a post appends a numeric suffix when the slug is already taken in the target namespace', function () {
+    $user = User::factory()->create();
+    $sourceNamespace = PostNamespace::factory()->create([
+        'slug' => 'scrap',
+        'full_path' => 'scrap',
+        'is_system' => true,
+    ]);
+    $targetNamespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+        'is_system' => false,
+    ]);
+    Post::factory()->for($user)->create([
+        'namespace_id' => $targetNamespace->id,
+        'slug' => 'artisan-note',
+        'full_path' => 'guides/artisan-note',
+    ]);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $sourceNamespace->id,
+        'slug' => 'artisan-note',
+        'full_path' => 'scrap/artisan-note',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.moveToNamespace', [$sourceNamespace, $post]), [
+            'target_namespace_id' => $targetNamespace->id,
+        ])
+        ->assertRedirect(route('admin.posts.show', [$targetNamespace, 'artisan-note-2']));
+
+    $post->refresh();
+    expect($post->slug)->toBe('artisan-note-2');
+    expect($post->full_path)->toBe('guides/artisan-note-2');
+});
+
+test('moving a post rejects system target namespaces', function () {
+    $user = User::factory()->create();
+    $sourceNamespace = PostNamespace::factory()->create([
+        'slug' => 'scrap',
+        'full_path' => 'scrap',
+        'is_system' => true,
+    ]);
+    $targetNamespace = PostNamespace::factory()->create([
+        'slug' => 'archive',
+        'full_path' => 'archive',
+        'is_system' => true,
+    ]);
+    $post = Post::factory()->for($user)->create([
+        'namespace_id' => $sourceNamespace->id,
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.moveToNamespace', [$sourceNamespace, $post]), [
+            'target_namespace_id' => $targetNamespace->id,
+        ])
+        ->assertSessionHasErrors('target_namespace_id');
 });
 
 test('authenticated users can update a post', function () {

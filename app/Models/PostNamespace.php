@@ -27,6 +27,7 @@ class PostNamespace extends Model
         'description',
         'cover_image',
         'is_published',
+        'is_system',
         'post_order',
     ];
 
@@ -36,6 +37,7 @@ class PostNamespace extends Model
     {
         return [
             'is_published' => 'boolean',
+            'is_system' => 'boolean',
             'post_order' => 'array',
         ];
     }
