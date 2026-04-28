@@ -1,4 +1,4 @@
-import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
+import { Form, Head, Link, setLayoutProps, useHttp } from '@inertiajs/react';
 import {
     ArrowLeft,
     Calendar,
@@ -10,15 +10,21 @@ import {
     Link2,
     Minimize2,
     Save,
+    Sparkles,
     Tag,
 } from 'lucide-react';
+import { Languages } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { toast } from 'sonner';
+import PostController from '@/actions/App/Http/Controllers/Admin/PostController';
 import InputError from '@/components/input-error';
 import MarkdownEditor from '@/components/markdown-editor';
+import type { MarkdownEditorRef } from '@/components/markdown-editor';
 import TagInput from '@/components/tag-input';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { Switch } from '@/components/ui/switch';
 import ViewContextBadge from '@/components/view-context-badge';
 import { cn } from '@/lib/utils';
@@ -58,11 +64,13 @@ export default function Edit({
     post,
     slugPrefix,
     availableTags,
+    aiEnabled,
 }: {
     namespace: Namespace;
     post: Post;
     slugPrefix: string;
     availableTags: string[];
+    aiEnabled: boolean;
 }) {
     const initialPublishedAt = post.published_at
         ? new Date(post.published_at).toISOString().slice(0, 16)
@@ -87,6 +95,70 @@ export default function Edit({
             returnTo: params.get('return_to'),
         };
     }, []);
+
+    const editorRef = useRef<MarkdownEditorRef>(null);
+    const [hasSelection, setHasSelection] = useState(false);
+    const {
+        setData: setStructureData,
+        post: structurePost,
+        processing: structuring,
+    } = useHttp({ content: '' });
+    const {
+        setData: setTranslateData,
+        post: translatePost,
+        processing: translating,
+    } = useHttp({ content: '' });
+
+    function runSelectionAction(
+        setData: (key: string, value: string) => void,
+        post: (url: string, options: object) => void,
+        url: string,
+    ) {
+        const selection = editorRef.current?.getSelection();
+
+        if (!selection) {
+            return;
+        }
+
+        setData('content', selection.text);
+        post(url, {
+            onSuccess: (response: unknown) => {
+                const { content, message } = response as {
+                    content: string;
+                    message: string;
+                };
+                editorRef.current?.replaceRange(
+                    selection.start,
+                    selection.end,
+                    content,
+                );
+                setHasUnsavedChanges(true);
+                toast.success(message);
+            },
+        });
+    }
+
+    function structureMarkdown() {
+        runSelectionAction(
+            setStructureData,
+            structurePost,
+            PostController.structureMarkdown.url({
+                namespace: namespace.id,
+                post: post.slug,
+            }),
+        );
+    }
+
+    function translateMarkdown() {
+        runSelectionAction(
+            setTranslateData,
+            translatePost,
+            PostController.translateMarkdown.url({
+                namespace: namespace.id,
+                post: post.slug,
+            }),
+        );
+    }
 
     const [metaPanelOpen, setMetaPanelOpen] = useState(true);
     const [slug, setSlug] = useState(post.slug);
@@ -343,6 +415,7 @@ export default function Edit({
                                         </div>
 
                                         <MarkdownEditor
+                                            ref={editorRef}
                                             name="content"
                                             defaultValue={post.content}
                                             error={errors.content}
@@ -351,6 +424,72 @@ export default function Edit({
                                                 post: post.slug,
                                             })}
                                             jumpTo={jumpTo}
+                                            onSelectionChange={
+                                                aiEnabled && !post.is_syncing
+                                                    ? setHasSelection
+                                                    : undefined
+                                            }
+                                            toolbar={
+                                                aiEnabled &&
+                                                !post.is_syncing ? (
+                                                    <div className="flex items-center gap-1.5">
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={
+                                                                !hasSelection ||
+                                                                structuring ||
+                                                                translating
+                                                            }
+                                                            title={
+                                                                !hasSelection
+                                                                    ? 'Select text in the editor to structure it'
+                                                                    : undefined
+                                                            }
+                                                            onClick={
+                                                                structureMarkdown
+                                                            }
+                                                        >
+                                                            {structuring ? (
+                                                                <Spinner className="mr-1.5" />
+                                                            ) : (
+                                                                <Sparkles className="mr-1.5 size-3.5" />
+                                                            )}
+                                                            {structuring
+                                                                ? 'Structuring…'
+                                                                : 'Structure'}
+                                                        </Button>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            size="sm"
+                                                            disabled={
+                                                                !hasSelection ||
+                                                                structuring ||
+                                                                translating
+                                                            }
+                                                            title={
+                                                                !hasSelection
+                                                                    ? 'Select text in the editor to translate it'
+                                                                    : undefined
+                                                            }
+                                                            onClick={
+                                                                translateMarkdown
+                                                            }
+                                                        >
+                                                            {translating ? (
+                                                                <Spinner className="mr-1.5" />
+                                                            ) : (
+                                                                <Languages className="mr-1.5 size-3.5" />
+                                                            )}
+                                                            {translating
+                                                                ? 'Translating…'
+                                                                : 'Translate'}
+                                                        </Button>
+                                                    </div>
+                                                ) : undefined
+                                            }
                                         />
                                     </main>
 

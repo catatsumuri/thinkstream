@@ -1,11 +1,13 @@
 import { Head, router, setLayoutProps, useForm } from '@inertiajs/react';
+import { Sparkles } from 'lucide-react';
+import { useState } from 'react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import CoverImageDropzone from '@/components/cover-image-dropzone';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
 import {
     index as namespacesIndex,
@@ -49,11 +51,12 @@ export default function Edit({
     });
 
     const [generating, setGenerating] = useState(false);
+    const [additionalPrompt, setAdditionalPrompt] = useState('');
 
     function generateCoverImage() {
         router.post(
             NamespaceController.generateCoverImage.url(namespace.id),
-            {},
+            { additional_prompt: additionalPrompt },
             {
                 onStart: () => setGenerating(true),
                 onFinish: () => setGenerating(false),
@@ -152,12 +155,29 @@ export default function Edit({
                                     disabled={generating || processing}
                                     onClick={generateCoverImage}
                                 >
+                                    {generating ? (
+                                        <Spinner className="mr-1.5" />
+                                    ) : (
+                                        <Sparkles className="mr-1.5 size-3.5" />
+                                    )}
                                     {generating
                                         ? 'Generating…'
                                         : 'Generate with AI'}
                                 </Button>
                             )}
                         </div>
+                        {aiEnabled && (
+                            <Input
+                                type="text"
+                                value={additionalPrompt}
+                                onChange={(e) =>
+                                    setAdditionalPrompt(e.target.value)
+                                }
+                                placeholder="Optional: add style guidance, colors, mood… (any language)"
+                                disabled={generating || processing}
+                                maxLength={500}
+                            />
+                        )}
                         <CoverImageDropzone
                             id="cover_image"
                             currentImageUrl={namespace.cover_image_url}

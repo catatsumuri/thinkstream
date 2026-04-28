@@ -655,6 +655,43 @@ test('generating a namespace cover image stores a new image and replaces the old
     Storage::disk('public')->assertExists($newPath);
 });
 
+test('generating a namespace cover image includes additional prompt in agent metadata', function () {
+    Storage::fake('public');
+    Image::fake();
+    CoverImagePromptAgent::fake([
+        'A blue ocean-themed abstract illustration representing technical guides.',
+    ])->preventStrayPrompts();
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create(['name' => 'Guides', 'description' => null]);
+
+    $this->actingAs($user)
+        ->from(route('admin.namespaces.edit', $namespace))
+        ->post(route('admin.namespaces.generate-cover-image', $namespace), [
+            'additional_prompt' => '青い海のイメージ',
+        ])
+        ->assertRedirect(route('admin.namespaces.edit', $namespace));
+
+    CoverImagePromptAgent::assertPrompted(fn ($prompt) => str_contains($prompt->prompt, 'Additional style guidance from user: 青い海のイメージ'));
+});
+
+test('generating a namespace cover image validates additional prompt length', function () {
+    Image::fake();
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.namespaces.generate-cover-image', $namespace), [
+            'additional_prompt' => str_repeat('a', 501),
+        ])
+        ->assertSessionHasErrors(['additional_prompt']);
+
+    Image::assertNothingGenerated();
+});
+
 test('guests cannot reorder namespaces', function () {
     $this->patch(route('admin.namespaces.reorder'), ['ids' => [1, 2]])
         ->assertRedirect(route('login'));

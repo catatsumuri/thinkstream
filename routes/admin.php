@@ -43,5 +43,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
         Route::get('/{namespace}/{post:slug}/revisions', [PostController::class, 'revisions'])->name('revisions')->scopeBindings();
         Route::post('/{namespace}/{post:slug}/revisions/{revision}/restore', [PostController::class, 'restore'])->name('revisions.restore')->scopeBindings();
         Route::post('/{namespace}/{post:slug}/image', [PostController::class, 'uploadImage'])->name('uploadImage')->scopeBindings();
+        Route::post('/{namespace}/{post:slug}/structure-markdown', [PostController::class, 'structureMarkdown'])->name('structureMarkdown')->scopeBindings();
+        Route::post('/{namespace}/{post:slug}/translate-markdown', [PostController::class, 'translateMarkdown'])->name('translateMarkdown')->scopeBindings();
     });
 });
