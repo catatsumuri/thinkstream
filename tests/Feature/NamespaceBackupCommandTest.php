@@ -2,6 +2,7 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\PostReferrer;
 use App\Models\PostRevision;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -52,8 +53,8 @@ function addNamespaceBackupTreeToZip(ZipArchive $zip, array $tree, string $prefi
             $frontmatter['page_views'] = $post['page_views'];
         }
 
-        if (array_key_exists('http_referer', $post)) {
-            $frontmatter['http_referer'] = $post['http_referer'];
+        if (array_key_exists('referrers', $post)) {
+            $frontmatter['referrers'] = $post['referrers'];
         }
 
         if (array_key_exists('reference_title', $post)) {
@@ -104,15 +105,20 @@ test('namespace backup command exports namespace metadata and markdown posts', f
 
     $namespace->forceFill(['sort_order' => 3])->save();
 
-    Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
+    $routingPost = Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
         'title' => 'Routing',
         'slug' => 'routing',
         'full_path' => 'guides/routing',
         'page_views' => 42,
-        'http_referer' => 'https://example.com/search?q=routing',
         'reference_title' => 'Laravel Routing Docs',
         'reference_url' => 'https://laravel.com/docs/routing',
         'content' => "# Routing\n\n![Diagram](/images/posts/123/diagram.png)\n\nBackup me.",
+    ]);
+    PostReferrer::create([
+        'post_id' => $routingPost->id,
+        'http_referer' => 'https://example.com/search?q=routing',
+        'referrer_host' => 'example.com',
+        'count' => 5,
     ]);
 
     $zipPath = storage_path('framework/testing/'.Str::uuid().'.zip');
@@ -153,7 +159,7 @@ test('namespace backup command exports namespace metadata and markdown posts', f
         ->toContain('slug: routing')
         ->toContain('full_path: guides/routing')
         ->toContain('page_views: 42')
-        ->toContain('http_referer:')
+        ->toContain('referrers:')
         ->toContain('https://example.com/search?q=routing')
         ->toContain("reference_title: 'Laravel Routing Docs'")
         ->toContain("reference_url: 'https://laravel.com/docs/routing'")
@@ -181,7 +187,7 @@ test('namespace restore command imports a namespace backup zip', function () {
                 'title' => 'Laravel AI SDK',
                 'slug' => 'laravel-ai-sdk',
                 'page_views' => 11,
-                'http_referer' => 'https://example.com/docs/ai',
+                'referrers' => [['url' => 'https://example.com/docs/ai', 'count' => 3]],
                 'reference_title' => 'Laravel AI SDK Docs',
                 'reference_url' => 'https://laravel.com/docs/ai',
                 'content' => "# Laravel AI SDK\n\n![Diagram](/images/posts/legacy-id/ai-sdk.png)\n\nIntro.",
@@ -218,17 +224,21 @@ test('namespace restore command imports a namespace backup zip', function () {
             ->orderBy('slug')
             ->get();
 
+        $aiSdkPost = $posts->firstWhere('slug', 'laravel-ai-sdk');
+        $aiSdkReferrer = PostReferrer::where('post_id', $aiSdkPost?->id)->first();
+
         expect($posts)->toHaveCount(2)
             ->and($posts->pluck('slug')->all())->toBe([
                 'laravel-ai-sdk',
                 'upgrade-12-to-13',
             ])
-            ->and($posts->firstWhere('slug', 'laravel-ai-sdk')?->page_views)->toBe(11)
-            ->and($posts->firstWhere('slug', 'laravel-ai-sdk')?->http_referer)->toBe('https://example.com/docs/ai')
-            ->and($posts->firstWhere('slug', 'laravel-ai-sdk')?->reference_title)->toBe('Laravel AI SDK Docs')
-            ->and($posts->firstWhere('slug', 'laravel-ai-sdk')?->reference_url)->toBe('https://laravel.com/docs/ai')
+            ->and($aiSdkPost?->page_views)->toBe(11)
+            ->and($aiSdkReferrer?->http_referer)->toBe('https://example.com/docs/ai')
+            ->and($aiSdkReferrer?->count)->toBe(3)
+            ->and($aiSdkPost?->reference_title)->toBe('Laravel AI SDK Docs')
+            ->and($aiSdkPost?->reference_url)->toBe('https://laravel.com/docs/ai')
             ->and($posts->firstWhere('slug', 'upgrade-12-to-13')?->page_views)->toBe(0)
-            ->and($posts->firstWhere('slug', 'upgrade-12-to-13')?->http_referer)->toBeNull()
+            ->and(PostReferrer::whereIn('post_id', $posts->pluck('id'))->count())->toBe(1)
             ->and($posts->pluck('user_id')->unique()->all())->toBe([$user->id]);
 
         Storage::disk('public')->assertExists('namespaces/laravel-13-cover.jpg');
@@ -343,7 +353,7 @@ test('namespace restore command defaults page views to zero for older backups', 
         expect($post)->not->toBeNull()
             ->and($post->user_id)->toBe($user->id)
             ->and($post->page_views)->toBe(0)
-            ->and($post->http_referer)->toBeNull();
+            ->and(PostReferrer::where('post_id', $post->id)->count())->toBe(0);
     } finally {
         File::delete($zipPath);
     }

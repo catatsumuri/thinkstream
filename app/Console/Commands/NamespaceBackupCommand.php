@@ -93,8 +93,8 @@ class NamespaceBackupCommand extends Command
         }
 
         $posts = $withRevisions
-            ? $namespace->posts()->with('revisions.user', 'tags')->get()
-            : $namespace->posts()->with('tags')->get();
+            ? $namespace->posts()->with('revisions.user', 'tags', 'referrers')->get()
+            : $namespace->posts()->with('tags', 'referrers')->get();
 
         foreach ($posts as $post) {
             $frontmatter = [
@@ -102,7 +102,9 @@ class NamespaceBackupCommand extends Command
                 'slug' => $post->slug,
                 'full_path' => $post->full_path,
                 'page_views' => $post->page_views,
-                'http_referer' => $post->http_referer,
+                'referrers' => $post->referrers
+                    ->map(fn ($r) => ['url' => $r->http_referer, 'count' => $r->count])
+                    ->all(),
                 'is_draft' => $post->is_draft,
                 'published_at' => $post->published_at?->toIso8601String(),
                 'reference_title' => $post->reference_title,

@@ -1,5 +1,12 @@
 import { Head, Link } from '@inertiajs/react';
-import { BarChart3, ExternalLink, Eye, FileText, Globe } from 'lucide-react';
+import {
+    BarChart3,
+    Clock,
+    ExternalLink,
+    Eye,
+    FileText,
+    Globe,
+} from 'lucide-react';
 import {
     Card,
     CardContent,
@@ -9,6 +16,16 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { dashboard } from '@/routes';
+
+type RecentPost = {
+    id: number;
+    title: string;
+    full_path: string;
+    page_views: number;
+    updated_at: string;
+    canonical_url: string | null;
+    admin_url: string;
+};
 
 type TopPost = {
     id: number;
@@ -26,10 +43,23 @@ type TopReferrer = {
     total_views: number;
 };
 
+function formatRelativeTime(isoString: string): string {
+    const diff = Date.now() - new Date(isoString).getTime();
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 60) return `${minutes}m ago`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    if (days < 30) return `${days}d ago`;
+    return new Date(isoString).toLocaleDateString();
+}
+
 export default function Dashboard({
+    recent_posts,
     top_posts,
     top_referrers,
 }: {
+    recent_posts: RecentPost[];
     top_posts: TopPost[];
     top_referrers: TopReferrer[];
 }) {
@@ -59,7 +89,7 @@ export default function Dashboard({
                     </Card>
 
                     <Card className="shadow-none">
-                        <Tabs defaultValue="posts">
+                        <Tabs defaultValue="recent">
                             <CardHeader>
                                 <div className="flex items-center justify-between gap-4">
                                     <div>
@@ -69,9 +99,13 @@ export default function Dashboard({
                                         <CardTitle>Top 10</CardTitle>
                                     </div>
                                     <TabsList>
-                                        <TabsTrigger value="posts">
-                                            <FileText />
-                                            Posts
+                                        <TabsTrigger value="recent">
+                                            <Clock />
+                                            Recent
+                                        </TabsTrigger>
+                                        <TabsTrigger value="pv">
+                                            <Eye />
+                                            PV
                                         </TabsTrigger>
                                         <TabsTrigger value="referrers">
                                             <Globe />
@@ -81,7 +115,71 @@ export default function Dashboard({
                                 </div>
                             </CardHeader>
                             <CardContent>
-                                <TabsContent value="posts">
+                                <TabsContent value="recent">
+                                    {recent_posts.length === 0 ? (
+                                        <div className="rounded-xl border border-dashed px-6 py-10 text-center text-sm text-muted-foreground">
+                                            No posts yet.
+                                        </div>
+                                    ) : (
+                                        <div className="space-y-3">
+                                            {recent_posts.map((post) => (
+                                                <div
+                                                    key={post.id}
+                                                    className="flex flex-col gap-3 rounded-xl border px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+                                                >
+                                                    <div className="flex min-w-0 items-start gap-4">
+                                                        <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                                                            <Clock className="size-4" />
+                                                        </div>
+                                                        <div className="min-w-0">
+                                                            <Link
+                                                                href={
+                                                                    post.admin_url
+                                                                }
+                                                                className="inline-flex items-center gap-2 font-medium hover:underline"
+                                                            >
+                                                                <FileText className="size-4 shrink-0 text-muted-foreground" />
+                                                                <span className="truncate">
+                                                                    {post.title}
+                                                                </span>
+                                                            </Link>
+                                                            <p className="mt-1 truncate text-sm text-muted-foreground">
+                                                                /
+                                                                {post.full_path}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-4 sm:justify-end">
+                                                        {post.page_views >
+                                                            0 && (
+                                                            <div className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-sm font-medium">
+                                                                <Eye className="size-4 text-muted-foreground" />
+                                                                {post.page_views.toLocaleString()}
+                                                            </div>
+                                                        )}
+                                                        <span className="shrink-0 text-sm text-muted-foreground">
+                                                            {formatRelativeTime(
+                                                                post.updated_at,
+                                                            )}
+                                                        </span>
+                                                        {post.canonical_url ? (
+                                                            <Link
+                                                                href={
+                                                                    post.canonical_url
+                                                                }
+                                                                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+                                                            >
+                                                                <ExternalLink className="size-4" />
+                                                            </Link>
+                                                        ) : null}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </TabsContent>
+
+                                <TabsContent value="pv">
                                     {top_posts.length === 0 ? (
                                         <div className="rounded-xl border border-dashed px-6 py-10 text-center text-sm text-muted-foreground">
                                             No tracked page views yet.

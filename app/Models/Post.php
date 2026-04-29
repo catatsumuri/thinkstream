@@ -23,7 +23,6 @@ class Post extends Model
         'full_path',
         'content',
         'page_views',
-        'http_referer',
         'user_id',
         'is_draft',
         'published_at',
@@ -115,5 +114,10 @@ class Post extends Model
     public function revisions(): HasMany
     {
         return $this->hasMany(PostRevision::class);
+    }
+
+    public function referrers(): HasMany
+    {
+        return $this->hasMany(PostReferrer::class);
     }
 }
