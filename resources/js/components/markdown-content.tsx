@@ -141,7 +141,9 @@ function MessageBox({
             {...props}
         >
             <Icon className={cn('mt-0.5 shrink-0', iconColor)} size={18} />
-            <div className="min-w-0 flex-1">{children}</div>
+            <div className="min-w-0 flex-1 [&_h1]:mb-2 [&_h1]:font-semibold [&_h2]:mb-2 [&_h2]:font-semibold [&_h3]:mb-1.5 [&_h3]:font-semibold [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-4 [&_p:not(:last-child)]:mb-2 [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-4">
+                {children}
+            </div>
         </aside>
     );
 }

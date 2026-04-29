@@ -210,6 +210,7 @@ export default function Show({
         auth.user
             ? {
                   headingAnchorPlacement: 'gutter',
+                  scrollMargin: 'scroll-mt-40',
                   onEditHeading: handleEditHeading,
               }
             : {},
@@ -315,7 +316,9 @@ export default function Show({
                     </div>
                 )}
 
-                <header className="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur">
+                <header
+                    className={`sticky z-50 border-b border-border/60 bg-background/80 backdrop-blur ${auth.user ? 'top-16' : 'top-0'}`}
+                >
                     <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 lg:py-6">
                         <div className="flex min-w-0 items-center gap-2">
                             <Link
@@ -460,11 +463,13 @@ export default function Show({
                     className={`mx-auto max-w-7xl px-4 py-10 ${gridCols ? `lg:grid lg:gap-12 ${gridCols}` : ''}`}
                 >
                     {hasNav && (
-                        <aside className="hidden self-start lg:sticky lg:top-20 lg:block">
+                        <aside
+                            className={`hidden self-start lg:sticky lg:block ${auth.user ? 'lg:top-36' : 'lg:top-20'}`}
+                        >
                             {navVisible ? (
                                 <div
                                     data-test="content-nav-shell"
-                                    className="flex max-h-[calc(100vh-6rem)] flex-col text-sm"
+                                    className={`flex flex-col text-sm ${auth.user ? 'max-h-[calc(100vh-10rem)]' : 'max-h-[calc(100vh-6rem)]'}`}
                                 >
                                     <div className="shrink-0 pb-4">
                                         <p className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
@@ -514,7 +519,7 @@ export default function Show({
                         <article className="space-y-4">
                             <header
                                 id={`post-${post.slug}`}
-                                className="scroll-mt-24 space-y-4"
+                                className={`space-y-4 ${auth.user ? 'scroll-mt-40' : 'scroll-mt-24'}`}
                             >
                                 <div
                                     data-test="post-title-row"
@@ -623,7 +628,9 @@ export default function Show({
                     </main>
 
                     {tocVisible && hasHeadings && (
-                        <aside className="hidden self-start lg:sticky lg:top-20 lg:block">
+                        <aside
+                            className={`hidden self-start lg:sticky lg:block ${auth.user ? 'lg:top-36' : 'lg:top-20'}`}
+                        >
                             <TableOfContents
                                 sticky
                                 posts={[

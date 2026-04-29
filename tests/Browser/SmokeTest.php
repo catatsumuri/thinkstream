@@ -312,6 +312,93 @@ test('desktop sidebars stay sticky while the article scrolls', function () {
     JS))->toBeTrue();
 });
 
+test('signed-in post pages keep sticky navigation and hash scrolling below the stacked headers', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+        'is_published' => true,
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'signed-in-sticky-offsets',
+        'title' => 'Signed In Sticky Offsets',
+        'content' => collect([
+            '## Installation',
+            str_repeat('Setup steps. ', 120),
+            '## Cache Behavior',
+            str_repeat('Cache notes. ', 120),
+            ...collect(range(1, 24))
+                ->map(
+                    fn (int $section): string => "## Section {$section}\n\n".str_repeat(
+                        'Long body content. ',
+                        40,
+                    ),
+                )
+                ->all(),
+        ])->implode("\n\n"),
+    ]);
+
+    $headingId = 'signed-in-sticky-offsets-cache-behavior';
+
+    $this->actingAs($user);
+
+    $page = visit(route('posts.path', ['path' => $post->full_path]))->resize(1440, 1200);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="app-header-search-toggle"]')
+        ->assertPresent('[data-test="content-nav-shell"]')
+        ->assertPresent('[data-test="table-of-contents"][data-sticky="true"]');
+
+    $page->script('window.scrollTo(0, 1400)');
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const leftSidebar = document.querySelector('[data-test="content-nav-shell"]');
+            const rightSidebar = document.querySelector('[data-test="table-of-contents"][data-sticky="true"]');
+
+            if (! leftSidebar || ! rightSidebar) {
+                return null;
+            }
+
+            return {
+                leftTop: Math.round(leftSidebar.getBoundingClientRect().top),
+                rightTop: Math.round(rightSidebar.getBoundingClientRect().top),
+            };
+        })()
+    JS))->toBe([
+        'leftTop' => 144,
+        'rightTop' => 144,
+    ]);
+
+    $page
+        ->click("[data-test=\"table-of-contents\"][data-sticky=\"true\"] [data-test=\"toc-link-{$headingId}\"]")
+        ->wait(0.5);
+
+    $metrics = $page->script(<<<JS
+        (() => {
+            const heading = document.getElementById('{$headingId}');
+
+            if (! heading) {
+                return null;
+            }
+
+            return {
+                hash: window.location.hash,
+                top: Math.round(heading.getBoundingClientRect().top),
+            };
+        })()
+    JS);
+
+    expect($metrics['hash'])->toBe("#{$headingId}");
+    expect($metrics['top'])->toBeGreaterThanOrEqual(128);
+    expect($metrics['top'])->toBeLessThanOrEqual(220);
+});
+
 test('post navigation folders can be expanded from the sidebar', function () {
     $namespace = PostNamespace::factory()->create([
         'slug' => 'docs',
@@ -939,6 +1026,75 @@ test('admin namespace page shows a cover image thumbnail in the manage header', 
             'src',
             '/storage/namespaces/guides-cover.jpg',
         );
+});
+
+test('admin namespace edit asks before replacing an existing AI-generated cover image', function () {
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+        'cover_image' => 'namespaces/guides-cover.jpg',
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.namespaces.edit', $namespace, absolute: false))->resize(1440, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertSee('Edit Namespace')
+        ->assertSee('Generate with AI')
+        ->type('input[maxlength="500"]', 'moody cinematic colors');
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const input = document.querySelector('input[maxlength="500"]');
+
+            if (! input) {
+                return false;
+            }
+
+            input.dispatchEvent(new KeyboardEvent('keydown', {
+                key: 'Enter',
+                bubbles: true,
+                cancelable: true,
+            }));
+
+            return true;
+        })()
+    JS))->toBeTrue();
+
+    $page
+        ->wait(0.3)
+        ->assertPresent('[role="dialog"]')
+        ->assertSee('Replace existing cover image?')
+        ->assertSee('Generate anyway');
+
+    expect($page->script(<<<'JS'
+        (() => window.location.pathname)()
+    JS))->toBe(route('admin.namespaces.edit', $namespace, false));
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const cancelButton = [...document.querySelectorAll('[role="dialog"] button')]
+                .find((button) => button.textContent?.includes('Cancel'));
+
+            if (! cancelButton) {
+                return false;
+            }
+
+            cancelButton.click();
+
+            return true;
+        })()
+    JS))->toBeTrue();
+
+    $page->wait(0.2)->assertMissing('[role="dialog"]');
 });
 
 test('admin namespace page shows backup count and backup management button when backups exist', function () {

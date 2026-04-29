@@ -266,6 +266,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
     let activeFence: string | null = null;
     let activeFenceIndent = 0;
     let mintlifyTabsDepth = 0;
+    const mintlifyCalloutColonCounts: number[] = [];
     const mintlifyTagStack: Array<
         | 'Tabs'
         | 'Tab'
@@ -373,12 +374,16 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
         if (calloutOpenMatch) {
             const tag = calloutOpenMatch.groups!.tag as MintlifyCalloutTag;
+            const colonCount = 3 + 5 - mintlifyCalloutColonCounts.length;
+            const template = MINTLIFY_CALLOUT_TAGS[tag];
+            const directiveBody = template.slice(3);
 
             pushBlankLineIfNeeded();
-            pushLine(MINTLIFY_CALLOUT_TAGS[tag]);
+            pushLine(':'.repeat(colonCount) + directiveBody);
             pushLine('');
             mintlifyTagLeadingSpaces.push(leadingSpaces);
             mintlifyTagStack.push(tag);
+            mintlifyCalloutColonCounts.push(colonCount);
 
             continue;
         }
@@ -389,14 +394,16 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
         if (calloutCloseMatch) {
             const tag = calloutCloseMatch.groups!.tag as MintlifyCalloutTag;
+            let colonCount = 3;
 
             if (mintlifyTagStack.at(-1) === tag) {
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
+                colonCount = mintlifyCalloutColonCounts.pop() ?? 3;
             }
 
             pushBlankLineIfNeeded();
-            pushLine(':::');
+            pushLine(':'.repeat(colonCount));
 
             continue;
         }

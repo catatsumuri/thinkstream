@@ -5,6 +5,14 @@ import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceC
 import CoverImageDropzone from '@/components/cover-image-dropzone';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -52,8 +60,10 @@ export default function Edit({
 
     const [generating, setGenerating] = useState(false);
     const [additionalPrompt, setAdditionalPrompt] = useState('');
+    const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
 
     function generateCoverImage() {
+        setShowGenerateConfirm(false);
         router.post(
             NamespaceController.generateCoverImage.url(namespace.id),
             { additional_prompt: additionalPrompt },
@@ -62,6 +72,14 @@ export default function Edit({
                 onFinish: () => setGenerating(false),
             },
         );
+    }
+
+    function handleGenerateClick() {
+        if (namespace.cover_image_url) {
+            setShowGenerateConfirm(true);
+        } else {
+            generateCoverImage();
+        }
     }
 
     const { data, setData, post, processing, errors } = useForm<{
@@ -153,7 +171,7 @@ export default function Edit({
                                     variant="outline"
                                     size="sm"
                                     disabled={generating || processing}
-                                    onClick={generateCoverImage}
+                                    onClick={handleGenerateClick}
                                 >
                                     {generating ? (
                                         <Spinner className="mr-1.5" />
@@ -173,6 +191,13 @@ export default function Edit({
                                 onChange={(e) =>
                                     setAdditionalPrompt(e.target.value)
                                 }
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        if (!generating && !processing)
+                                            handleGenerateClick();
+                                    }
+                                }}
                                 placeholder="Optional: add style guidance, colors, mood… (any language)"
                                 disabled={generating || processing}
                                 maxLength={500}
@@ -215,6 +240,26 @@ export default function Edit({
                     </div>
                 </form>
             </div>
+            <Dialog
+                open={showGenerateConfirm}
+                onOpenChange={setShowGenerateConfirm}
+            >
+                <DialogContent>
+                    <DialogTitle>Replace existing cover image?</DialogTitle>
+                    <DialogDescription>
+                        This namespace already has a cover image. Generating a
+                        new one will permanently replace it.
+                    </DialogDescription>
+                    <DialogFooter className="gap-2">
+                        <DialogClose asChild>
+                            <Button variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button onClick={generateCoverImage}>
+                            Generate anyway
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
