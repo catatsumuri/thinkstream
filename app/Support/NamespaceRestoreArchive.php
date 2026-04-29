@@ -34,11 +34,19 @@ class NamespaceRestoreArchive
 
     public function tokenPath(string $token): string
     {
+        if (! $this->hasValidTokenFormat($token)) {
+            throw new RuntimeException('Invalid restore archive token.');
+        }
+
         return $this->directory().'/'.$token.'.zip';
     }
 
     public function hasToken(string $token): bool
     {
+        if (! $this->hasValidTokenFormat($token)) {
+            return false;
+        }
+
         return File::isFile($this->tokenPath($token));
     }
 
@@ -458,6 +466,11 @@ class NamespaceRestoreArchive
         }
 
         return implode('/', $segments);
+    }
+
+    private function hasValidTokenFormat(string $token): bool
+    {
+        return preg_match('/\A[a-zA-Z0-9_-]+\z/', $token) === 1;
     }
 
     private function removeDirectory(string $path): void

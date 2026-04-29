@@ -35,7 +35,7 @@ use Symfony\Component\Yaml\Yaml;
 
 class PostController extends Controller
 {
-    public function index(Request $request, NamespaceRestoreArchive $restoreArchive): Response
+    public function index(Request $request): Response
     {
         $allowedColumns = ['name', 'posts_count', 'is_published'];
         $allowedDirections = ['asc', 'desc'];
@@ -60,22 +60,9 @@ class PostController extends Controller
                 ->get();
         }
 
-        $restoreToken = $request->string('restore')->toString();
-        $restorePreview = null;
-
-        if ($restoreToken !== '' && $restoreArchive->hasToken($restoreToken)) {
-            $restorePreview = [
-                'token' => $restoreToken,
-                ...$restoreArchive->preview($restoreArchive->tokenPath($restoreToken)),
-                'stream_url' => route('admin.posts.restore.stream', ['token' => $restoreToken], absolute: false),
-            ];
-        }
-
         return Inertia::render('admin/posts/index', [
             'namespaces' => $namespaces,
             'sort' => ['column' => $column, 'direction' => $direction],
-            'restore_upload_url' => route('admin.posts.restore.upload', absolute: false),
-            'restore_preview' => $restorePreview,
         ]);
     }
 
@@ -279,7 +266,7 @@ class PostController extends Controller
             ]);
         }
 
-        return to_route('admin.posts.index', ['restore' => $token]);
+        return to_route('admin.backups.index', ['restore' => $token]);
     }
 
     public function streamRestoreArchive(string $token, NamespaceRestoreArchive $restoreArchive): StreamedResponse

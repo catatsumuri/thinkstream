@@ -126,15 +126,15 @@ test('posts index defaults to namespace sort order', function () {
         );
 });
 
-test('posts index exposes root restore upload metadata', function () {
+test('posts index no longer exposes root restore upload metadata', function () {
     $user = User::factory()->create();
 
     $this->actingAs($user)
         ->get(route('admin.posts.index'))
         ->assertInertia(fn ($page) => $page
             ->component('admin/posts/index')
-            ->where('restore_upload_url', route('admin.posts.restore.upload', absolute: false))
-            ->where('restore_preview', null)
+            ->missing('restore_upload_url')
+            ->missing('restore_preview')
         );
 });
 
@@ -184,7 +184,7 @@ test('create form includes available tags', function () {
         );
 });
 
-test('uploading a restore zip from the posts index returns a restore preview', function () {
+test('uploading a restore zip from the backups index returns a restore preview', function () {
     $user = User::factory()->create();
     $existingNamespace = PostNamespace::factory()->create([
         'slug' => 'guides',
@@ -244,12 +244,12 @@ test('uploading a restore zip from the posts index returns a restore preview', f
 
         $location = $response->headers->get('Location');
 
-        expect($location)->not->toBeNull()->and($location)->toContain('/admin/posts?restore=');
+        expect($location)->not->toBeNull()->and($location)->toContain('/admin/backups?restore=');
 
         $this->actingAs($user)
             ->get($location)
             ->assertInertia(fn ($page) => $page
-                ->component('admin/posts/index')
+                ->component('admin/backups/index')
                 ->where('restore_preview.root.full_path', 'guides')
                 ->where('restore_preview.root.status', 'existing')
                 ->where('restore_preview.totals.namespace_count', 2)
