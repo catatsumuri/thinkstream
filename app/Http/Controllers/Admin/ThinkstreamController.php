@@ -13,12 +13,19 @@ use App\Support\AiCostCalculator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
+use JsonException;
+use RuntimeException;
+use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\Yaml\Yaml;
+use ZipArchive;
 
 class ThinkstreamController extends Controller
 {
@@ -32,7 +39,243 @@ class ThinkstreamController extends Controller
 
         return Inertia::render('admin/thinkstream/index', [
             'pages' => $pages,
+            'latest_backup' => $this->latestBackupInfo($request->user()->id),
         ]);
+    }
+
+    public function backup(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'description' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $description = trim((string) ($data['description'] ?? ''));
+
+        $pages = ThinkstreamPage::query()
+            ->whereBelongsTo($request->user())
+            ->with('thoughts:id,page_id,content,created_at')
+            ->orderBy('created_at')
+            ->get();
+
+        $dir = $this->backupDirectory();
+
+        if (! File::isDirectory($dir)) {
+            File::makeDirectory($dir, 0755, true);
+        }
+
+        $path = $this->latestBackupPath($request->user()->id);
+
+        $zip = new ZipArchive;
+        $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+        $zip->addFromString('_backup.yaml', Yaml::dump([
+            'description' => $description !== '' ? $description : null,
+            'created_at' => now()->toIso8601String(),
+            'page_count' => $pages->count(),
+        ], 4));
+
+        $zip->addFromString('thinkstream.json', (string) json_encode(
+            $pages->map(fn (ThinkstreamPage $page): array => [
+                'id' => $page->id,
+                'title' => $page->title,
+                'created_at' => $page->created_at->toIso8601String(),
+                'thoughts' => $page->thoughts->map(fn (Thought $thought): array => [
+                    'id' => $thought->id,
+                    'content' => $thought->content,
+                    'created_at' => $thought->created_at->toIso8601String(),
+                ])->all(),
+            ])->all(),
+            JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
+        ));
+
+        $zip->close();
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Backup created.']);
+
+        return to_route('admin.thinkstream.index');
+    }
+
+    public function backupDownload(Request $request): BinaryFileResponse
+    {
+        $path = $this->latestBackupPath($request->user()->id);
+
+        abort_unless(File::exists($path), 404);
+
+        $filename = 'thinkstream-'.date('Ymd-His', File::lastModified($path)).'.zip';
+
+        return response()->download($path, $filename);
+    }
+
+    public function backupRestore(Request $request): RedirectResponse
+    {
+        $path = $this->latestBackupPath($request->user()->id);
+
+        abort_unless(File::exists($path), 404);
+
+        $request->validate([
+            'confirmation' => ['required', 'string', Rule::in(['restore'])],
+        ]);
+
+        try {
+            $pages = $this->readBackupPages($path);
+        } catch (RuntimeException) {
+            throw ValidationException::withMessages([
+                'backup' => 'The saved backup is not a valid Thinkstream backup.',
+            ]);
+        }
+
+        $pageCount = $this->performRestore($request->user()->id, $pages);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Restored '.$pageCount.' canvas'.($pageCount === 1 ? '' : 'es').' from backup.']);
+
+        return to_route('admin.thinkstream.index');
+    }
+
+    public function backupRestoreUpload(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'file' => ['required', 'file', 'extensions:zip', 'max:20480'],
+            'confirmation' => ['required', 'string', Rule::in(['restore'])],
+        ]);
+
+        $tempPath = $data['file']->getRealPath();
+
+        try {
+            $pages = $this->readBackupPages($tempPath);
+        } catch (RuntimeException) {
+            throw ValidationException::withMessages([
+                'file' => 'The uploaded file is not a valid Thinkstream backup.',
+            ]);
+        }
+
+        $dir = $this->backupDirectory();
+
+        if (! File::isDirectory($dir)) {
+            File::makeDirectory($dir, 0755, true);
+        }
+
+        $savedPath = $this->latestBackupPath($request->user()->id);
+        if ($tempPath !== $savedPath) {
+            File::copy($tempPath, $savedPath);
+        }
+
+        $pageCount = $this->performRestore($request->user()->id, $pages);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Restored '.$pageCount.' canvas'.($pageCount === 1 ? '' : 'es').' from uploaded backup.']);
+
+        return to_route('admin.thinkstream.index');
+    }
+
+    /**
+     * @param  array<int, array{title: string, created_at: string, thoughts: array<int, array{content: string, created_at: string}>}>  $pages
+     */
+    private function performRestore(int $userId, array $pages): int
+    {
+        return DB::transaction(function () use ($pages, $userId): int {
+            ThinkstreamPage::where('user_id', $userId)->delete();
+
+            foreach ($pages as $pageData) {
+                $page = ThinkstreamPage::create([
+                    'user_id' => $userId,
+                    'title' => $pageData['title'],
+                    'created_at' => $pageData['created_at'],
+                    'updated_at' => $pageData['created_at'],
+                ]);
+
+                foreach ($pageData['thoughts'] as $thoughtData) {
+                    Thought::create([
+                        'user_id' => $userId,
+                        'page_id' => $page->id,
+                        'content' => $thoughtData['content'],
+                        'created_at' => $thoughtData['created_at'],
+                        'updated_at' => $thoughtData['created_at'],
+                    ]);
+                }
+            }
+
+            return count($pages);
+        });
+    }
+
+    /**
+     * @return array<int, array{title: string, created_at: string, thoughts: array<int, array{content: string, created_at: string}>}>
+     */
+    private function readBackupPages(string $zipPath): array
+    {
+        $zip = new ZipArchive;
+
+        if ($zip->open($zipPath) !== true) {
+            throw new RuntimeException('Unable to open Thinkstream backup archive.');
+        }
+
+        $json = $zip->getFromName('thinkstream.json');
+        $zip->close();
+
+        if (! is_string($json) || $json === '') {
+            throw new RuntimeException('Missing thinkstream.json in Thinkstream backup archive.');
+        }
+
+        try {
+            $pages = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
+        } catch (JsonException $exception) {
+            throw new RuntimeException('Malformed thinkstream.json in Thinkstream backup archive.', previous: $exception);
+        }
+
+        if (! is_array($pages)) {
+            throw new RuntimeException('Invalid Thinkstream backup payload.');
+        }
+
+        return $pages;
+    }
+
+    private function backupDirectory(): string
+    {
+        return storage_path('app/private/thinkstream-backups');
+    }
+
+    private function latestBackupPath(int $userId): string
+    {
+        return $this->backupDirectory().'/thinkstream-'.$userId.'.zip';
+    }
+
+    /**
+     * @return array{created_at: string, size_human: string, description: string|null, download_url: string}|null
+     */
+    private function latestBackupInfo(int $userId): ?array
+    {
+        $path = $this->latestBackupPath($userId);
+
+        if (! File::exists($path)) {
+            return null;
+        }
+
+        $zip = new ZipArchive;
+        $description = null;
+
+        if ($zip->open($path) === true) {
+            $yaml = $zip->getFromName('_backup.yaml');
+
+            if (is_string($yaml) && $yaml !== '') {
+                $data = Yaml::parse($yaml);
+                $description = is_array($data) ? ($data['description'] ?? null) : null;
+            }
+
+            $zip->close();
+        }
+
+        $bytes = File::size($path);
+        $sizeHuman = match (true) {
+            $bytes >= 1024 * 1024 => round($bytes / (1024 * 1024), 1).' MB',
+            $bytes >= 1024 => round($bytes / 1024, 1).' KB',
+            default => $bytes.' B',
+        };
+
+        return [
+            'created_at' => date(DATE_ATOM, File::lastModified($path)),
+            'size_human' => $sizeHuman,
+            'description' => $description,
+            'download_url' => route('admin.thinkstream.backup.download', absolute: false),
+        ];
     }
 
     public function storePage(Request $request): RedirectResponse

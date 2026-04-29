@@ -8,8 +8,19 @@ use App\Models\ThinkstreamPage;
 use App\Models\Thought;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\File;
+use Symfony\Component\Yaml\Yaml;
 
 uses(RefreshDatabase::class);
+
+beforeEach(function () {
+    File::deleteDirectory(storage_path('app/private/thinkstream-backups'));
+});
+
+afterEach(function () {
+    File::deleteDirectory(storage_path('app/private/thinkstream-backups'));
+});
 
 // Index
 
@@ -610,4 +621,269 @@ test('posts in system namespace cannot be published via update', function () {
     $post->refresh();
     expect($post->is_draft)->toBeTrue();
     expect($post->published_at)->toBeNull();
+});
+
+// Backup
+
+test('authenticated users can create a thinkstream backup', function () {
+    $user = User::factory()->create();
+    ThinkstreamPage::factory()->for($user)->create(['title' => 'My Canvas']);
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.backup'))
+        ->assertRedirect(route('admin.thinkstream.index'));
+
+    $path = storage_path('app/private/thinkstream-backups/thinkstream-'.$user->id.'.zip');
+    expect(file_exists($path))->toBeTrue();
+
+    $zip = new ZipArchive;
+    $zip->open($path);
+    $json = json_decode($zip->getFromName('thinkstream.json'), true);
+    $zip->close();
+
+    expect($json)->toHaveCount(1);
+    expect($json[0]['title'])->toBe('My Canvas');
+});
+
+test('backup only includes the authenticated users canvases', function () {
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    ThinkstreamPage::factory()->for($user)->create(['title' => 'Mine']);
+    ThinkstreamPage::factory()->for($otherUser)->create(['title' => 'Not mine']);
+
+    $this->actingAs($user)->post(route('admin.thinkstream.backup'));
+
+    $path = storage_path('app/private/thinkstream-backups/thinkstream-'.$user->id.'.zip');
+    $zip = new ZipArchive;
+    $zip->open($path);
+    $json = json_decode($zip->getFromName('thinkstream.json'), true);
+    $zip->close();
+
+    expect($json)->toHaveCount(1);
+    expect($json[0]['title'])->toBe('Mine');
+});
+
+test('backup accepts an optional description stored in yaml', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)->post(route('admin.thinkstream.backup'), ['description' => 'snapshot note']);
+
+    $path = storage_path('app/private/thinkstream-backups/thinkstream-'.$user->id.'.zip');
+    $zip = new ZipArchive;
+    $zip->open($path);
+    $yaml = Yaml::parse($zip->getFromName('_backup.yaml'));
+    $zip->close();
+
+    expect($yaml['description'])->toBe('snapshot note');
+});
+
+test('latest backup is shown on the index after creating one', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user)->post(route('admin.thinkstream.backup'));
+
+    $this->actingAs($user)
+        ->get(route('admin.thinkstream.index'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('latest_backup')
+            ->whereNot('latest_backup', null)
+        );
+});
+
+test('authenticated users can download their latest backup', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user)->post(route('admin.thinkstream.backup'));
+
+    $response = $this->actingAs($user)->get(route('admin.thinkstream.backup.download'));
+    $response->assertOk();
+    $response->assertHeader('Content-Type', 'application/zip');
+    expect($response->headers->get('Content-Disposition'))->toContain('thinkstream-');
+});
+
+test('downloading backup returns 404 when none exists', function () {
+    $user = User::factory()->create();
+
+    $path = storage_path('app/private/thinkstream-backups/thinkstream-'.$user->id.'.zip');
+    @unlink($path);
+
+    $this->actingAs($user)->get(route('admin.thinkstream.backup.download'))->assertNotFound();
+});
+
+test('unauthenticated users cannot create a thinkstream backup', function () {
+    $this->post(route('admin.thinkstream.backup'))->assertRedirect(route('login'));
+});
+
+// Backup Restore
+
+test('authenticated users can restore from backup', function () {
+    $user = User::factory()->create();
+    ThinkstreamPage::factory()->for($user)->create(['title' => 'Original Canvas']);
+    $this->actingAs($user)->post(route('admin.thinkstream.backup'));
+
+    // Replace data with something else
+    ThinkstreamPage::where('user_id', $user->id)->delete();
+    ThinkstreamPage::factory()->for($user)->create(['title' => 'New Canvas']);
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.backup.restore'), ['confirmation' => 'restore'])
+        ->assertRedirect(route('admin.thinkstream.index'));
+
+    $titles = ThinkstreamPage::where('user_id', $user->id)->pluck('title');
+    expect($titles)->toContain('Original Canvas');
+    expect($titles)->not->toContain('New Canvas');
+});
+
+test('restore requires confirmation text', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user)->post(route('admin.thinkstream.backup'));
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.backup.restore'), ['confirmation' => 'wrong'])
+        ->assertSessionHasErrors('confirmation');
+});
+
+test('restore returns 404 when no backup exists', function () {
+    $user = User::factory()->create();
+
+    $path = storage_path('app/private/thinkstream-backups/thinkstream-'.$user->id.'.zip');
+    @unlink($path);
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.backup.restore'), ['confirmation' => 'restore'])
+        ->assertNotFound();
+});
+
+test('restore preserves existing canvases when the saved backup payload is invalid', function () {
+    $user = User::factory()->create();
+    ThinkstreamPage::factory()->for($user)->create(['title' => 'Current Canvas']);
+
+    $path = storage_path('app/private/thinkstream-backups/thinkstream-'.$user->id.'.zip');
+    File::ensureDirectoryExists(dirname($path));
+
+    $zip = new ZipArchive;
+    $zip->open($path, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+    $zip->addFromString('thinkstream.json', '{invalid json');
+    $zip->close();
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.backup.restore'), ['confirmation' => 'restore'])
+        ->assertSessionHasErrors('backup');
+
+    expect(ThinkstreamPage::whereBelongsTo($user)->pluck('title')->all())
+        ->toBe(['Current Canvas']);
+});
+
+test('unauthenticated users cannot restore a thinkstream backup', function () {
+    $this->post(route('admin.thinkstream.backup.restore'))->assertRedirect(route('login'));
+});
+
+// Backup Restore Upload
+
+test('authenticated users can restore from an uploaded zip', function () {
+    $user = User::factory()->create();
+    ThinkstreamPage::factory()->for($user)->create(['title' => 'Original Canvas']);
+    $this->actingAs($user)->post(route('admin.thinkstream.backup'));
+
+    $zipPath = storage_path('app/private/thinkstream-backups/thinkstream-'.$user->id.'.zip');
+
+    ThinkstreamPage::where('user_id', $user->id)->delete();
+    ThinkstreamPage::factory()->for($user)->create(['title' => 'Different Canvas']);
+
+    $uploadedFile = new UploadedFile($zipPath, 'thinkstream.zip', 'application/zip', null, true);
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.backup.restore.upload'), [
+            'file' => $uploadedFile,
+            'confirmation' => 'restore',
+        ])
+        ->assertRedirect(route('admin.thinkstream.index'));
+
+    $titles = ThinkstreamPage::where('user_id', $user->id)->pluck('title');
+    expect($titles)->toContain('Original Canvas');
+    expect($titles)->not->toContain('Different Canvas');
+});
+
+test('upload restore overwrites the saved backup file', function () {
+    $user = User::factory()->create();
+    ThinkstreamPage::factory()->for($user)->create(['title' => 'Original']);
+    $this->actingAs($user)->post(route('admin.thinkstream.backup'));
+    $zipPath = storage_path('app/private/thinkstream-backups/thinkstream-'.$user->id.'.zip');
+    $mtimeBefore = filemtime($zipPath);
+
+    sleep(1);
+
+    $uploadedFile = new UploadedFile($zipPath, 'thinkstream.zip', 'application/zip', null, true);
+    $this->actingAs($user)->post(route('admin.thinkstream.backup.restore.upload'), [
+        'file' => $uploadedFile,
+        'confirmation' => 'restore',
+    ]);
+
+    clearstatcache();
+    expect(filemtime($zipPath))->toBeGreaterThanOrEqual($mtimeBefore);
+    expect(file_exists($zipPath))->toBeTrue();
+});
+
+test('upload restore rejects a non-thinkstream zip', function () {
+    $user = User::factory()->create();
+
+    $tempPath = tempnam(sys_get_temp_dir(), 'invalid-').'.zip';
+    $zip = new ZipArchive;
+    $zip->open($tempPath, ZipArchive::CREATE);
+    $zip->addFromString('something-else.json', '{}');
+    $zip->close();
+
+    $uploadedFile = new UploadedFile($tempPath, 'bad.zip', 'application/zip', null, true);
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.backup.restore.upload'), [
+            'file' => $uploadedFile,
+            'confirmation' => 'restore',
+        ])
+        ->assertSessionHasErrors('file');
+
+    unlink($tempPath);
+});
+
+test('upload restore rejects malformed thinkstream json without deleting current canvases', function () {
+    $user = User::factory()->create();
+    ThinkstreamPage::factory()->for($user)->create(['title' => 'Current Canvas']);
+
+    $tempPath = tempnam(sys_get_temp_dir(), 'invalid-thinkstream-').'.zip';
+    $zip = new ZipArchive;
+    $zip->open($tempPath, ZipArchive::CREATE);
+    $zip->addFromString('thinkstream.json', '{invalid json');
+    $zip->close();
+
+    $uploadedFile = new UploadedFile($tempPath, 'broken.zip', 'application/zip', null, true);
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.backup.restore.upload'), [
+            'file' => $uploadedFile,
+            'confirmation' => 'restore',
+        ])
+        ->assertSessionHasErrors('file');
+
+    expect(ThinkstreamPage::whereBelongsTo($user)->pluck('title')->all())
+        ->toBe(['Current Canvas']);
+
+    unlink($tempPath);
+});
+
+test('upload restore requires confirmation text', function () {
+    $user = User::factory()->create();
+    $this->actingAs($user)->post(route('admin.thinkstream.backup'));
+    $zipPath = storage_path('app/private/thinkstream-backups/thinkstream-'.$user->id.'.zip');
+
+    $uploadedFile = new UploadedFile($zipPath, 'thinkstream.zip', 'application/zip', null, true);
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.backup.restore.upload'), [
+            'file' => $uploadedFile,
+            'confirmation' => 'wrong',
+        ])
+        ->assertSessionHasErrors('confirmation');
+});
+
+test('unauthenticated users cannot use upload restore', function () {
+    $this->post(route('admin.thinkstream.backup.restore.upload'))->assertRedirect(route('login'));
 });

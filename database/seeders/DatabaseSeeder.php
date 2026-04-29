@@ -23,7 +23,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             ScrapNamespaceSeeder::class,
             SyntaxSeeder::class,
-            NamespaceBackupSeeder::class,
+            RestoreSeeder::class,
             // RoutingCheckSeeder::class, // for testing
         ]);
     }
