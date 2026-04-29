@@ -24,7 +24,7 @@ type EncodedMetadata = {
     caption?: string;
 };
 
-function isAbsoluteUrl(url: string): boolean {
+export function isAbsoluteUrl(url: string): boolean {
     return (
         url.startsWith('http://') ||
         url.startsWith('https://') ||

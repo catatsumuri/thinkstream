@@ -2,6 +2,7 @@ import { router, usePage } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, Code2, Eye } from 'lucide-react';
 import {
     forwardRef,
+    useCallback,
     useEffect,
     useImperativeHandle,
     useRef,
@@ -13,6 +14,7 @@ import MarkdownContent from '@/components/markdown-content';
 import { Label } from '@/components/ui/label';
 import { createMarkdownComponents } from '@/lib/markdown-components';
 import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
+import { isAbsoluteUrl } from '@/lib/markdown-syntax';
 import { slugify } from '@/lib/slugify';
 import { cn } from '@/lib/utils';
 
@@ -30,6 +32,7 @@ type Props = {
     error?: string;
     uploadUrl?: string;
     jumpTo?: number;
+    disabled?: boolean;
     onSelectionChange?: (hasSelection: boolean) => void;
     toolbar?: React.ReactNode;
 };
@@ -43,6 +46,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
             error,
             uploadUrl,
             jumpTo,
+            disabled = false,
             onSelectionChange,
             toolbar,
         }: Props,
@@ -52,6 +56,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
         const [activeTab, setActiveTab] = useState<'write' | 'preview'>(
             'write',
         );
+        const valueRef = useRef(defaultValue);
 
         const lastSelectionRef = useRef<{
             text: string;
@@ -59,22 +64,37 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
             end: number;
         } | null>(null);
 
+        const updateValue = useCallback(
+            (updater: React.SetStateAction<string>) => {
+                const nextValue =
+                    typeof updater === 'function'
+                        ? (updater as (previous: string) => string)(
+                              valueRef.current,
+                          )
+                        : updater;
+
+                valueRef.current = nextValue;
+                setValue(nextValue);
+            },
+            [],
+        );
+
         useImperativeHandle(
             ref,
             () => ({
-                setContent: (content: string) => setValue(content),
+                setContent: (content: string) => updateValue(content),
                 getContent: () => value,
                 getSelection: () => lastSelectionRef.current,
                 replaceRange: (start: number, end: number, newText: string) => {
                     lastSelectionRef.current = null;
                     onSelectionChange?.(false);
-                    setValue(
+                    updateValue(
                         (prev) =>
                             prev.slice(0, start) + newText + prev.slice(end),
                     );
                 },
             }),
-            [value, onSelectionChange],
+            [onSelectionChange, updateValue, value],
         );
         const textareaRef = useRef<HTMLTextAreaElement>(null);
         const previewRef = useRef<HTMLDivElement>(null);
@@ -94,7 +114,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                 const { selectionStart, selectionEnd } = textarea;
                 const markdown = `![image](${props.imageUrl})`;
 
-                setValue((prevContent) => {
+                updateValue((prevContent) => {
                     const newContent =
                         prevContent.substring(0, selectionStart) +
                         markdown +
@@ -109,7 +129,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                     return newContent;
                 });
             }
-        }, [props.imageUrl]);
+        }, [props.imageUrl, updateValue]);
 
         useEffect(() => {
             if (hasJumpedRef.current || jumpTo === undefined) {
@@ -138,10 +158,9 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                 ) || 20;
             const lineIndex =
                 textarea.value.slice(0, clamped).split(/\r?\n/).length - 1;
-            textarea.scrollTop = Math.max(
-                0,
-                lineIndex * lineHeight - lineHeight * 2,
-            );
+            textarea.scrollTo({
+                top: Math.max(0, lineIndex * lineHeight - lineHeight * 2),
+            });
 
             const line = textarea.value.slice(clamped, selectionEnd);
             const headingMatch = /^(#{1,6})\s+(.+?)(?:\s+#+\s*)?$/.exec(line);
@@ -158,7 +177,13 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                     const containerTop =
                         previewRef.current.getBoundingClientRect().top;
                     const elTop = el.getBoundingClientRect().top;
-                    previewRef.current.scrollTop += elTop - containerTop - 16;
+                    previewRef.current.scrollTo({
+                        top:
+                            previewRef.current.scrollTop +
+                            elTop -
+                            containerTop -
+                            16,
+                    });
                 }
             }
 
@@ -210,8 +235,9 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
             }
 
             const ratio = textarea.scrollTop / scrollableHeight;
-            preview.scrollTop =
-                ratio * (preview.scrollHeight - preview.clientHeight);
+            preview.scrollTo({
+                top: ratio * (preview.scrollHeight - preview.clientHeight),
+            });
         };
 
         const syncRightToLeft = () => {
@@ -230,8 +256,9 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
             }
 
             const ratio = preview.scrollTop / scrollableHeight;
-            textarea.scrollTop =
-                ratio * (textarea.scrollHeight - textarea.clientHeight);
+            textarea.scrollTo({
+                top: ratio * (textarea.scrollHeight - textarea.clientHeight),
+            });
         };
 
         const handlePaste = (e: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -246,6 +273,37 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                 if (file) {
                     handleImageUpload(file);
                 }
+
+                return;
+            }
+
+            const pastedText = e.clipboardData.getData('text/plain').trim();
+            const { selectionStart, selectionEnd } = e.currentTarget;
+
+            if (selectionStart !== selectionEnd && isAbsoluteUrl(pastedText)) {
+                e.preventDefault();
+                const selectedText = e.currentTarget.value.slice(
+                    selectionStart,
+                    selectionEnd,
+                );
+                const markdownLink = `[${selectedText}](${pastedText})`;
+
+                updateValue(
+                    (prev) =>
+                        prev.slice(0, selectionStart) +
+                        markdownLink +
+                        prev.slice(selectionEnd),
+                );
+
+                setTimeout(() => {
+                    if (textareaRef.current) {
+                        const pos = selectionStart + markdownLink.length;
+                        textareaRef.current.setSelectionRange(pos, pos);
+                    }
+                }, 0);
+
+                lastSelectionRef.current = null;
+                onSelectionChange?.(false);
             }
         };
 
@@ -334,7 +392,7 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                                 id={name}
                                 name={name}
                                 value={value}
-                                onChange={(e) => setValue(e.target.value)}
+                                onChange={(e) => updateValue(e.target.value)}
                                 onSelect={(e) => {
                                     const t = e.currentTarget;
                                     const has =
@@ -389,11 +447,13 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                                         ? (e) => e.preventDefault()
                                         : undefined
                                 }
-                                onPaste={uploadUrl ? handlePaste : undefined}
+                                onPaste={handlePaste}
+                                readOnly={disabled}
                                 placeholder="Write markdown here..."
                                 className={cn(
                                     'h-[50vh] w-full resize-none border-0 bg-transparent px-4 pb-4 font-mono text-sm shadow-none outline-none placeholder:text-muted-foreground/60 lg:h-[65vh]',
                                     error && 'border-b border-destructive',
+                                    disabled && 'cursor-not-allowed opacity-50',
                                 )}
                             />
                         </div>

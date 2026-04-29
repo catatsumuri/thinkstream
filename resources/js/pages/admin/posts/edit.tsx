@@ -111,8 +111,7 @@ export default function Edit({
     } = useHttp({ content: '' });
 
     function runSelectionAction(
-        setData: (key: string, value: string) => void,
-        post: (url: string, options: object) => void,
+        post: (url: string, options: object) => Promise<unknown>,
         url: string,
     ) {
         const selection = editorRef.current?.getSelection();
@@ -121,7 +120,6 @@ export default function Edit({
             return;
         }
 
-        setData('content', selection.text);
         post(url, {
             onSuccess: (response: unknown) => {
                 const { content, message } = response as {
@@ -133,15 +131,18 @@ export default function Edit({
                     selection.end,
                     content,
                 );
-                setHasUnsavedChanges(true);
                 toast.success(message);
             },
+            onError: (errors: Record<string, string>) => {
+                toast.error(errors.content ?? 'Failed to process content.');
+            },
+        }).catch(() => {
+            toast.error('AI request failed. Try selecting less content.');
         });
     }
 
     function structureMarkdown() {
         runSelectionAction(
-            setStructureData,
             structurePost,
             PostController.structureMarkdown.url({
                 namespace: namespace.id,
@@ -152,7 +153,6 @@ export default function Edit({
 
     function translateMarkdown() {
         runSelectionAction(
-            setTranslateData,
             translatePost,
             PostController.translateMarkdown.url({
                 namespace: namespace.id,
@@ -425,9 +425,31 @@ export default function Edit({
                                                 post: post.slug,
                                             })}
                                             jumpTo={jumpTo}
+                                            disabled={
+                                                structuring || translating
+                                            }
                                             onSelectionChange={
                                                 aiEnabled && !post.is_syncing
-                                                    ? setHasSelection
+                                                    ? (has) => {
+                                                          setHasSelection(has);
+
+                                                          if (has) {
+                                                              const sel =
+                                                                  editorRef.current?.getSelection();
+
+                                                              if (sel) {
+                                                                  setStructureData(
+                                                                      'content',
+                                                                      sel.text,
+                                                                  );
+
+                                                                  setTranslateData(
+                                                                      'content',
+                                                                      sel.text,
+                                                                  );
+                                                              }
+                                                          }
+                                                      }
                                                     : undefined
                                             }
                                             toolbar={
