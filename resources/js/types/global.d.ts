@@ -13,6 +13,10 @@ declare module '@inertiajs/core' {
                 }>;
             };
             sidebarOpen: boolean;
+            thoughtImageUpload?: {
+                key: string;
+                url: string;
+            };
             [key: string]: unknown;
         };
     }

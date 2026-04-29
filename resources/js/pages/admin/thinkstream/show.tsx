@@ -4,6 +4,7 @@ import {
     setLayoutProps,
     useForm,
     useHttp,
+    usePage,
 } from '@inertiajs/react';
 import {
     BookmarkPlus,
@@ -19,7 +20,7 @@ import {
     Wand2,
     X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
     destroyMany as thinkstreamDestroyMany,
     index as thinkstreamIndex,
@@ -29,6 +30,7 @@ import {
     store as thinkstreamStore,
     structureThoughts as thinkstreamStructureThoughts,
     update as thinkstreamUpdate,
+    uploadImage as thinkstreamUploadImage,
 } from '@/actions/App/Http/Controllers/Admin/ThinkstreamController';
 import MarkdownContent from '@/components/markdown-content';
 import { Button } from '@/components/ui/button';
@@ -45,8 +47,8 @@ import {
 } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
-import { getMarkdownLinkPasteResult } from '@/lib/markdown-link-paste';
 import { createMarkdownComponents } from '@/lib/markdown-components';
+import { getMarkdownLinkPasteResult } from '@/lib/markdown-link-paste';
 import { timeAgo } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
@@ -64,6 +66,18 @@ type Page = {
     id: number;
     title: string;
     created_at: string;
+};
+
+type ThoughtImageUpload = {
+    key: string;
+    url: string;
+};
+
+type PendingImageUpload = {
+    key: string;
+    target: 'thought' | 'edit';
+    selectionStart: number;
+    selectionEnd: number;
 };
 
 function hasThoughtsProp(props: unknown): props is { thoughts: Thought[] } {
@@ -84,6 +98,17 @@ export default function ThinkstreamShow({
     thoughts: Thought[];
     aiEnabled: boolean;
 }) {
+    const { props } = usePage<{ thoughtImageUpload?: ThoughtImageUpload }>();
+    const thoughtTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const editTextareaRef = useRef<HTMLTextAreaElement>(null);
+    const pendingImageUploadsRef = useRef<PendingImageUpload[]>([]);
+    const previousThoughtImageUploadKeyRef = useRef<string | undefined>(
+        undefined,
+    );
+    const nextUploadKeyRef = useRef(0);
+    const thoughtContentRef = useRef('');
+    const editingContentRef = useRef('');
+
     const [pageTitle, setPageTitle] = useState(page.title);
     const { data, setData, post, processing, errors, reset } = useForm({
         content: '',
@@ -105,6 +130,14 @@ export default function ThinkstreamShow({
     const [structuredExpanded, setStructuredExpanded] = useState(false);
     const [scrapUrl, setScrapUrl] = useState<string | null>(null);
     const [deleteCanvasOnSave, setDeleteCanvasOnSave] = useState(false);
+
+    useEffect(() => {
+        thoughtContentRef.current = data.content;
+    }, [data.content]);
+
+    useEffect(() => {
+        editingContentRef.current = editingContent;
+    }, [editingContent]);
 
     const {
         setData: setStructureData,
@@ -132,6 +165,121 @@ export default function ThinkstreamShow({
             { title: pageTitle, href: thinkstreamShow.url(page.id) },
         ],
     });
+
+    useEffect(() => {
+        if (
+            !props.thoughtImageUpload ||
+            props.thoughtImageUpload.key ===
+                previousThoughtImageUploadKeyRef.current
+        ) {
+            return;
+        }
+
+        previousThoughtImageUploadKeyRef.current = props.thoughtImageUpload.key;
+
+        const pendingUploadIndex = pendingImageUploadsRef.current.findIndex(
+            ({ key }) => key === props.thoughtImageUpload?.key,
+        );
+
+        if (pendingUploadIndex === -1) {
+            return;
+        }
+
+        const [pendingUpload] = pendingImageUploadsRef.current.splice(
+            pendingUploadIndex,
+            1,
+        );
+
+        if (!pendingUpload) {
+            return;
+        }
+
+        const markdown = `![image](${props.thoughtImageUpload.url})`;
+
+        if (pendingUpload.target === 'thought') {
+            setData(
+                'content',
+                thoughtContentRef.current.substring(
+                    0,
+                    pendingUpload.selectionStart,
+                ) +
+                    markdown +
+                    thoughtContentRef.current.substring(
+                        pendingUpload.selectionEnd,
+                    ),
+            );
+
+            setTimeout(() => {
+                const textarea = thoughtTextareaRef.current;
+
+                if (!textarea) {
+                    return;
+                }
+
+                const pos = pendingUpload.selectionStart + markdown.length;
+                textarea.setSelectionRange(pos, pos);
+                textarea.focus();
+            }, 0);
+        } else {
+            setEditingContent(
+                editingContentRef.current.substring(
+                    0,
+                    pendingUpload.selectionStart,
+                ) +
+                    markdown +
+                    editingContentRef.current.substring(
+                        pendingUpload.selectionEnd,
+                    ),
+            );
+
+            setTimeout(() => {
+                const textarea = editTextareaRef.current;
+
+                if (!textarea) {
+                    return;
+                }
+
+                const pos = pendingUpload.selectionStart + markdown.length;
+                textarea.setSelectionRange(pos, pos);
+                textarea.focus();
+            }, 0);
+        }
+    }, [props.thoughtImageUpload, setData]);
+
+    function handleImageUpload(file: File, target: 'thought' | 'edit') {
+        if (!file.type.startsWith('image/')) {
+            return;
+        }
+
+        const targetTextarea =
+            target === 'thought'
+                ? thoughtTextareaRef.current
+                : editTextareaRef.current;
+        const uploadKey = `thought-image-${nextUploadKeyRef.current++}`;
+
+        pendingImageUploadsRef.current.push({
+            key: uploadKey,
+            target,
+            selectionStart: targetTextarea?.selectionStart ?? 0,
+            selectionEnd: targetTextarea?.selectionEnd ?? 0,
+        });
+
+        router.post(
+            thinkstreamUploadImage.url(page.id),
+            { image: file, upload_key: uploadKey },
+            {
+                preserveState: true,
+                preserveScroll: true,
+                onError: (uploadErrors) => {
+                    pendingImageUploadsRef.current =
+                        pendingImageUploadsRef.current.filter(
+                            ({ key }) => key !== uploadKey,
+                        );
+                    alert(uploadErrors.image ?? 'Image upload failed.');
+                },
+            },
+        );
+    }
 
     function refineTitle() {
         refineTitlePost(thinkstreamRefineTitle.url(page.id), {
@@ -280,6 +428,21 @@ export default function ThinkstreamShow({
     }
 
     function handleThoughtPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+        const imageItem = Array.from(e.clipboardData.items).find((item) =>
+            item.type.startsWith('image/'),
+        );
+
+        if (imageItem) {
+            e.preventDefault();
+            const file = imageItem.getAsFile();
+
+            if (file) {
+                handleImageUpload(file, 'thought');
+            }
+
+            return;
+        }
+
         const pasteResult = getMarkdownLinkPasteResult({
             currentValue: e.currentTarget.value,
             pastedText: e.clipboardData.getData('text/plain'),
@@ -305,6 +468,21 @@ export default function ThinkstreamShow({
     }
 
     function handleEditingPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+        const imageItem = Array.from(e.clipboardData.items).find((item) =>
+            item.type.startsWith('image/'),
+        );
+
+        if (imageItem) {
+            e.preventDefault();
+            const file = imageItem.getAsFile();
+
+            if (file) {
+                handleImageUpload(file, 'edit');
+            }
+
+            return;
+        }
+
         const pasteResult = getMarkdownLinkPasteResult({
             currentValue: e.currentTarget.value,
             pastedText: e.clipboardData.getData('text/plain'),
@@ -560,6 +738,9 @@ export default function ThinkstreamShow({
                                                         }
                                                     >
                                                         <Textarea
+                                                            ref={
+                                                                editTextareaRef
+                                                            }
                                                             value={
                                                                 editingContent
                                                             }
@@ -571,6 +752,30 @@ export default function ThinkstreamShow({
                                                             }
                                                             onPaste={
                                                                 handleEditingPaste
+                                                            }
+                                                            onDrop={(e) => {
+                                                                e.preventDefault();
+                                                                const imageFile =
+                                                                    Array.from(
+                                                                        e
+                                                                            .dataTransfer
+                                                                            .files,
+                                                                    ).find(
+                                                                        (f) =>
+                                                                            f.type.startsWith(
+                                                                                'image/',
+                                                                            ),
+                                                                    );
+
+                                                                if (imageFile) {
+                                                                    handleImageUpload(
+                                                                        imageFile,
+                                                                        'edit',
+                                                                    );
+                                                                }
+                                                            }}
+                                                            onDragOver={(e) =>
+                                                                e.preventDefault()
                                                             }
                                                             rows={12}
                                                             data-test="thinkstream-edit-thought-textarea"
@@ -670,11 +875,28 @@ export default function ThinkstreamShow({
                         <CardContent className="p-4">
                             <form onSubmit={submit} className="space-y-3">
                                 <Textarea
+                                    ref={thoughtTextareaRef}
                                     value={data.content}
                                     onChange={(e) =>
                                         setData('content', e.target.value)
                                     }
                                     onPaste={handleThoughtPaste}
+                                    onDrop={(e) => {
+                                        e.preventDefault();
+                                        const imageFile = Array.from(
+                                            e.dataTransfer.files,
+                                        ).find((f) =>
+                                            f.type.startsWith('image/'),
+                                        );
+
+                                        if (imageFile) {
+                                            handleImageUpload(
+                                                imageFile,
+                                                'thought',
+                                            );
+                                        }
+                                    }}
+                                    onDragOver={(e) => e.preventDefault()}
                                     placeholder="Add the next thought..."
                                     rows={6}
                                     data-test="thinkstream-new-thought-textarea"
