@@ -45,6 +45,7 @@ import {
 } from '@/components/ui/dialog';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
+import { getMarkdownLinkPasteResult } from '@/lib/markdown-link-paste';
 import { createMarkdownComponents } from '@/lib/markdown-components';
 import { timeAgo } from '@/lib/time';
 import { cn } from '@/lib/utils';
@@ -276,6 +277,56 @@ export default function ThinkstreamShow({
                 onFinish: () => setEditSaving(false),
             },
         );
+    }
+
+    function handleThoughtPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+        const pasteResult = getMarkdownLinkPasteResult({
+            currentValue: e.currentTarget.value,
+            pastedText: e.clipboardData.getData('text/plain'),
+            selectionStart: e.currentTarget.selectionStart,
+            selectionEnd: e.currentTarget.selectionEnd,
+        });
+
+        if (!pasteResult) {
+            return;
+        }
+
+        e.preventDefault();
+        setData('content', pasteResult.nextValue);
+
+        const textarea = e.currentTarget;
+
+        setTimeout(() => {
+            textarea.setSelectionRange(
+                pasteResult.nextSelectionStart,
+                pasteResult.nextSelectionEnd,
+            );
+        }, 0);
+    }
+
+    function handleEditingPaste(e: React.ClipboardEvent<HTMLTextAreaElement>) {
+        const pasteResult = getMarkdownLinkPasteResult({
+            currentValue: e.currentTarget.value,
+            pastedText: e.clipboardData.getData('text/plain'),
+            selectionStart: e.currentTarget.selectionStart,
+            selectionEnd: e.currentTarget.selectionEnd,
+        });
+
+        if (!pasteResult) {
+            return;
+        }
+
+        e.preventDefault();
+        setEditingContent(pasteResult.nextValue);
+
+        const textarea = e.currentTarget;
+
+        setTimeout(() => {
+            textarea.setSelectionRange(
+                pasteResult.nextSelectionStart,
+                pasteResult.nextSelectionEnd,
+            );
+        }, 0);
     }
 
     return (
@@ -518,7 +569,11 @@ export default function ThinkstreamShow({
                                                                         .value,
                                                                 )
                                                             }
+                                                            onPaste={
+                                                                handleEditingPaste
+                                                            }
                                                             rows={12}
+                                                            data-test="thinkstream-edit-thought-textarea"
                                                             className="min-h-[24rem] resize-none px-4 py-3 text-[15px] leading-7 sm:min-h-[30rem]"
                                                             autoFocus
                                                         />
@@ -557,6 +612,7 @@ export default function ThinkstreamShow({
                                                                     type="button"
                                                                     size="sm"
                                                                     variant="outline"
+                                                                    data-test="thinkstream-edit-thought-button"
                                                                     className="h-7 px-2.5 text-xs"
                                                                     onClick={(
                                                                         e,
@@ -618,8 +674,10 @@ export default function ThinkstreamShow({
                                     onChange={(e) =>
                                         setData('content', e.target.value)
                                     }
+                                    onPaste={handleThoughtPaste}
                                     placeholder="Add the next thought..."
                                     rows={6}
+                                    data-test="thinkstream-new-thought-textarea"
                                     className="resize-none"
                                 />
                                 {errors.content && (
