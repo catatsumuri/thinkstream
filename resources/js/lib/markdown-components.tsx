@@ -26,6 +26,7 @@ export const HeadingIdContext = createContext<
 
 export type MarkdownComponentOptions = {
     headingAnchorPlacement?: 'inline' | 'gutter';
+    scrollMargin?: string;
     onEditHeading?: (payload: {
         level: number;
         text: string;
@@ -96,6 +97,7 @@ function makeHeadingComponents(
     postSlug?: string,
     {
         headingAnchorPlacement = 'inline',
+        scrollMargin = 'scroll-mt-24',
         onEditHeading,
     }: MarkdownComponentOptions = {},
 ): Pick<Components, 'h1' | 'h2' | 'h3'> {
@@ -118,7 +120,8 @@ function makeHeadingComponents(
                 <Tag
                     id={id}
                     className={cn(
-                        'group scroll-mt-24',
+                        'group',
+                        scrollMargin,
                         headingAnchorPlacement === 'gutter' && 'relative',
                     )}
                 >

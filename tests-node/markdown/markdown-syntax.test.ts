@@ -564,6 +564,76 @@ const x = 1;
     assert.match(output, /<CodeGroup>/);
 });
 
+test('preprocessMarkdownSyntax uses more colons for outer callout than inner when nested', () => {
+    const output = preprocessMarkdownSyntax(`<Note>
+  Outer note.
+  <Info>
+    Inner info.
+  </Info>
+</Note>`);
+
+    const lines = output.split('\n');
+    const outerLine = lines.find((l) => l.includes('message{.note}')) ?? '';
+    const innerLine = lines.find((l) => /^:{3,}message(?!\{\.note\})/.test(l)) ?? '';
+    const outerColons = (outerLine.match(/^(:{3,})/)?.[1] ?? '').length;
+    const innerColons = (innerLine.match(/^(:{3,})/)?.[1] ?? '').length;
+
+    assert.ok(outerColons >= 3, 'outer directive should use at least 3 colons');
+    assert.ok(innerColons >= 3, 'inner directive should use at least 3 colons');
+    assert.ok(outerColons > innerColons, 'outer directive must use more colons than inner to allow nesting');
+    assert.match(output, /Outer note\./);
+    assert.match(output, /Inner info\./);
+});
+
+test('preprocessMarkdownSyntax nested callout produces no stray ::: in output', () => {
+    const output = preprocessMarkdownSyntax(`<Note>
+  Some content.
+
+  <Info>
+    Nested hint.
+  </Info>
+</Note>`);
+
+    const lines = output.split('\n');
+    const strayClosings = lines.filter((l) => /^:{3}$/.test(l.trim()));
+
+    assert.equal(strayClosings.length, 0, 'no stray ::: close tags should appear in output');
+    assert.match(output, /Some content\./);
+    assert.match(output, /Nested hint\./);
+});
+
+test('preprocessMarkdownSyntax supports three levels of callout nesting without stray :::', () => {
+    const output = preprocessMarkdownSyntax(`<Note>
+  Level one.
+  <Info>
+    Level two.
+    <Tip>
+      Level three.
+    </Tip>
+  </Info>
+</Note>`);
+
+    const lines = output.split('\n');
+    const strayClosings = lines.filter((l) => /^:{3}$/.test(l.trim()));
+
+    assert.equal(strayClosings.length, 0, 'no stray ::: close tags should appear');
+    assert.match(output, /Level one\./);
+    assert.match(output, /Level two\./);
+    assert.match(output, /Level three\./);
+});
+
+test('preprocessMarkdownSyntax non-nested callout still emits a valid message directive', () => {
+    const output = preprocessMarkdownSyntax(`<Note>
+  Stand-alone note.
+</Note>`);
+
+    const lines = output.split('\n');
+    const directiveLine = lines.find((l) => l.includes('message{.note}')) ?? '';
+
+    assert.ok(/^:{3,}message\{\.note\}$/.test(directiveLine), 'directive line should be colons + message{.note}');
+    assert.match(output, /Stand-alone note\./);
+});
+
 test('preprocessMarkdownContent encodes image metadata outside fences only', () => {
     const output =
         preprocessMarkdownContent(`![Guide cover](/storage/guide.png =250x)
