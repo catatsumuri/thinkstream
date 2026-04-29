@@ -24,7 +24,6 @@ class PostFactory extends Factory
             'slug' => Str::slug($title),
             'content' => implode("\n\n", fake()->paragraphs(3)),
             'page_views' => 0,
-            'http_referer' => null,
             'is_draft' => false,
             'published_at' => now(),
         ];

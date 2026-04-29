@@ -2,6 +2,7 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\PostReferrer;
 use App\Models\Tag;
 use App\Models\User;
 use App\Support\NamespaceBackupArchive;
@@ -57,8 +58,8 @@ function addAdminNamespaceBackupTreeToZip(ZipArchive $zip, array $tree, string $
             $frontmatter['page_views'] = $post['page_views'];
         }
 
-        if (array_key_exists('http_referer', $post)) {
-            $frontmatter['http_referer'] = $post['http_referer'];
+        if (array_key_exists('referrers', $post)) {
+            $frontmatter['referrers'] = $post['referrers'];
         }
 
         if (array_key_exists('tags', $post)) {
@@ -1211,10 +1212,16 @@ test('authenticated users can view a post details page', function () {
         'title' => 'Release Notes',
         'slug' => 'release-notes',
         'page_views' => 27,
-        'http_referer' => 'https://example.com/changelog',
         'is_draft' => false,
         'reference_title' => 'Release Notes Source',
         'reference_url' => 'https://example.com/release-notes',
+    ]);
+    PostReferrer::create([
+        'post_id' => $post->id,
+        'http_referer' => 'https://example.com/changelog',
+        'referrer_host' => 'example.com',
+        'count' => 5,
+        'last_seen_at' => now(),
     ]);
 
     $this->actingAs($user)
@@ -1227,8 +1234,9 @@ test('authenticated users can view a post details page', function () {
             ->where('post.slug', 'release-notes')
             ->where('post.title', 'Release Notes')
             ->where('post.page_views', 27)
-            ->where('post.http_referer', 'https://example.com/changelog')
-            ->where('post.http_referer_url', 'https://example.com/changelog')
+            ->where('post.referrers.0.http_referer', 'https://example.com/changelog')
+            ->where('post.referrers.0.http_referer_url', 'https://example.com/changelog')
+            ->where('post.referrers.0.count', 5)
             ->where('post.reference_title', 'Release Notes Source')
             ->where('post.reference_url', 'https://example.com/release-notes')
         );
@@ -1264,9 +1272,12 @@ test('admin post details page includes move namespace options for system namespa
 test('admin post details page does not expose unsafe referer links', function () {
     $user = User::factory()->create();
     $namespace = PostNamespace::factory()->create();
-    $post = Post::factory()->for($user)->create([
-        'namespace_id' => $namespace->id,
+    $post = Post::factory()->for($user)->create(['namespace_id' => $namespace->id]);
+    PostReferrer::create([
+        'post_id' => $post->id,
         'http_referer' => 'javascript:alert(1)',
+        'referrer_host' => 'javascript:alert(1)',
+        'count' => 1,
     ]);
 
     $this->actingAs($user)
@@ -1274,8 +1285,8 @@ test('admin post details page does not expose unsafe referer links', function ()
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('admin/posts/show')
-            ->where('post.http_referer', 'javascript:alert(1)')
-            ->where('post.http_referer_url', null)
+            ->where('post.referrers.0.http_referer', 'javascript:alert(1)')
+            ->where('post.referrers.0.http_referer_url', null)
         );
 });
 

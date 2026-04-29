@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\PostReferrer;
 use App\Models\PostRevision;
 use App\Models\Tag;
 use App\Models\User;
@@ -281,7 +282,6 @@ class NamespaceRestoreArchive
             $post->slug = (string) $frontmatter['slug'];
             $post->content = $body;
             $post->page_views = (int) ($frontmatter['page_views'] ?? 0);
-            $post->http_referer = $frontmatter['http_referer'] ?? null;
             $post->is_draft = (bool) ($frontmatter['is_draft'] ?? false);
             $post->published_at = $frontmatter['published_at'] ?? null;
             $post->reference_title = $frontmatter['reference_title'] ?? null;
@@ -300,6 +300,20 @@ class NamespaceRestoreArchive
                 ->all();
 
             $post->tags()->sync($tagIds);
+
+            if (isset($frontmatter['referrers']) && is_array($frontmatter['referrers'])) {
+                $post->referrers()->delete();
+                foreach ($frontmatter['referrers'] as $referrerData) {
+                    if (isset($referrerData['url']) && $referrerData['url'] !== '') {
+                        PostReferrer::create([
+                            'post_id' => $post->id,
+                            'http_referer' => (string) $referrerData['url'],
+                            'referrer_host' => PostReferrer::normalizeHost((string) $referrerData['url']),
+                            'count' => (int) ($referrerData['count'] ?? 1),
+                        ]);
+                    }
+                }
+            }
 
             if ($withRevisions) {
                 $revisionsPath = $path.'/'.$post->slug.'.revisions.json';

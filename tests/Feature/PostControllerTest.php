@@ -2,9 +2,11 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\PostReferrer;
 use App\Models\Tag;
 use App\Models\User;
 use App\Support\ReservedContentPath;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -253,7 +255,7 @@ test('published post increments page views and queues a tracking cookie', functi
         );
 
     expect($post->fresh()->page_views)->toBe(5)
-        ->and($post->fresh()->http_referer)->toBe('https://example.com/search?q=laravel');
+        ->and(PostReferrer::where('post_id', $post->id)->where('http_referer', 'https://example.com/search?q=laravel')->value('count'))->toBe(1);
 });
 
 test('published post does not increment page views again while tracking cookie exists', function () {
@@ -278,7 +280,7 @@ test('published post does not increment page views again while tracking cookie e
     expect($post->fresh()->page_views)->toBe(9);
 });
 
-test('published post keeps the previous referer when the request has no referer header', function () {
+test('published post does not create a referrer record when the request has no referer header', function () {
     $namespace = PostNamespace::factory()->create([
         'slug' => 'guides',
         'is_published' => true,
@@ -286,13 +288,72 @@ test('published post keeps the previous referer when the request has no referer 
     $post = Post::factory()->for($namespace, 'namespace')->published()->create([
         'slug' => 'routing',
         'page_views' => 1,
+    ]);
+    PostReferrer::create([
+        'post_id' => $post->id,
         'http_referer' => 'https://old.example.com/article',
+        'referrer_host' => 'old.example.com',
+        'count' => 1,
     ]);
 
     $this->get(route('posts.path', ['path' => $post->full_path]))->assertSuccessful();
 
     expect($post->fresh()->page_views)->toBe(2)
-        ->and($post->fresh()->http_referer)->toBe('https://old.example.com/article');
+        ->and(PostReferrer::where('post_id', $post->id)->count())->toBe(1);
+});
+
+test('published post increments an existing referrer row instead of creating a duplicate', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'routing',
+        'page_views' => 1,
+    ]);
+    PostReferrer::create([
+        'post_id' => $post->id,
+        'http_referer' => 'https://example.com/search?q=laravel',
+        'referrer_host' => 'example.com',
+        'count' => 1,
+    ]);
+
+    $this->withHeader('Referer', 'https://example.com/search?q=laravel')
+        ->get(route('posts.path', ['path' => $post->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/show')
+            ->where('post.id', $post->id)
+            ->where('post.page_views', 2)
+        );
+
+    $referrer = PostReferrer::query()
+        ->where('post_id', $post->id)
+        ->where('http_referer', 'https://example.com/search?q=laravel')
+        ->first();
+
+    expect($post->fresh()->page_views)->toBe(2)
+        ->and($referrer)->not->toBeNull()
+        ->and($referrer->count)->toBe(2)
+        ->and(PostReferrer::where('post_id', $post->id)->count())->toBe(1);
+});
+
+test('post referrers table enforces unique referrers per post', function () {
+    $post = Post::factory()->published()->create();
+
+    PostReferrer::create([
+        'post_id' => $post->id,
+        'http_referer' => 'https://example.com/search?q=laravel',
+        'referrer_host' => 'example.com',
+        'count' => 1,
+    ]);
+
+    expect(fn () => PostReferrer::create([
+        'post_id' => $post->id,
+        'http_referer' => 'https://example.com/search?q=laravel',
+        'referrer_host' => 'example.com',
+        'count' => 1,
+    ]))->toThrow(QueryException::class);
 });
 
 test('published post does not increment page views for bot user agents', function () {

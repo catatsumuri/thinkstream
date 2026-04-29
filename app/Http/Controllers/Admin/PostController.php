@@ -389,7 +389,7 @@ class PostController extends Controller
     public function show(PostNamespace $namespace, Post $post): Response
     {
         $rootNamespace = $this->rootNamespace($namespace);
-        $post->load('tags');
+        $post->load('tags', 'referrers');
 
         return Inertia::render('admin/posts/show', [
             'namespace' => [
@@ -412,14 +412,23 @@ class PostController extends Controller
                     'published_at',
                     'created_at',
                     'page_views',
-                    'http_referer',
                     'reference_title',
                     'reference_url',
                 ]),
-                'http_referer_url' => $this->safeExternalUrl($post->http_referer),
                 'is_syncing' => $post->is_syncing,
                 'sync_file_path' => $post->sync_file_path,
                 'tags' => $post->tags->pluck('name')->values()->all(),
+                'referrers' => $post->referrers
+                    ->sortByDesc('count')
+                    ->take(10)
+                    ->map(fn ($referrer) => [
+                        'http_referer' => $referrer->http_referer,
+                        'http_referer_url' => $this->safeExternalUrl($referrer->http_referer),
+                        'count' => $referrer->count,
+                        'last_seen_at' => $referrer->last_seen_at?->toISOString(),
+                    ])
+                    ->values()
+                    ->all(),
             ],
         ]);
     }

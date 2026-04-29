@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\PostReferrer;
 use App\Support\ReservedContentPath;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\QueryException;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response as HttpResponse;
 use Illuminate\Support\Collection;
@@ -194,12 +196,10 @@ class PostController extends Controller
         ) {
             $referer = $this->resolveHttpReferer($request);
 
+            $post->increment('page_views');
+
             if ($referer !== null) {
-                $post->increment('page_views', 1, [
-                    'http_referer' => $referer,
-                ]);
-            } else {
-                $post->increment('page_views');
+                $this->recordReferrerView($post, $referer);
             }
 
             $pageViews++;
@@ -242,6 +242,53 @@ class PostController extends Controller
             ->value();
 
         return $referer === '' ? null : $referer;
+    }
+
+    private function recordReferrerView(Post $post, string $referer): void
+    {
+        $seenAt = now();
+        $attributes = [
+            'post_id' => $post->id,
+            'http_referer' => $referer,
+        ];
+
+        $updated = PostReferrer::query()
+            ->where($attributes)
+            ->increment('count', 1, [
+                'last_seen_at' => $seenAt,
+                'referrer_host' => PostReferrer::normalizeHost($referer),
+            ]);
+
+        if ($updated > 0) {
+            return;
+        }
+
+        try {
+            PostReferrer::query()->create([
+                ...$attributes,
+                'referrer_host' => PostReferrer::normalizeHost($referer),
+                'count' => 1,
+                'last_seen_at' => $seenAt,
+            ]);
+        } catch (QueryException $exception) {
+            if (! $this->isUniqueConstraintViolation($exception)) {
+                throw $exception;
+            }
+
+            PostReferrer::query()
+                ->where($attributes)
+                ->increment('count', 1, [
+                    'last_seen_at' => $seenAt,
+                    'referrer_host' => PostReferrer::normalizeHost($referer),
+                ]);
+        }
+    }
+
+    private function isUniqueConstraintViolation(QueryException $exception): bool
+    {
+        $sqlState = (string) ($exception->errorInfo[0] ?? $exception->getCode());
+
+        return in_array($sqlState, ['23000', '23505'], true);
     }
 
     private function isBotRequest(Request $request): bool

@@ -144,8 +144,12 @@ type Post = {
     full_path: string;
     content: string;
     page_views: number;
-    http_referer: string | null;
-    http_referer_url: string | null;
+    referrers: {
+        http_referer: string;
+        http_referer_url: string | null;
+        count: number;
+        last_seen_at: string | null;
+    }[];
     is_draft: boolean;
     published_at: string | null;
     created_at: string;
@@ -636,26 +640,45 @@ export default function Show({
                                                     /{post.full_path}
                                                 </span>
                                             </div>
-                                            <div className="flex items-center justify-between gap-3 px-4 py-3">
-                                                <span className="text-sm text-muted-foreground">
-                                                    Referer
+                                            <div className="flex flex-col gap-1 px-4 py-3">
+                                                <span className="mb-1 text-sm text-muted-foreground">
+                                                    Referrers
                                                 </span>
-                                                {post.http_referer &&
-                                                post.http_referer_url ? (
-                                                    <a
-                                                        href={
-                                                            post.http_referer_url
-                                                        }
-                                                        target="_blank"
-                                                        rel="noreferrer"
-                                                        className="max-w-32 truncate text-right text-xs text-muted-foreground underline-offset-4 hover:underline"
-                                                    >
-                                                        {post.http_referer}
-                                                    </a>
-                                                ) : post.http_referer ? (
-                                                    <span className="max-w-32 truncate text-right text-xs text-muted-foreground">
-                                                        {post.http_referer}
-                                                    </span>
+                                                {post.referrers.length > 0 ? (
+                                                    post.referrers.map(
+                                                        (referrer, i) => (
+                                                            <div
+                                                                key={i}
+                                                                className="flex items-center justify-between gap-3"
+                                                            >
+                                                                {referrer.http_referer_url ? (
+                                                                    <a
+                                                                        href={
+                                                                            referrer.http_referer_url
+                                                                        }
+                                                                        target="_blank"
+                                                                        rel="noreferrer"
+                                                                        className="max-w-48 truncate text-xs text-muted-foreground underline-offset-4 hover:underline"
+                                                                    >
+                                                                        {
+                                                                            referrer.http_referer
+                                                                        }
+                                                                    </a>
+                                                                ) : (
+                                                                    <span className="max-w-48 truncate text-xs text-muted-foreground">
+                                                                        {
+                                                                            referrer.http_referer
+                                                                        }
+                                                                    </span>
+                                                                )}
+                                                                <span className="shrink-0 text-xs font-medium">
+                                                                    {
+                                                                        referrer.count
+                                                                    }
+                                                                </span>
+                                                            </div>
+                                                        ),
+                                                    )
                                                 ) : (
                                                     <span className="text-sm font-medium">
                                                         -

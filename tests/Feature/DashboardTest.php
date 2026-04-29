@@ -2,6 +2,7 @@
 
 use App\Models\Post;
 use App\Models\PostNamespace;
+use App\Models\PostReferrer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -63,26 +64,41 @@ test('dashboard groups top referrers by host and keeps malformed referrers reada
         'full_path' => 'guides',
     ]);
 
-    Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
+    $laravelPost = Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
         'title' => 'Laravel',
         'slug' => 'laravel',
         'full_path' => 'guides/laravel',
         'page_views' => 40,
-        'http_referer' => 'https://example.com/docs/laravel',
     ]);
-    Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
+    $phpPost = Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
         'title' => 'PHP',
         'slug' => 'php',
         'full_path' => 'guides/php',
         'page_views' => 15,
-        'http_referer' => 'https://example.com/docs/php',
     ]);
-    Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
+    $oddPost = Post::factory()->for($user)->for($namespace, 'namespace')->published()->create([
         'title' => 'Odd',
         'slug' => 'odd',
         'full_path' => 'guides/odd',
         'page_views' => 25,
+    ]);
+    PostReferrer::create([
+        'post_id' => $laravelPost->id,
+        'http_referer' => 'https://example.com/docs/laravel',
+        'referrer_host' => 'example.com',
+        'count' => 40,
+    ]);
+    PostReferrer::create([
+        'post_id' => $phpPost->id,
+        'http_referer' => 'https://example.com/docs/php',
+        'referrer_host' => 'example.com',
+        'count' => 15,
+    ]);
+    PostReferrer::create([
+        'post_id' => $oddPost->id,
         'http_referer' => 'not a valid url',
+        'referrer_host' => 'not a valid url',
+        'count' => 25,
     ]);
 
     $this->actingAs($user)
