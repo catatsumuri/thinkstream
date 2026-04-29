@@ -12,6 +12,10 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('thinkstream', [ThinkstreamController::class, 'index'])->name('thinkstream.index');
     Route::post('thinkstream', [ThinkstreamController::class, 'storePage'])->name('thinkstream.storePage');
     Route::post('thinkstream/save-to-scrap', [ThinkstreamController::class, 'saveToScrap'])->name('thinkstream.saveToScrap');
+    Route::post('thinkstream/backup', [ThinkstreamController::class, 'backup'])->name('thinkstream.backup');
+    Route::get('thinkstream/backup/download', [ThinkstreamController::class, 'backupDownload'])->name('thinkstream.backup.download');
+    Route::post('thinkstream/backup/restore', [ThinkstreamController::class, 'backupRestore'])->name('thinkstream.backup.restore');
+    Route::post('thinkstream/backup/restore/upload', [ThinkstreamController::class, 'backupRestoreUpload'])->name('thinkstream.backup.restore.upload');
     Route::delete('thinkstream/{page}', [ThinkstreamController::class, 'destroyPage'])->name('thinkstream.destroyPage');
     Route::get('thinkstream/{page}', [ThinkstreamController::class, 'show'])->name('thinkstream.show');
     Route::post('thinkstream/{page}', [ThinkstreamController::class, 'store'])->name('thinkstream.store');
