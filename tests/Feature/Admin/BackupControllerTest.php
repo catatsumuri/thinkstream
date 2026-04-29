@@ -138,8 +138,22 @@ test('authenticated users can view the backups index', function () {
                 ->where('backups.1.namespace.id', $alpha->id)
                 ->where('delete_backups_url', route('admin.backups.destroyMany', absolute: false))
                 ->where('create_backups_url', route('admin.backups.storeMany', absolute: false))
+                ->where('restore_upload_url', route('admin.posts.restore.upload', absolute: false))
+                ->where('restore_preview', null)
             );
     });
+});
+
+test('backups index ignores invalid restore tokens', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->get(route('admin.backups.index', ['restore' => '../malicious']))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/backups/index')
+            ->where('restore_preview', null)
+        );
 });
 
 test('authenticated users can delete selected backups from the backups index', function () {

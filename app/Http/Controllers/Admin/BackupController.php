@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\PostNamespace;
 use App\Support\NamespaceBackupIndex;
+use App\Support\NamespaceRestoreArchive;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -17,13 +18,26 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class BackupController extends Controller
 {
-    public function index(NamespaceBackupIndex $backupIndex): Response
-    {
+    public function index(
+        Request $request,
+        NamespaceBackupIndex $backupIndex,
+        NamespaceRestoreArchive $restoreArchive
+    ): Response {
         $backups = collect($backupIndex->allFiles());
         $backupCountsByNamespaceId = $backups
             ->pluck('namespace')
             ->filter()
             ->countBy('id');
+        $restoreToken = $request->string('restore')->toString();
+        $restorePreview = null;
+
+        if ($restoreToken !== '' && $restoreArchive->hasToken($restoreToken)) {
+            $restorePreview = [
+                'token' => $restoreToken,
+                ...$restoreArchive->preview($restoreArchive->tokenPath($restoreToken)),
+                'stream_url' => route('admin.posts.restore.stream', ['token' => $restoreToken], absolute: false),
+            ];
+        }
 
         $namespaces = PostNamespace::query()
             ->orderByRaw('sort_order IS NULL, sort_order ASC, name ASC')
@@ -44,6 +58,8 @@ class BackupController extends Controller
             'create_backups_url' => route('admin.backups.storeMany', absolute: false),
             'delete_backups_url' => route('admin.backups.destroyMany', absolute: false),
             'restore_backups_url' => route('admin.backups.restoreMany', absolute: false),
+            'restore_upload_url' => route('admin.posts.restore.upload', absolute: false),
+            'restore_preview' => $restorePreview,
             'backups' => $backups
                 ->map(fn (array $backup): array => [
                     'key' => $backup['filename'],
