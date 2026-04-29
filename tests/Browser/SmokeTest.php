@@ -3,6 +3,8 @@
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\Tag;
+use App\Models\ThinkstreamPage;
+use App\Models\Thought;
 use App\Models\User;
 use App\Support\NamespaceBackupArchive;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -1354,6 +1356,124 @@ test('admin post edit pastes selected text as a markdown link', function () {
         'selectionCollapsed' => true,
     ]);
 
+});
+
+test('thinkstream textareas paste selected text as a markdown link', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $pageModel = ThinkstreamPage::factory()->for($user)->create([
+        'title' => 'Canvas',
+    ]);
+
+    Thought::factory()->for($user)->for($pageModel, 'page')->create([
+        'content' => 'Read docs here.',
+        'created_at' => now()->subHour(),
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.thinkstream.show', $pageModel, absolute: false))
+        ->resize(1440, 900);
+
+    $page->assertNoJavaScriptErrors();
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const textarea = document.querySelector('[data-test="thinkstream-new-thought-textarea"]');
+
+            if (! (textarea instanceof HTMLTextAreaElement) || typeof DataTransfer === 'undefined') {
+                return null;
+            }
+
+            const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+
+            if (! setter) {
+                return null;
+            }
+
+            setter.call(textarea, 'Read docs here.');
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            textarea.focus();
+            textarea.setSelectionRange(5, 9);
+
+            const clipboardData = new DataTransfer();
+            clipboardData.setData('text/plain', 'https://example.com/docs');
+
+            const event = new Event('paste', { bubbles: true, cancelable: true });
+            Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+
+            textarea.dispatchEvent(event);
+
+            return event.defaultPrevented;
+        })()
+    JS))->toBeTrue();
+
+    $page->wait(0.2);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const textarea = document.querySelector('[data-test="thinkstream-new-thought-textarea"]');
+
+            if (! (textarea instanceof HTMLTextAreaElement)) {
+                return null;
+            }
+
+            return {
+                value: textarea.value,
+                selectionCollapsed: textarea.selectionStart === textarea.selectionEnd,
+            };
+        })()
+    JS))->toBe([
+        'value' => 'Read [docs](https://example.com/docs) here.',
+        'selectionCollapsed' => true,
+    ]);
+
+    $page->click('[data-test="thinkstream-edit-thought-button"]')->wait(0.2);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const textarea = document.querySelector('[data-test="thinkstream-edit-thought-textarea"]');
+
+            if (! (textarea instanceof HTMLTextAreaElement) || typeof DataTransfer === 'undefined') {
+                return null;
+            }
+
+            textarea.focus();
+            textarea.setSelectionRange(5, 9);
+
+            const clipboardData = new DataTransfer();
+            clipboardData.setData('text/plain', 'https://example.com/docs');
+
+            const event = new Event('paste', { bubbles: true, cancelable: true });
+            Object.defineProperty(event, 'clipboardData', { value: clipboardData });
+
+            textarea.dispatchEvent(event);
+
+            return event.defaultPrevented;
+        })()
+    JS))->toBeTrue();
+
+    $page->wait(0.2);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const textarea = document.querySelector('[data-test="thinkstream-edit-thought-textarea"]');
+
+            if (! (textarea instanceof HTMLTextAreaElement)) {
+                return null;
+            }
+
+            return {
+                value: textarea.value,
+                selectionCollapsed: textarea.selectionStart === textarea.selectionEnd,
+            };
+        })()
+    JS))->toBe([
+        'value' => 'Read [docs](https://example.com/docs) here.',
+        'selectionCollapsed' => true,
+    ]);
 });
 
 test('admin post edit can collapse the metadata panel', function () {

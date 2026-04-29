@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Ai\Agents\ThinkstreamStructureAgent;
 use App\Ai\Agents\ThinkstreamTitleAgent;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\UploadThoughtImageRequest;
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\ThinkstreamPage;
@@ -311,6 +312,22 @@ class ThinkstreamController extends Controller
             'thoughts' => $thoughts,
             'aiEnabled' => config('thinkstream.ai.enabled'),
         ]);
+    }
+
+    public function uploadImage(UploadThoughtImageRequest $request, ThinkstreamPage $page): RedirectResponse
+    {
+        $this->authorizePage($request, $page);
+
+        $path = $request->file('image')->store("thoughts/{$page->id}", 'public');
+
+        $imageUrl = '/images/'.$path;
+
+        return to_route('admin.thinkstream.show', $page)
+            ->with('thoughtImageUrl', $imageUrl)
+            ->with('thoughtImageUpload', [
+                'key' => $request->string('upload_key')->toString(),
+                'url' => $imageUrl,
+            ]);
     }
 
     public function store(Request $request, ThinkstreamPage $page): RedirectResponse

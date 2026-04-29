@@ -14,7 +14,7 @@ import MarkdownContent from '@/components/markdown-content';
 import { Label } from '@/components/ui/label';
 import { createMarkdownComponents } from '@/lib/markdown-components';
 import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
-import { isAbsoluteUrl } from '@/lib/markdown-syntax';
+import { getMarkdownLinkPasteResult } from '@/lib/markdown-link-paste';
 import { slugify } from '@/lib/slugify';
 import { cn } from '@/lib/utils';
 
@@ -277,28 +277,23 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                 return;
             }
 
-            const pastedText = e.clipboardData.getData('text/plain').trim();
-            const { selectionStart, selectionEnd } = e.currentTarget;
+            const pasteResult = getMarkdownLinkPasteResult({
+                currentValue: e.currentTarget.value,
+                pastedText: e.clipboardData.getData('text/plain'),
+                selectionStart: e.currentTarget.selectionStart,
+                selectionEnd: e.currentTarget.selectionEnd,
+            });
 
-            if (selectionStart !== selectionEnd && isAbsoluteUrl(pastedText)) {
+            if (pasteResult) {
                 e.preventDefault();
-                const selectedText = e.currentTarget.value.slice(
-                    selectionStart,
-                    selectionEnd,
-                );
-                const markdownLink = `[${selectedText}](${pastedText})`;
-
-                updateValue(
-                    (prev) =>
-                        prev.slice(0, selectionStart) +
-                        markdownLink +
-                        prev.slice(selectionEnd),
-                );
+                updateValue(pasteResult.nextValue);
 
                 setTimeout(() => {
                     if (textareaRef.current) {
-                        const pos = selectionStart + markdownLink.length;
-                        textareaRef.current.setSelectionRange(pos, pos);
+                        textareaRef.current.setSelectionRange(
+                            pasteResult.nextSelectionStart,
+                            pasteResult.nextSelectionEnd,
+                        );
                     }
                 }, 0);
 
