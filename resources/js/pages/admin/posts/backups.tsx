@@ -28,6 +28,7 @@ type Namespace = {
     slug: string;
     full_path: string;
     backup_count: number;
+    ancestors: { id: number; name: string }[];
 };
 
 type Backup = {
@@ -169,6 +170,10 @@ export default function Backups({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
             { title: 'Namespaces', href: index.url() },
+            ...namespace.ancestors.map((ancestor) => ({
+                title: ancestor.name,
+                href: namespaceRoute.url(ancestor.id),
+            })),
             { title: namespace.name, href: namespaceRoute.url(namespace.id) },
             { title: 'Backups', href: backupsRoute.url(namespace.id) },
         ],

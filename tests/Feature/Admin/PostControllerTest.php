@@ -185,6 +185,26 @@ test('create form includes available tags', function () {
         );
 });
 
+test('create form exposes namespace ancestors for breadcrumb', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create(['name' => 'Guides']);
+    $child = PostNamespace::factory()->create([
+        'name' => 'Laravel',
+        'parent_id' => $root->id,
+        'full_path' => 'guides/laravel',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.create', $child))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/create')
+            ->has('namespace.ancestors', 1)
+            ->where('namespace.ancestors.0.id', $root->id)
+            ->where('namespace.ancestors.0.name', 'Guides')
+        );
+});
+
 test('uploading a restore zip from the backups index returns a restore preview', function () {
     $user = User::factory()->create();
     $existingNamespace = PostNamespace::factory()->create([
@@ -461,6 +481,35 @@ test('authenticated users can view the namespace backup management page', functi
                     'namespace' => $namespace,
                     'backup' => basename($latestBackup),
                 ], false))
+            );
+    } finally {
+        File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+    }
+});
+
+test('namespace backup management page exposes namespace ancestors for breadcrumb', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create(['name' => 'Guides']);
+    $child = PostNamespace::factory()->create([
+        'name' => 'Laravel',
+        'parent_id' => $root->id,
+        'full_path' => 'guides/laravel',
+    ]);
+
+    $backupDirectory = NamespaceBackupArchive::directory();
+    $backupPrefix = NamespaceBackupArchive::currentPrefix($child);
+    File::ensureDirectoryExists($backupDirectory);
+    File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
+
+    try {
+        $this->actingAs($user)
+            ->get(route('admin.posts.backups', $child))
+            ->assertOk()
+            ->assertInertia(fn ($page) => $page
+                ->component('admin/posts/backups')
+                ->has('namespace.ancestors', 1)
+                ->where('namespace.ancestors.0.id', $root->id)
+                ->where('namespace.ancestors.0.name', 'Guides')
             );
     } finally {
         File::delete(File::glob($backupDirectory.'/'.$backupPrefix.'-*.zip'));
@@ -1202,6 +1251,75 @@ test('authenticated users can view the edit form', function () {
     $this->actingAs($user)
         ->get(route('admin.posts.edit', [$namespace, $post]))
         ->assertOk();
+});
+
+test('edit form exposes namespace ancestors for breadcrumb', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create(['name' => 'Guides']);
+    $child = PostNamespace::factory()->create(['name' => 'Laravel', 'parent_id' => $root->id]);
+    $post = Post::factory()->for($user)->create(['namespace_id' => $child->id]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.edit', [$child, $post]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/edit')
+            ->has('namespace.ancestors', 1)
+            ->where('namespace.ancestors.0.id', $root->id)
+            ->where('namespace.ancestors.0.name', 'Guides')
+        );
+});
+
+test('post details page exposes namespace ancestors for breadcrumb', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create(['name' => 'Guides']);
+    $child = PostNamespace::factory()->create(['name' => 'Laravel', 'parent_id' => $root->id]);
+    $post = Post::factory()->for($user)->create(['namespace_id' => $child->id]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.show', [$child, $post]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/show')
+            ->has('namespace.ancestors', 1)
+            ->where('namespace.ancestors.0.id', $root->id)
+            ->where('namespace.ancestors.0.name', 'Guides')
+        );
+});
+
+test('post details page has empty ancestors for root namespace', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create(['name' => 'Guides']);
+    $post = Post::factory()->for($user)->create(['namespace_id' => $root->id]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.show', [$root, $post]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/show')
+            ->where('namespace.ancestors', [])
+        );
+});
+
+test('revision history page exposes namespace ancestors for breadcrumb', function () {
+    $user = User::factory()->create();
+    $root = PostNamespace::factory()->create(['name' => 'Guides']);
+    $child = PostNamespace::factory()->create([
+        'name' => 'Laravel',
+        'parent_id' => $root->id,
+        'full_path' => 'guides/laravel',
+    ]);
+    $post = Post::factory()->for($user)->create(['namespace_id' => $child->id]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.revisions', [$child, $post]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/revisions')
+            ->has('namespace.ancestors', 1)
+            ->where('namespace.ancestors.0.id', $root->id)
+            ->where('namespace.ancestors.0.name', 'Guides')
+        );
 });
 
 test('authenticated users can view a post details page', function () {

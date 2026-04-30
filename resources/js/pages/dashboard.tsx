@@ -6,6 +6,7 @@ import {
     Eye,
     FileText,
     Globe,
+    Tag,
 } from 'lucide-react';
 import {
     Card,
@@ -16,6 +17,7 @@ import {
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { dashboard } from '@/routes';
+import { show as tagShow } from '@/routes/tags';
 
 type RecentPost = {
     id: number;
@@ -41,6 +43,12 @@ type TopReferrer = {
     host: string;
     post_count: number;
     total_views: number;
+};
+
+type TagStat = {
+    id: number;
+    name: string;
+    posts_count: number;
 };
 
 function formatRelativeTime(isoString: string): string {
@@ -70,10 +78,12 @@ export default function Dashboard({
     recent_posts,
     top_posts,
     top_referrers,
+    tags,
 }: {
     recent_posts: RecentPost[];
     top_posts: TopPost[];
     top_referrers: TopReferrer[];
+    tags: TagStat[];
 }) {
     const totalViews = top_posts.reduce(
         (sum, post) => sum + post.page_views,
@@ -100,7 +110,7 @@ export default function Dashboard({
                         </CardContent>
                     </Card>
 
-                    <Card className="shadow-none">
+                    <Card className="min-w-0 overflow-hidden shadow-none">
                         <Tabs defaultValue="recent">
                             <CardHeader>
                                 <div className="flex items-center justify-between gap-4">
@@ -148,7 +158,7 @@ export default function Dashboard({
                                                                 href={
                                                                     post.admin_url
                                                                 }
-                                                                className="inline-flex items-center gap-2 font-medium hover:underline"
+                                                                className="inline-flex max-w-full items-center gap-2 overflow-hidden font-medium hover:underline"
                                                             >
                                                                 <FileText className="size-4 shrink-0 text-muted-foreground" />
                                                                 <span className="truncate">
@@ -212,7 +222,7 @@ export default function Dashboard({
                                                                 href={
                                                                     post.admin_url
                                                                 }
-                                                                className="inline-flex items-center gap-2 font-medium hover:underline"
+                                                                className="inline-flex max-w-full items-center gap-2 overflow-hidden font-medium hover:underline"
                                                             >
                                                                 <FileText className="size-4 shrink-0 text-muted-foreground" />
                                                                 <span className="truncate">
@@ -292,6 +302,34 @@ export default function Dashboard({
                         </Tabs>
                     </Card>
                 </div>
+
+                {tags.length > 0 && (
+                    <Card className="shadow-none">
+                        <CardHeader>
+                            <CardDescription>Tags</CardDescription>
+                            <CardTitle>All Tags</CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex flex-wrap gap-2">
+                                {tags.map((tag) => (
+                                    <Link
+                                        key={tag.id}
+                                        href={tagShow(tag.name).url}
+                                        className="inline-flex items-center gap-1.5 rounded-full border bg-muted/50 px-3 py-1.5 text-sm transition-colors hover:bg-muted"
+                                    >
+                                        <Tag className="size-3 shrink-0 text-muted-foreground" />
+                                        <span className="font-medium">
+                                            {tag.name}
+                                        </span>
+                                        <span className="rounded-full bg-background px-1.5 py-0.5 text-xs font-semibold text-muted-foreground tabular-nums">
+                                            {tag.posts_count}
+                                        </span>
+                                    </Link>
+                                ))}
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
             </div>
         </>
     );

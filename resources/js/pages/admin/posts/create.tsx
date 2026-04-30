@@ -23,6 +23,7 @@ type Namespace = {
     slug: string;
     full_path: string;
     name: string;
+    ancestors: { id: number; name: string }[];
 };
 
 function toSlug(value: string): string {
@@ -52,6 +53,10 @@ export default function Create({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
             { title: 'Namespaces', href: index.url() },
+            ...namespace.ancestors.map((ancestor) => ({
+                title: ancestor.name,
+                href: namespaceRoute.url(ancestor.id),
+            })),
             { title: namespace.name, href: namespaceRoute.url(namespace.id) },
             { title: 'New Post', href: create.url(namespace.id) },
         ],

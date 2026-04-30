@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Post;
 use App\Models\PostReferrer;
+use App\Models\Tag;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -90,10 +91,25 @@ class DashboardController extends Controller
             ->values()
             ->all();
 
+        $tags = Tag::query()
+            ->withCount('posts')
+            ->whereHas('posts')
+            ->orderByDesc('posts_count')
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->map(fn (Tag $tag): array => [
+                'id' => $tag->id,
+                'name' => $tag->name,
+                'posts_count' => $tag->posts_count,
+            ])
+            ->values()
+            ->all();
+
         return Inertia::render('dashboard', [
             'recent_posts' => $recentPosts,
             'top_posts' => $topPosts,
             'top_referrers' => $topReferrers,
+            'tags' => $tags,
         ]);
     }
 }
