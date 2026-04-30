@@ -141,17 +141,17 @@ export default function ThinkstreamShow({
     }, [editingContent]);
 
     const {
-        setData: setStructureData,
         post: structurePost,
         processing: structuring,
+        transform: transformStructure,
     } = useHttp({ ids: [] as number[] });
 
     const { post: refineTitlePost, processing: refiningTitle } = useHttp({});
 
     const {
-        setData: setSaveData,
         post: savePost,
         processing: saving,
+        transform: transformSave,
     } = useHttp({
         content: '',
         title: '',
@@ -318,8 +318,7 @@ export default function ThinkstreamShow({
     function structureThoughts() {
         const ids = Array.from(selected);
 
-        setStructureData('ids', ids);
-
+        transformStructure(() => ({ ids }));
         structurePost(thinkstreamStructureThoughts.url(page.id), {
             onSuccess: (response) => {
                 const { title, content, message } = response as {
@@ -341,11 +340,16 @@ export default function ThinkstreamShow({
         }
 
         const pageId = deleteCanvasOnSave ? page.id : null;
+        const title = structuredTitle ?? pageTitle;
+        const content = structuredContent;
+        const deleteCanvas = deleteCanvasOnSave;
 
-        setSaveData('content', structuredContent);
-        setSaveData('title', structuredTitle ?? pageTitle);
-        setSaveData('delete_canvas', deleteCanvasOnSave);
-        setSaveData('page_id', pageId);
+        transformSave(() => ({
+            content,
+            title,
+            delete_canvas: deleteCanvas,
+            page_id: pageId,
+        }));
 
         savePost(thinkstreamSaveToScrap.url(), {
             onSuccess: (response) => {
@@ -547,6 +551,7 @@ export default function ThinkstreamShow({
                                         variant={
                                             editMode ? 'secondary' : 'default'
                                         }
+                                        data-test="thinkstream-select-thoughts-button"
                                         className="shrink-0"
                                         onClick={
                                             editMode
@@ -564,6 +569,7 @@ export default function ThinkstreamShow({
                                     <Button
                                         type="button"
                                         variant="outline"
+                                        data-test="thinkstream-refine-title-button"
                                         className="shrink-0"
                                         disabled={
                                             refiningTitle ||
@@ -603,6 +609,7 @@ export default function ThinkstreamShow({
                                         type="button"
                                         size="sm"
                                         variant="secondary"
+                                        data-test="thinkstream-select-all-button"
                                         onClick={toggleSelectAll}
                                     >
                                         {selected.size === thoughts.length
@@ -613,6 +620,7 @@ export default function ThinkstreamShow({
                                         <Button
                                             size="sm"
                                             variant="outline"
+                                            data-test="thinkstream-refine-scrap-button"
                                             disabled={
                                                 structuring ||
                                                 selected.size === 0
@@ -695,6 +703,7 @@ export default function ThinkstreamShow({
                                 return (
                                     <Card
                                         key={thought.id}
+                                        data-test={`thinkstream-thought-card-${thought.id}`}
                                         onClick={() => {
                                             if (editMode && !isEditing) {
                                                 toggleSelected(thought.id);
@@ -1044,6 +1053,7 @@ export default function ThinkstreamShow({
                                 {scrapUrl ? (
                                     <a
                                         href={scrapUrl}
+                                        data-test="thinkstream-view-scrap-link"
                                         className="flex items-center gap-1 text-xs text-primary hover:underline"
                                     >
                                         <ExternalLink className="size-3" />
@@ -1067,6 +1077,7 @@ export default function ThinkstreamShow({
                                         <Button
                                             variant="outline"
                                             size="sm"
+                                            data-test="thinkstream-save-scrap-button"
                                             className="h-7 text-xs"
                                             disabled={saving}
                                             onClick={saveToScrap}
