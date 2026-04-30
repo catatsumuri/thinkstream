@@ -23,6 +23,7 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->string('cover_image')->nullable();
             $table->boolean('is_published')->default(true);
+            $table->boolean('is_system')->default(false);
             $table->json('post_order')->nullable();
             $table->unsignedInteger('sort_order')->nullable();
             $table->timestamps();
