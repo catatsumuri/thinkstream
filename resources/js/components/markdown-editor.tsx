@@ -57,7 +57,6 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
             'write',
         );
         const valueRef = useRef(defaultValue);
-
         const lastSelectionRef = useRef<{
             text: string;
             start: number;
@@ -74,6 +73,12 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                         : updater;
 
                 valueRef.current = nextValue;
+                if (
+                    textareaRef.current &&
+                    textareaRef.current.value !== nextValue
+                ) {
+                    textareaRef.current.value = nextValue;
+                }
                 setValue(nextValue);
             },
             [],
@@ -386,8 +391,11 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                                 ref={textareaRef}
                                 id={name}
                                 name={name}
-                                value={value}
-                                onChange={(e) => updateValue(e.target.value)}
+                                defaultValue={defaultValue}
+                                onChange={(e) => {
+                                    valueRef.current = e.target.value;
+                                    setValue(e.target.value);
+                                }}
                                 onSelect={(e) => {
                                     const t = e.currentTarget;
                                     const has =

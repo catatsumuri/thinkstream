@@ -1358,6 +1358,104 @@ test('admin post edit pastes selected text as a markdown link', function () {
 
 });
 
+test('admin post edit keeps caret position when pressing space in a scrolled markdown textarea', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->create([
+        'slug' => 'todo',
+        'title' => 'Todo',
+        'content' => str_repeat(
+            "X API bookmarks require bookmark.read, tweet.read, and users.read scopes.\n",
+            200,
+        ),
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.edit', [
+        'namespace' => $namespace->id,
+        'post' => $post->slug,
+    ], absolute: false))->resize(1440, 900);
+
+    $page->assertNoJavaScriptErrors();
+
+    $page->script(<<<'JS'
+        (() => {
+            const textarea = document.querySelector('textarea[name="content"]');
+
+            if (! (textarea instanceof HTMLTextAreaElement)) {
+                return false;
+            }
+
+            window.scrollTo(0, 0);
+            textarea.scrollTop = 2400;
+
+            return true;
+        })()
+    JS);
+
+    $page->page()->locator('textarea[name="content"]')->click([
+        'position' => [
+            'x' => 320,
+            'y' => 420,
+        ],
+    ]);
+
+    $before = $page->script(<<<'JS'
+        (() => {
+            const textarea = document.querySelector('textarea[name="content"]');
+
+            if (! (textarea instanceof HTMLTextAreaElement)) {
+                return null;
+            }
+
+            return {
+                selectionStart: textarea.selectionStart,
+                selectionEnd: textarea.selectionEnd,
+                scrollTop: textarea.scrollTop,
+                contentLength: textarea.value.length,
+            };
+        })()
+    JS);
+
+    $page->page()->keyDown('Space');
+    $page->page()->keyUp('Space');
+    $page->wait(0.2);
+
+    $after = $page->script(<<<'JS'
+        (() => {
+            const textarea = document.querySelector('textarea[name="content"]');
+
+            if (! (textarea instanceof HTMLTextAreaElement)) {
+                return null;
+            }
+
+            return {
+                selectionStart: textarea.selectionStart,
+                selectionEnd: textarea.selectionEnd,
+                scrollTop: textarea.scrollTop,
+                contentLength: textarea.value.length,
+            };
+        })()
+    JS);
+
+    expect($before)->toBeArray()
+        ->and($before['selectionStart'])->toBeLessThan($before['contentLength'] - 100)
+        ->and($before['selectionStart'])->toBe($before['selectionEnd'])
+        ->and($before['scrollTop'])->toBe(2400)
+        ->and($after)->toBeArray()
+        ->and($after['selectionStart'])->toBe($before['selectionStart'] + 1)
+        ->and($after['selectionEnd'])->toBe($before['selectionEnd'] + 1)
+        ->and($after['scrollTop'])->toBe(2400);
+});
+
 test('thinkstream textareas paste selected text as a markdown link', function () {
     $user = User::factory()->create([
         'email' => 'test@example.com',
