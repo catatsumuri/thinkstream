@@ -1476,6 +1476,84 @@ test('thinkstream textareas paste selected text as a markdown link', function ()
     ]);
 });
 
+test('thinkstream edit switches between write and preview without losing content', function () {
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $pageModel = ThinkstreamPage::factory()->for($user)->create([
+        'title' => 'Canvas',
+    ]);
+
+    Thought::factory()->for($user)->for($pageModel, 'page')->create([
+        'content' => 'Hello world',
+        'created_at' => now()->subHour(),
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.thinkstream.show', $pageModel, absolute: false))
+        ->resize(1440, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->click('[data-test="thinkstream-edit-thought-button"]')
+        ->wait(0.2);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const textarea = document.querySelector('[data-test="thinkstream-edit-thought-textarea"]');
+
+            if (! (textarea instanceof HTMLTextAreaElement)) {
+                return null;
+            }
+
+            const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+
+            if (! setter) {
+                return null;
+            }
+
+            setter.call(textarea, '# Preview Title\n\n**Bold** text');
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+
+            return textarea.value;
+        })()
+    JS))->toBe("# Preview Title\n\n**Bold** text");
+
+    $page
+        ->click('[data-test="thinkstream-edit-preview-tab"]')
+        ->wait(0.2);
+
+    expect($page->script(<<<'JS'
+        (() => ({
+            textareaPresent: document.querySelector('[data-test="thinkstream-edit-thought-textarea"]') !== null,
+            headingText: document.querySelector('[data-test="thinkstream-edit-preview-panel"] h1')?.textContent ?? null,
+            strongText: document.querySelector('[data-test="thinkstream-edit-preview-panel"] strong')?.textContent ?? null,
+        }))()
+    JS))->toBe([
+        'textareaPresent' => false,
+        'headingText' => 'Preview Title',
+        'strongText' => 'Bold',
+    ]);
+
+    $page
+        ->click('[data-test="thinkstream-edit-write-tab"]')
+        ->wait(0.2);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const textarea = document.querySelector('[data-test="thinkstream-edit-thought-textarea"]');
+
+            if (! (textarea instanceof HTMLTextAreaElement)) {
+                return null;
+            }
+
+            return textarea.value;
+        })()
+    JS))->toBe("# Preview Title\n\n**Bold** text");
+});
+
 test('admin post edit can collapse the metadata panel', function () {
     $user = User::factory()->create([
         'email' => 'test@example.com',

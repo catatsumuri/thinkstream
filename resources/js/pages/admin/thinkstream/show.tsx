@@ -119,6 +119,7 @@ export default function ThinkstreamShow({
     const [editMode, setEditMode] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editingContent, setEditingContent] = useState('');
+    const [editPreviewMode, setEditPreviewMode] = useState(false);
     const [editSaving, setEditSaving] = useState(false);
     const [structuredTitle, setStructuredTitle] = useState<string | null>(null);
     const [structuredContent, setStructuredContent] = useState<string | null>(
@@ -390,6 +391,7 @@ export default function ThinkstreamShow({
 
     function startEditing(thought: Thought, e: React.MouseEvent) {
         e.stopPropagation();
+        setEditPreviewMode(false);
         setEditingId(thought.id);
         setEditingContent(thought.content);
     }
@@ -419,6 +421,7 @@ export default function ThinkstreamShow({
                 },
                 preserveScroll: true,
                 onError: () => {
+                    setEditPreviewMode(false);
                     setEditingId(thought.id);
                     setEditingContent(contentToSave);
                 },
@@ -737,60 +740,134 @@ export default function ThinkstreamShow({
                                                             e.stopPropagation()
                                                         }
                                                     >
-                                                        <Textarea
-                                                            ref={
-                                                                editTextareaRef
-                                                            }
-                                                            value={
-                                                                editingContent
-                                                            }
-                                                            onChange={(e) =>
-                                                                setEditingContent(
-                                                                    e.target
-                                                                        .value,
-                                                                )
-                                                            }
-                                                            onPaste={
-                                                                handleEditingPaste
-                                                            }
-                                                            onDrop={(e) => {
-                                                                e.preventDefault();
-                                                                const imageFile =
-                                                                    Array.from(
-                                                                        e
-                                                                            .dataTransfer
-                                                                            .files,
-                                                                    ).find(
-                                                                        (f) =>
-                                                                            f.type.startsWith(
-                                                                                'image/',
-                                                                            ),
-                                                                    );
-
-                                                                if (imageFile) {
-                                                                    handleImageUpload(
-                                                                        imageFile,
-                                                                        'edit',
-                                                                    );
+                                                        <div
+                                                            aria-label="Edit mode"
+                                                            className="flex w-fit gap-1 rounded-lg bg-muted/50 p-0.5"
+                                                        >
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setEditPreviewMode(
+                                                                        false,
+                                                                    )
                                                                 }
-                                                            }}
-                                                            onDragOver={(e) =>
-                                                                e.preventDefault()
-                                                            }
-                                                            rows={12}
-                                                            data-test="thinkstream-edit-thought-textarea"
-                                                            className="min-h-[24rem] resize-none px-4 py-3 text-[15px] leading-7 sm:min-h-[30rem]"
-                                                            autoFocus
-                                                        />
+                                                                aria-label="Write mode"
+                                                                aria-pressed={
+                                                                    !editPreviewMode
+                                                                }
+                                                                data-test="thinkstream-edit-write-tab"
+                                                                className={cn(
+                                                                    'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                                                                    !editPreviewMode
+                                                                        ? 'bg-card text-foreground shadow-sm'
+                                                                        : 'text-muted-foreground hover:text-foreground',
+                                                                )}
+                                                            >
+                                                                Write
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                onClick={() =>
+                                                                    setEditPreviewMode(
+                                                                        true,
+                                                                    )
+                                                                }
+                                                                aria-label="Preview mode"
+                                                                aria-pressed={
+                                                                    editPreviewMode
+                                                                }
+                                                                data-test="thinkstream-edit-preview-tab"
+                                                                className={cn(
+                                                                    'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                                                                    editPreviewMode
+                                                                        ? 'bg-card text-foreground shadow-sm'
+                                                                        : 'text-muted-foreground hover:text-foreground',
+                                                                )}
+                                                            >
+                                                                Preview
+                                                            </button>
+                                                        </div>
+                                                        {editPreviewMode ? (
+                                                            <div
+                                                                data-test="thinkstream-edit-preview-panel"
+                                                                className="min-h-[24rem] overflow-y-auto rounded-md border px-4 py-3 sm:min-h-[30rem]"
+                                                            >
+                                                                <div className="prose prose-sm max-w-none text-[15px] leading-7 prose-neutral dark:prose-invert">
+                                                                    <MarkdownContent
+                                                                        content={
+                                                                            editingContent
+                                                                        }
+                                                                        components={
+                                                                            thoughtMarkdownComponents
+                                                                        }
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <Textarea
+                                                                ref={
+                                                                    editTextareaRef
+                                                                }
+                                                                value={
+                                                                    editingContent
+                                                                }
+                                                                onChange={(e) =>
+                                                                    setEditingContent(
+                                                                        e.target
+                                                                            .value,
+                                                                    )
+                                                                }
+                                                                onPaste={
+                                                                    handleEditingPaste
+                                                                }
+                                                                onDrop={(e) => {
+                                                                    e.preventDefault();
+                                                                    const imageFile =
+                                                                        Array.from(
+                                                                            e
+                                                                                .dataTransfer
+                                                                                .files,
+                                                                        ).find(
+                                                                            (
+                                                                                f,
+                                                                            ) =>
+                                                                                f.type.startsWith(
+                                                                                    'image/',
+                                                                                ),
+                                                                        );
+
+                                                                    if (
+                                                                        imageFile
+                                                                    ) {
+                                                                        handleImageUpload(
+                                                                            imageFile,
+                                                                            'edit',
+                                                                        );
+                                                                    }
+                                                                }}
+                                                                onDragOver={(
+                                                                    e,
+                                                                ) =>
+                                                                    e.preventDefault()
+                                                                }
+                                                                rows={12}
+                                                                data-test="thinkstream-edit-thought-textarea"
+                                                                className="min-h-[24rem] resize-none px-4 py-3 text-[15px] leading-7 sm:min-h-[30rem]"
+                                                                autoFocus
+                                                            />
+                                                        )}
                                                         <div className="flex justify-end gap-2 pt-2">
                                                             <Button
                                                                 size="sm"
                                                                 variant="secondary"
-                                                                onClick={() =>
+                                                                onClick={() => {
+                                                                    setEditPreviewMode(
+                                                                        false,
+                                                                    );
                                                                     setEditingId(
                                                                         null,
-                                                                    )
-                                                                }
+                                                                    );
+                                                                }}
                                                             >
                                                                 Cancel
                                                             </Button>
