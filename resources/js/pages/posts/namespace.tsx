@@ -1,5 +1,4 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { timeAgo } from '@/lib/time';
 import {
     AlertTriangle,
     BookOpen,
@@ -23,6 +22,7 @@ import {
 } from '@/components/ui/sheet';
 import { useBelowDesktop } from '@/hooks/use-below-desktop';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { timeAgo } from '@/lib/time';
 import { namespace as adminNamespaceRoute } from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';
 import { markdown as contentPathMarkdown } from '@/routes/posts/path';

@@ -36,6 +36,7 @@ import { remarkBadgeDirective } from '@/lib/remark-badge-directive';
 import { remarkCardDirective } from '@/lib/remark-card-directive';
 import { remarkCodeGroupDirective } from '@/lib/remark-code-group-directive';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
+import { remarkFixUrlPorts } from '@/lib/remark-fix-url-ports';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
 import { remarkMark } from '@/lib/remark-mark';
 import { remarkStepsDirective } from '@/lib/remark-steps-directive';
@@ -43,7 +44,6 @@ import { remarkTabsDirective } from '@/lib/remark-tabs-directive';
 import { remarkTooltipDirective } from '@/lib/remark-tooltip-directive';
 import { remarkTreeDirective } from '@/lib/remark-tree-directive';
 import { remarkUpdateDirective } from '@/lib/remark-update-directive';
-import { remarkFixUrlPorts } from '@/lib/remark-fix-url-ports';
 import { remarkZennDirective } from '@/lib/remark-zenn-directive';
 import { cn } from '@/lib/utils';
 
