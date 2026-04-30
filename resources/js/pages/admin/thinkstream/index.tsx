@@ -10,6 +10,16 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useRef, useState } from 'react';
+import {
+    backup as thinkstreamBackup,
+    backupDownload as thinkstreamBackupDownload,
+    backupRestore as thinkstreamBackupRestore,
+    backupRestoreUpload as thinkstreamBackupRestoreUpload,
+    destroyPage as thinkstreamDestroyPage,
+    index as thinkstreamIndex,
+    show as thinkstreamShow,
+    storePage as thinkstreamStorePage,
+} from '@/actions/App/Http/Controllers/Admin/ThinkstreamController';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -27,16 +37,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { matchesDeleteConfirmation } from '@/lib/delete-confirmation';
 import { timeAgo } from '@/lib/time';
 import { dashboard } from '@/routes';
-import {
-    backup as thinkstreamBackup,
-    backupDownload as thinkstreamBackupDownload,
-    backupRestore as thinkstreamBackupRestore,
-    backupRestoreUpload as thinkstreamBackupRestoreUpload,
-    destroyPage as thinkstreamDestroyPage,
-    index as thinkstreamIndex,
-    show as thinkstreamShow,
-    storePage as thinkstreamStorePage,
-} from '@/actions/App/Http/Controllers/Admin/ThinkstreamController';
 
 type Page = {
     id: number;
@@ -131,6 +131,7 @@ function RestoreDialog({ backup }: { backup: LatestBackup | null }) {
     function resetState() {
         setSavedConfirmation('');
         uploadForm.reset();
+
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -148,7 +149,10 @@ function RestoreDialog({ backup }: { backup: LatestBackup | null }) {
             open={open}
             onOpenChange={(v) => {
                 setOpen(v);
-                if (!v) resetState();
+
+                if (!v) {
+                    resetState();
+                }
             }}
         >
             <DialogTrigger asChild>

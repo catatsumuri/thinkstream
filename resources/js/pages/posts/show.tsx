@@ -1,5 +1,4 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { timeAgo } from '@/lib/time';
 import {
     AlertTriangle,
     BookOpen,
@@ -29,6 +28,7 @@ import {
 import { useBelowDesktop } from '@/hooks/use-below-desktop';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
+import { timeAgo } from '@/lib/time';
 import {
     edit as adminPostEdit,
     show as adminPostShow,

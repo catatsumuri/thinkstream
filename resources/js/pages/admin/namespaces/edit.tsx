@@ -194,8 +194,10 @@ export default function Edit({
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
                                         e.preventDefault();
-                                        if (!generating && !processing)
+
+                                        if (!generating && !processing) {
                                             handleGenerateClick();
+                                        }
                                     }
                                 }}
                                 placeholder="Optional: add style guidance, colors, mood… (any language)"
