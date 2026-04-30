@@ -16,6 +16,7 @@ type Namespace = {
     id: number;
     slug: string;
     name: string;
+    ancestors: { id: number; name: string }[];
 };
 
 type Post = {
@@ -104,6 +105,10 @@ export default function Revisions({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
             { title: 'Namespaces', href: index.url() },
+            ...namespace.ancestors.map((ancestor) => ({
+                title: ancestor.name,
+                href: namespaceRoute.url(ancestor.id),
+            })),
             { title: namespace.name, href: namespaceRoute.url(namespace.id) },
             {
                 title: post.title,

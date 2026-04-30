@@ -3,6 +3,7 @@
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\PostReferrer;
+use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -23,6 +24,7 @@ test('authenticated users can visit the dashboard', function () {
             ->component('dashboard')
             ->where('top_posts', [])
             ->where('top_referrers', [])
+            ->where('tags', [])
         );
 });
 
@@ -54,6 +56,35 @@ test('dashboard shows top 10 posts ordered by page views', function () {
             ->where('top_posts.0.canonical_url', route('posts.path', ['path' => $topPosts->last()->full_path], false))
             ->where('top_posts.9.title', $topPosts->get(2)->title)
             ->where('top_posts.9.page_views', 30)
+        );
+});
+
+test('dashboard shows all tags ordered by post count descending', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+    ]);
+
+    $tagA = Tag::create(['name' => 'laravel']);
+    $tagB = Tag::create(['name' => 'php']);
+    $tagC = Tag::create(['name' => 'unused']);
+
+    $posts = Post::factory()->count(3)->for($user)->for($namespace, 'namespace')->create();
+
+    $tagA->posts()->attach($posts->pluck('id'));
+    $tagB->posts()->attach($posts->first()->id);
+
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('dashboard')
+            ->has('tags', 2)
+            ->where('tags.0.name', 'laravel')
+            ->where('tags.0.posts_count', 3)
+            ->where('tags.1.name', 'php')
+            ->where('tags.1.posts_count', 1)
         );
 });
 

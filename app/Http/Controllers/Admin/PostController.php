@@ -128,6 +128,7 @@ class PostController extends Controller
                 'slug' => $namespace->slug,
                 'full_path' => $namespace->full_path,
                 'backup_count' => $backupIndex->countForNamespace($namespace),
+                'ancestors' => $namespace->ancestors()->map(fn (PostNamespace $ns) => ['id' => $ns->id, 'name' => $ns->name])->values()->all(),
             ],
             'create_backup_url' => route('admin.posts.backups.store', $namespace, absolute: false),
             'delete_backups_url' => route('admin.posts.backups.destroyMany', $namespace, absolute: false),
@@ -306,7 +307,14 @@ class PostController extends Controller
     public function create(PostNamespace $namespace): Response
     {
         return Inertia::render('admin/posts/create', [
-            'namespace' => $namespace,
+            'namespace' => [
+                'id' => $namespace->id,
+                'name' => $namespace->name,
+                'slug' => $namespace->slug,
+                'full_path' => $namespace->full_path,
+                'is_system' => (bool) $namespace->is_system,
+                'ancestors' => $namespace->ancestors()->map(fn (PostNamespace $ns) => ['id' => $ns->id, 'name' => $ns->name])->values()->all(),
+            ],
             'availableTags' => Tag::orderBy('name')->pluck('name')->all(),
             'slugPrefix' => trim($namespace->full_path, '/').'/',
         ]);
@@ -398,6 +406,7 @@ class PostController extends Controller
                 'slug' => $namespace->slug,
                 'full_path' => $namespace->full_path,
                 'is_system' => (bool) $namespace->is_system,
+                'ancestors' => $namespace->ancestors()->map(fn (PostNamespace $ns) => ['id' => $ns->id, 'name' => $ns->name])->values()->all(),
             ],
             'availableMoveNamespaces' => $this->availableMoveNamespaces($namespace),
             'navRoot' => $this->buildNavigationTree($rootNamespace),
@@ -620,7 +629,14 @@ class PostController extends Controller
         $post->load('tags');
 
         return Inertia::render('admin/posts/edit', [
-            'namespace' => $namespace,
+            'namespace' => [
+                'id' => $namespace->id,
+                'name' => $namespace->name,
+                'slug' => $namespace->slug,
+                'full_path' => $namespace->full_path,
+                'is_system' => (bool) $namespace->is_system,
+                'ancestors' => $namespace->ancestors()->map(fn (PostNamespace $ns) => ['id' => $ns->id, 'name' => $ns->name])->values()->all(),
+            ],
             'post' => [
                 ...$post->only([
                     'id',
@@ -715,7 +731,13 @@ class PostController extends Controller
         ];
 
         return Inertia::render('admin/posts/revisions', [
-            'namespace' => $namespace,
+            'namespace' => [
+                'id' => $namespace->id,
+                'name' => $namespace->name,
+                'slug' => $namespace->slug,
+                'full_path' => $namespace->full_path,
+                'ancestors' => $namespace->ancestors()->map(fn (PostNamespace $ns) => ['id' => $ns->id, 'name' => $ns->name])->values()->all(),
+            ],
             'post' => $post->only(['id', 'slug', 'title']),
             'revisions' => $revisions->prepend($currentRevision)->values(),
         ]);
