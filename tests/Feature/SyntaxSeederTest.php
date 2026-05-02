@@ -135,6 +135,33 @@ test('syntax seeder creates the mintlify syntax page', function () {
     expect($post->published_at)->not->toBeNull();
 });
 
+test('syntax seeder creates the thinkstream syntax page', function () {
+    $this->seed(SyntaxSeeder::class);
+
+    $namespace = PostNamespace::query()
+        ->where('slug', 'syntax')
+        ->first();
+
+    expect($namespace)->not->toBeNull();
+    expect($namespace->post_order)->toContain('thinkstream-syntax');
+
+    $post = Post::query()
+        ->where('namespace_id', $namespace->id)
+        ->where('slug', 'thinkstream-syntax')
+        ->first();
+
+    expect($post)->not->toBeNull();
+    expect($post->title)->toBe('Thinkstream Syntax');
+    expect($post->content)->toContain('# Thinkstream Syntax');
+    expect($post->content)->toContain('```tree');
+    expect($post->content)->toContain('app/Ai');
+    expect($post->content)->toContain('└── Agents');
+    expect($post->content)->toContain('resources/js');
+    expect($post->content)->toContain('app/');
+    expect($post->content)->toContain('4 directories, 2 files');
+    expect($post->published_at)->not->toBeNull();
+});
+
 test('routing check seeder creates wildcard routing lookalike namespaces', function () {
     $this->seed(RoutingCheckSeeder::class);
 

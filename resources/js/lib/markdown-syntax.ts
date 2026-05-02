@@ -265,6 +265,8 @@ export function preprocessMintlifySyntax(markdown: string): string {
     const processedLines: string[] = [];
     let activeFence: string | null = null;
     let activeFenceIndent = 0;
+    let treeFence: { openingLine: string; fence: string; lines: string[] } | null =
+        null;
     let mintlifyTabsDepth = 0;
     const mintlifyCalloutColonCounts: number[] = [];
     const mintlifyTagStack: Array<
@@ -312,6 +314,42 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 : line;
         const fenceMatch = /^(`{3,}|~{3,})/.exec(trimmedLine);
 
+        if (treeFence !== null) {
+            const remainder = fenceMatch
+                ? trimmedLine.slice(fenceMatch[1].length)
+                : '';
+
+            if (
+                fenceMatch &&
+                fenceMatch[1][0] === treeFence.fence[0] &&
+                fenceMatch[1].length >= treeFence.fence.length &&
+                remainder.trim() === ''
+            ) {
+                pushTreeDirective(
+                    processedLines,
+                    parseAsciiTreeContent(treeFence.lines),
+                    pushBlankLineIfNeeded,
+                    pushLine,
+                );
+                treeFence = null;
+            } else {
+                treeFence.lines.push(line);
+            }
+
+            continue;
+        }
+
+        if (fenceMatch && activeFence === null) {
+            const fence = fenceMatch[1];
+            const infoString = trimmedLine.slice(fence.length).trim();
+
+            if (/^tree(?:\s|$)/.test(infoString)) {
+                treeFence = { openingLine: line, fence, lines: [] };
+
+                continue;
+            }
+        }
+
         if (fenceMatch) {
             const fence = fenceMatch[1];
             const remainder = trimmedLine.slice(fence.length);
@@ -343,16 +381,12 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
         if (treeBuffer !== null) {
             if (trimmedLine === '</Tree>') {
-                const nodes = parseTreeContent(treeBuffer);
-                const json = JSON.stringify(nodes);
-
-                pushBlankLineIfNeeded();
-                pushLine(':::tree');
-                pushLine('```json');
-                pushLine(json);
-                pushLine('```');
-                pushLine('');
-                pushLine(':::');
+                pushTreeDirective(
+                    processedLines,
+                    parseTreeContent(treeBuffer),
+                    pushBlankLineIfNeeded,
+                    pushLine,
+                );
                 treeBuffer = null;
             } else {
                 treeBuffer.push(line);
@@ -784,6 +818,10 @@ export function preprocessMintlifySyntax(markdown: string): string {
         processedLines.push(line);
     }
 
+    if (treeFence !== null) {
+        processedLines.push(treeFence.openingLine, ...treeFence.lines);
+    }
+
     return processedLines.join('\n');
 }
 
@@ -849,6 +887,157 @@ interface TreeNode {
     defaultOpen?: boolean;
     openable?: boolean;
     children?: TreeNode[];
+}
+
+function createAsciiTreeFolderNode(name: string): TreeNode {
+    return {
+        type: 'folder',
+        name,
+        defaultOpen: true,
+        children: [],
+    };
+}
+
+function createAsciiTreeFileNode(name: string): TreeNode {
+    return {
+        type: 'file',
+        name,
+    };
+}
+
+function ensureTreeNodeIsFolder(node: TreeNode): TreeNode {
+    if (node.type === 'folder') {
+        node.children ??= [];
+
+        return node;
+    }
+
+    node.type = 'folder';
+    node.defaultOpen = true;
+    node.children = [];
+
+    return node;
+}
+
+function splitTreePathSegments(value: string): string[] {
+    return value
+        .split('/')
+        .map((segment) => segment.trim())
+        .filter(Boolean);
+}
+
+function parseAsciiTreeContent(lines: string[]): TreeNode[] {
+    const root: TreeNode[] = [];
+    const stack: TreeNode[] = [];
+    let rootBranchDepthOffset = 0;
+    const normalizedLines = (() => {
+        const nonEmptyLines = lines.filter((line) => line.trim() !== '');
+        const sharedIndent = nonEmptyLines.reduce<number>((minimum, line) => {
+            const leadingSpaces = line.match(/^ */)?.[0].length ?? 0;
+
+            return Math.min(minimum, leadingSpaces);
+        }, Number.POSITIVE_INFINITY);
+
+        if (!Number.isFinite(sharedIndent) || sharedIndent === 0) {
+            return lines;
+        }
+
+        return lines.map((line) => line.slice(sharedIndent));
+    })();
+
+    const appendPath = (depth: number, rawValue: string): void => {
+        const isFolderHint = rawValue.endsWith('/');
+        const segments = splitTreePathSegments(
+            isFolderHint ? rawValue.slice(0, -1) : rawValue,
+        );
+
+        if (segments.length === 0) {
+            return;
+        }
+
+        let children =
+            depth === 0 || stack[depth - 1] === undefined
+                ? root
+                : ensureTreeNodeIsFolder(stack[depth - 1]).children!;
+        let currentDepth = depth;
+
+        for (const [index, segment] of segments.entries()) {
+            const isLastSegment = index === segments.length - 1;
+            const node =
+                !isLastSegment || isFolderHint
+                    ? createAsciiTreeFolderNode(segment)
+                    : createAsciiTreeFileNode(segment);
+
+            children.push(node);
+            stack[currentDepth] = node;
+            stack.length = currentDepth + 1;
+
+            if (node.type === 'folder') {
+                children = node.children!;
+                currentDepth++;
+            }
+        }
+    };
+
+    for (const line of normalizedLines) {
+        const trimmed = line.trimEnd();
+
+        if (
+            trimmed === '' ||
+            /^\d+\s+director(?:y|ies)(?:,\s+\d+\s+files?)?$/.test(trimmed)
+        ) {
+            continue;
+        }
+
+        if (trimmed.trim() === '.') {
+            rootBranchDepthOffset = -1;
+
+            continue;
+        }
+
+        const branchMatch =
+            /^(?<prefix>(?:│   |    )*)(?:├── |└── )(?<value>.+)$/.exec(
+                trimmed,
+            );
+
+        if (!branchMatch?.groups?.value) {
+            const rawValue = trimmed.trim();
+            appendPath(0, rawValue);
+
+            rootBranchDepthOffset = Math.max(
+                0,
+                splitTreePathSegments(
+                    rawValue.endsWith('/') ? rawValue.slice(0, -1) : rawValue,
+                ).length - 1,
+            );
+            continue;
+        }
+
+        const depth =
+            Math.floor(branchMatch.groups.prefix.length / 4) +
+            1 +
+            rootBranchDepthOffset;
+        appendPath(depth, branchMatch.groups.value.trim());
+    }
+
+    return root;
+}
+
+function pushTreeDirective(
+    processedLines: string[],
+    nodes: TreeNode[],
+    pushBlankLineIfNeeded: () => void,
+    pushLine: (value: string) => void,
+): void {
+    const json = JSON.stringify(nodes);
+
+    pushBlankLineIfNeeded();
+    pushLine(':::tree');
+    pushLine('```json');
+    pushLine(json);
+    pushLine('```');
+    pushLine('');
+    pushLine(':::');
 }
 
 function joinMultilineTreeTags(lines: string[]): string[] {

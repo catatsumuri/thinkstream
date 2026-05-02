@@ -430,6 +430,115 @@ test('preprocessMarkdownSyntax converts Mintlify Tree to a tree directive with J
     assert.match(output, /^:::\s*$/m);
 });
 
+test('preprocessMarkdownSyntax converts tree fenced blocks to a tree directive with inferred folders', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`tree
+app/Ai
+└── Agents
+    ├── CoverImagePromptAgent.php
+    ├── MarkdownStructureAgent.php
+    ├── ThinkstreamStructureAgent.php
+    ├── ThinkstreamTitleAgent.php
+    └── TranslateSelectionAgent.php
+\`\`\``);
+
+    assert.match(output, /:::tree/);
+    assert.match(output, /```json/);
+    assert.match(output, /"name":"app"/);
+    assert.match(output, /"name":"Ai"/);
+    assert.match(output, /"name":"Agents"/);
+    assert.match(output, /"defaultOpen":true/);
+    assert.match(output, /"name":"CoverImagePromptAgent\.php"/);
+    assert.match(output, /"name":"TranslateSelectionAgent\.php"/);
+    assert.match(output, /^:::\s*$/m);
+});
+
+test('preprocessMarkdownSyntax ignores tree summary lines and honors trailing slash folder hints', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`tree
+.
+app/
+└── Services/
+    └── SyncFileParser.php
+
+1 directory, 1 file
+\`\`\``);
+
+    assert.match(output, /"name":"app"/);
+    assert.match(output, /"name":"Services"/);
+    assert.match(output, /"name":"SyncFileParser\.php"/);
+    assert.doesNotMatch(output, /directory, 1 file/);
+});
+
+test('preprocessMarkdownSyntax handles tree command output rooted at dot', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`tree
+.
+├── app
+│   └── Services
+│       └── SyncFileParser.php
+└── tests
+    └── Feature
+        └── SyntaxSeederTest.php
+\`\`\``);
+
+    const json = /```json\n(?<payload>[\s\S]*?)\n```/.exec(output)?.groups
+        ?.payload;
+
+    assert.ok(json);
+
+    const tree = JSON.parse(json);
+
+    assert.equal(tree[0].name, 'app');
+    assert.equal(tree[0].children[0].name, 'Services');
+    assert.equal(tree[1].name, 'tests');
+    assert.equal(tree[1].children[0].name, 'Feature');
+});
+
+test('preprocessMarkdownSyntax handles tree fenced blocks with shared leading indentation', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`tree
+  app/Ai
+  └── Agents
+      └── TranslateSelectionAgent.php
+\`\`\``);
+
+    const json = /```json\n(?<payload>[\s\S]*?)\n```/.exec(output)?.groups
+        ?.payload;
+
+    assert.ok(json);
+
+    const tree = JSON.parse(json);
+
+    assert.equal(tree[0].name, 'app');
+    assert.equal(tree[0].children[0].name, 'Ai');
+    assert.equal(tree[0].children[0].children[0].name, 'Agents');
+    assert.equal(
+        tree[0].children[0].children[0].children[0].name,
+        'TranslateSelectionAgent.php',
+    );
+    assert.doesNotMatch(output, /"name":"└── Agents"/);
+});
+
+test('preprocessMarkdownSyntax leaves tree fences untouched inside longer fenced code blocks', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`\`md
+\`\`\`tree
+app/Ai
+└── Agents
+\`\`\`
+\`\`\`\``);
+
+    assert.doesNotMatch(output, /:::tree/);
+    assert.match(output, /```tree/);
+    assert.match(output, /└── Agents/);
+});
+
+test('preprocessMarkdownSyntax leaves unclosed tree fences untouched', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`tree
+app/Ai
+└── Agents`);
+
+    assert.doesNotMatch(output, /:::tree/);
+    assert.match(output, /```tree/);
+    assert.match(output, /└── Agents/);
+});
+
 test('preprocessMarkdownSyntax joins multiline Tree child tags before encoding JSON', () => {
     const output = preprocessMarkdownSyntax(`<Tree>
   <Tree.Folder
