@@ -145,15 +145,45 @@ test('GitHub URL renders as github embed', function () {
         'content' => <<<'MARKDOWN'
 # GitHub
 
-https://github.com/zenn-dev/zenn-editor/blob/canary/lerna.json
+https://github.com/laravel/framework/blob/13.x/composer.json
 MARKDOWN,
     ]);
 
-    $page = visit(route('posts.path', ['path' => $post->full_path]));
+    $page = visit(route('posts.path', ['path' => $post->full_path]))->resize(390, 844);
 
     $page->assertNoJavaScriptErrors()
         ->assertPresent('[data-test="embed-github"]')
-        ->assertPresent('[data-test="embed-github"].bg-card');
+        ->assertPresent('[data-test="embed-github"].bg-card')
+        ->assertPresent('[data-test="embed-github-scroll"]')
+        ->assertPresent('[data-test="embed-github-code"]');
+
+    $scrollMetrics = $page->script(<<<'JS'
+        (() => {
+            const viewport = document.querySelector('[data-test="embed-github-scroll"]');
+
+            if (!viewport) {
+                return null;
+            }
+
+            const styles = window.getComputedStyle(viewport);
+
+            return {
+                overflowX: styles.overflowX,
+                overflowY: styles.overflowY,
+                maxHeight: styles.maxHeight,
+                hasHorizontalOverflow: viewport.scrollWidth > viewport.clientWidth,
+                hasVerticalOverflow: viewport.scrollHeight > viewport.clientHeight,
+            };
+        })()
+    JS);
+
+    expect($scrollMetrics)->toBe([
+        'overflowX' => 'auto',
+        'overflowY' => 'auto',
+        'maxHeight' => '512px',
+        'hasHorizontalOverflow' => true,
+        'hasVerticalOverflow' => true,
+    ]);
 
 });
 
