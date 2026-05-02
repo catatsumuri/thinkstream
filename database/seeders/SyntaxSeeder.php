@@ -29,7 +29,7 @@ class SyntaxSeeder extends Seeder
                 'name' => 'Syntax',
                 'description' => 'Practical syntax references, walkthroughs, and rendering notes for writing and publishing posts.',
                 'cover_image' => $coverImagePath,
-                'post_order' => ['index', 'extended-syntax', 'zenn-syntax', 'mintlify-syntax'],
+                'post_order' => ['index', 'extended-syntax', 'zenn-syntax', 'mintlify-syntax', 'thinkstream-syntax'],
             ],
         );
 
@@ -1512,6 +1512,145 @@ Initial launch of Thinkstream with support for Markdown, GFM, Zenn syntax, and c
 
 </Update>
 ```
+MD),
+                'published_at' => now(),
+            ]);
+
+        Post::updateOrCreate(
+            ['namespace_id' => $namespace->id, 'slug' => 'thinkstream-syntax'],
+            [
+                'user_id' => $user->id,
+                'title' => 'Thinkstream Syntax',
+                'content' => trim(<<<'MD'
+## Thinkstream Syntax
+
+Thinkstream includes a few authoring shortcuts on top of standard Markdown, Zenn syntax, and the supported Mintlify components. This page documents the Thinkstream-specific additions.
+
+---
+
+## Tree Fence
+
+Use a `tree` fenced code block when you want to paste a file tree directly from your terminal. Thinkstream converts it into the interactive tree renderer automatically.
+
+Live example:
+
+```tree
+app/Ai
+└── Agents
+    ├── CoverImagePromptAgent.php
+    ├── MarkdownStructureAgent.php
+    ├── ThinkstreamStructureAgent.php
+    ├── ThinkstreamTitleAgent.php
+    └── TranslateSelectionAgent.php
+```
+
+Source:
+
+````md
+```tree
+app/Ai
+└── Agents
+    ├── CoverImagePromptAgent.php
+    ├── MarkdownStructureAgent.php
+    ├── ThinkstreamStructureAgent.php
+    ├── ThinkstreamTitleAgent.php
+    └── TranslateSelectionAgent.php
+```
+````
+
+Notes:
+
+- `app/Ai` is split into nested folders.
+- Child rows using `├──` and `└──` become files or folders automatically.
+- Folders are expanded by default so pasted trees are readable immediately.
+
+---
+
+## Shared Indentation
+
+Indented tree blocks are also supported, which is useful when the snippet itself is nested inside a list item or blockquote in your source file.
+
+Live example:
+
+```tree
+  resources/js
+  └── components
+      ├── markdown-content.tsx
+      ├── markdown-tree.tsx
+      └── markdown-update.tsx
+```
+
+Source:
+
+````md
+```tree
+  resources/js
+  └── components
+      ├── markdown-content.tsx
+      ├── markdown-tree.tsx
+      └── markdown-update.tsx
+```
+````
+
+---
+
+## Folder Hints
+
+Add a trailing slash when you want to make a folder explicit even before children are listed.
+
+Live example:
+
+```tree
+app/
+└── Services/
+    └── SyncFileParser.php
+```
+
+Source:
+
+````md
+```tree
+app/
+└── Services/
+    └── SyncFileParser.php
+```
+````
+
+---
+
+## Ignored Summary Lines
+
+Output copied from the `tree` command often includes summary lines at the bottom. Thinkstream ignores them automatically.
+
+Live example:
+
+```tree
+.
+├── app
+│   └── Services
+│       └── SyncFileParser.php
+└── tests
+    └── Feature
+        └── SyntaxSeederTest.php
+
+4 directories, 2 files
+```
+
+Source:
+
+````md
+```tree
+.
+├── app
+│   └── Services
+│       └── SyncFileParser.php
+└── tests
+    └── Feature
+        └── SyntaxSeederTest.php
+
+4 directories, 2 files
+```
+````
 MD),
                 'published_at' => now(),
             ]);
