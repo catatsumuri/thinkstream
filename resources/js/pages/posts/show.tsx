@@ -616,6 +616,7 @@ export default function Show({
                                 >
                                     Last updated:{' '}
                                     <span
+                                        suppressHydrationWarning
                                         title={postDateFormatter.format(
                                             new Date(post.updated_at),
                                         )}

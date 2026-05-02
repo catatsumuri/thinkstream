@@ -76,6 +76,7 @@ export default function TagShow({
                                                     </span>
                                                     <span
                                                         className="shrink-0 text-xs text-muted-foreground"
+                                                        suppressHydrationWarning
                                                         title={new Date(
                                                             post.published_at,
                                                         ).toLocaleDateString()}

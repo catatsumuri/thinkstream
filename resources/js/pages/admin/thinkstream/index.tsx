@@ -475,6 +475,7 @@ export default function ThinkstreamIndex({
                                             </span>
                                             <span>·</span>
                                             <span
+                                                suppressHydrationWarning
                                                 title={new Date(
                                                     page.created_at,
                                                 ).toLocaleString()}

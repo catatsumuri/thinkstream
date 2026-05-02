@@ -347,6 +347,7 @@ export default function Namespace({
                                                 <div className="shrink-0 text-sm text-muted-foreground">
                                                     {post.published_at ? (
                                                         <span
+                                                            suppressHydrationWarning
                                                             title={new Date(
                                                                 post.published_at,
                                                             ).toLocaleDateString()}
