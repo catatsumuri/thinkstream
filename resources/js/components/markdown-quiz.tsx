@@ -1,44 +1,7 @@
 import { CircleCheck, CircleX } from 'lucide-react';
 import { useState } from 'react';
+import { parseQuiz } from '@/lib/markdown-quiz';
 import { cn } from '@/lib/utils';
-
-type QuizOption = {
-    label: string;
-    text: string;
-};
-
-type QuizContent = {
-    question: string;
-    correct: string;
-    options: QuizOption[];
-    hint?: string;
-    incorrect?: string;
-    correctMessage?: string;
-    explanation?: string;
-};
-
-function parseQuiz(json: string | undefined): QuizContent | null {
-    try {
-        if (!json) {
-            return null;
-        }
-
-        const quiz = JSON.parse(json) as QuizContent;
-
-        if (
-            !quiz.question ||
-            !quiz.correct ||
-            !Array.isArray(quiz.options) ||
-            quiz.options.length < 2
-        ) {
-            return null;
-        }
-
-        return quiz;
-    } catch {
-        return null;
-    }
-}
 
 interface MarkdownQuizProps {
     'data-quiz'?: string;
