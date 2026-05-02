@@ -937,6 +937,7 @@ export default function ThinkstreamShow({
                                                                 }{' '}
                                                                 ·{' '}
                                                                 <span
+                                                                    suppressHydrationWarning
                                                                     title={new Date(
                                                                         thought.created_at,
                                                                     ).toLocaleString()}

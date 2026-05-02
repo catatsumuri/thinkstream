@@ -11,10 +11,6 @@ type CodeBlockProps = ComponentPropsWithoutRef<'code'> & ExtraProps;
 const escapeHtml = (value: string) =>
     value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
-const isMobileViewport = () =>
-    typeof window !== 'undefined' &&
-    window.matchMedia('(max-width: 767px)').matches;
-
 /**
  * Parses the fenced code block info string to extract language, filename, and
  * whether this is a diff block.
@@ -85,18 +81,12 @@ export function CodeBlock({
     node,
     metastring,
 }: CodeBlockProps & { metastring?: string }) {
-    const [wrap, setWrap] = useState(isMobileViewport);
+    const [wrap, setWrap] = useState(false);
     const [copied, setCopied] = useState(false);
-    const [prismReady, setPrismReady] = useState(() =>
-        Boolean(Prism.languages.php),
-    );
+    const [prismReady, setPrismReady] = useState(false);
     const [, copy] = useClipboard();
 
     useEffect(() => {
-        if (prismReady) {
-            return;
-        }
-
         let active = true;
 
         void ensurePrismLoaded().then(() => {
@@ -108,7 +98,7 @@ export function CodeBlock({
         return () => {
             active = false;
         };
-    }, [prismReady]);
+    }, []);
 
     const rawContent = String(children);
     const content = rawContent.replace(/\n$/, '');
@@ -283,8 +273,9 @@ export function CodeBlock({
                     </div>
                 </div>
                 <pre
-                    className={`px-4 py-3 font-mono text-sm text-gray-300 ${wrap ? 'break-words whitespace-pre-wrap' : 'overflow-x-auto'}`}
+                    className={`px-4 py-3 font-mono text-sm text-gray-300 ${wrap ? 'break-words whitespace-pre-wrap' : 'overflow-x-auto'}${className ? ` ${className}` : ''}`}
                     style={{ background: '#282c34' }}
+                    tabIndex={0}
                 >
                     <code
                         className={
@@ -345,8 +336,9 @@ export function CodeBlock({
                 </button>
             </div>
             <pre
-                className={`px-4 py-3 pr-20 font-mono text-sm text-gray-300 ${wrap ? 'break-words whitespace-pre-wrap' : 'overflow-x-auto'}`}
+                className={`px-4 py-3 pr-20 font-mono text-sm text-gray-300 ${wrap ? 'break-words whitespace-pre-wrap' : 'overflow-x-auto'}${className ? ` ${className}` : ''}`}
                 style={{ background: '#282c34' }}
+                tabIndex={0}
             >
                 <code
                     className={
