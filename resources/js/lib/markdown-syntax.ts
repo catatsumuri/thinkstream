@@ -265,8 +265,11 @@ export function preprocessMintlifySyntax(markdown: string): string {
     const processedLines: string[] = [];
     let activeFence: string | null = null;
     let activeFenceIndent = 0;
-    let treeFence: { openingLine: string; fence: string; lines: string[] } | null =
-        null;
+    let treeFence: {
+        openingLine: string;
+        fence: string;
+        lines: string[];
+    } | null = null;
     let mintlifyTabsDepth = 0;
     const mintlifyCalloutColonCounts: number[] = [];
     const mintlifyTagStack: Array<
