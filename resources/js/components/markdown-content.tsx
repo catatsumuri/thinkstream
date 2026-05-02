@@ -20,6 +20,7 @@ import {
     MarkdownCardGroup,
 } from '@/components/markdown-card-group';
 import { MarkdownCodeGroup } from '@/components/markdown-code-group';
+import { MarkdownQuiz } from '@/components/markdown-quiz';
 import { MarkdownStep, MarkdownSteps } from '@/components/markdown-steps';
 import { MarkdownTab, MarkdownTabs } from '@/components/markdown-tabs';
 import { MarkdownTooltip } from '@/components/markdown-tooltip';
@@ -39,6 +40,7 @@ import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkFixUrlPorts } from '@/lib/remark-fix-url-ports';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
 import { remarkMark } from '@/lib/remark-mark';
+import { remarkQuizDirective } from '@/lib/remark-quiz-directive';
 import { remarkStepsDirective } from '@/lib/remark-steps-directive';
 import { remarkTabsDirective } from '@/lib/remark-tabs-directive';
 import { remarkTooltipDirective } from '@/lib/remark-tooltip-directive';
@@ -244,9 +246,16 @@ export default function MarkdownContent({
             const embedUrl = (props as Record<string, unknown>)[
                 'data-embed-url'
             ] as string | undefined;
+            const quizJson = (props as Record<string, unknown>)['data-quiz'] as
+                | string
+                | undefined;
 
             if (embedType && embedUrl) {
                 return <EmbedCard type={embedType} url={embedUrl} />;
+            }
+
+            if (quizJson) {
+                return <MarkdownQuiz data-quiz={quizJson} />;
             }
 
             return <div {...props} />;
@@ -272,6 +281,7 @@ export default function MarkdownContent({
                     remarkTooltipDirective,
                     remarkUpdateDirective,
                     remarkTreeDirective,
+                    remarkQuizDirective,
                     remarkCodeGroupDirective,
                     remarkLinkifyToCard,
                     remarkSupersub,

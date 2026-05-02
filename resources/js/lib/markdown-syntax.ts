@@ -24,6 +24,21 @@ type EncodedMetadata = {
     caption?: string;
 };
 
+type QuizOption = {
+    label: string;
+    text: string;
+};
+
+type QuizContent = {
+    question: string;
+    correct: string;
+    options: QuizOption[];
+    hint?: string;
+    incorrect?: string;
+    correctMessage?: string;
+    explanation?: string;
+};
+
 export function isAbsoluteUrl(url: string): boolean {
     return (
         url.startsWith('http://') ||
@@ -270,6 +285,11 @@ export function preprocessMintlifySyntax(markdown: string): string {
         fence: string;
         lines: string[];
     } | null = null;
+    let quizFence: {
+        openingLine: string;
+        fence: string;
+        lines: string[];
+    } | null = null;
     let mintlifyTabsDepth = 0;
     const mintlifyCalloutColonCounts: number[] = [];
     const mintlifyTagStack: Array<
@@ -342,12 +362,54 @@ export function preprocessMintlifySyntax(markdown: string): string {
             continue;
         }
 
+        if (quizFence !== null) {
+            const remainder = fenceMatch
+                ? trimmedLine.slice(fenceMatch[1].length)
+                : '';
+
+            if (
+                fenceMatch &&
+                fenceMatch[1][0] === quizFence.fence[0] &&
+                fenceMatch[1].length >= quizFence.fence.length &&
+                remainder.trim() === ''
+            ) {
+                const quiz = parseQuizContent(quizFence.lines);
+
+                if (quiz === null) {
+                    processedLines.push(
+                        quizFence.openingLine,
+                        ...quizFence.lines,
+                        line,
+                    );
+                } else {
+                    pushQuizDirective(
+                        processedLines,
+                        quiz,
+                        pushBlankLineIfNeeded,
+                        pushLine,
+                    );
+                }
+
+                quizFence = null;
+            } else {
+                quizFence.lines.push(line);
+            }
+
+            continue;
+        }
+
         if (fenceMatch && activeFence === null) {
             const fence = fenceMatch[1];
             const infoString = trimmedLine.slice(fence.length).trim();
 
             if (/^tree(?:\s|$)/.test(infoString)) {
                 treeFence = { openingLine: line, fence, lines: [] };
+
+                continue;
+            }
+
+            if (/^quiz(?:\s|$)/.test(infoString)) {
+                quizFence = { openingLine: line, fence, lines: [] };
 
                 continue;
             }
@@ -825,6 +887,10 @@ export function preprocessMintlifySyntax(markdown: string): string {
         processedLines.push(treeFence.openingLine, ...treeFence.lines);
     }
 
+    if (quizFence !== null) {
+        processedLines.push(quizFence.openingLine, ...quizFence.lines);
+    }
+
     return processedLines.join('\n');
 }
 
@@ -999,7 +1065,7 @@ function parseAsciiTreeContent(lines: string[]): TreeNode[] {
         }
 
         const branchMatch =
-            /^(?<prefix>(?:│   |    )*)(?:├── |└── )(?<value>.+)$/.exec(
+            /^(?<prefix>(?:│ {3}| {4})*)(?:├── |└── )(?<value>.+)$/.exec(
                 trimmed,
             );
 
@@ -1026,6 +1092,111 @@ function parseAsciiTreeContent(lines: string[]): TreeNode[] {
     return root;
 }
 
+function parseQuizContent(lines: string[]): QuizContent | null {
+    const options: QuizOption[] = [];
+    const fields: Partial<Omit<QuizContent, 'options'>> = {};
+    let activeOption: QuizOption | null = null;
+    let activeField:
+        | 'question'
+        | 'hint'
+        | 'incorrect'
+        | 'correctMessage'
+        | 'explanation'
+        | null = null;
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+            activeOption = null;
+            activeField = null;
+
+            continue;
+        }
+
+        const optionMatch = /^(?<label>[A-Z]):\s*(?<text>.+)$/.exec(trimmed);
+
+        if (optionMatch?.groups?.label && optionMatch.groups.text) {
+            const option: QuizOption = {
+                label: optionMatch.groups.label,
+                text: optionMatch.groups.text.trim(),
+            };
+
+            options.push(option);
+            activeOption = option;
+            activeField = null;
+
+            continue;
+        }
+
+        const fieldMatch =
+            /^(?<key>question|correct|hint|incorrect|correctMessage|explanation):\s*(?<value>.+)$/.exec(
+                trimmed,
+            );
+
+        if (fieldMatch?.groups?.key && fieldMatch.groups.value) {
+            const key = fieldMatch.groups.key as
+                | 'question'
+                | 'correct'
+                | 'hint'
+                | 'incorrect'
+                | 'correctMessage'
+                | 'explanation';
+            const value = fieldMatch.groups.value.trim();
+
+            if (key === 'correct') {
+                fields.correct = value.toUpperCase();
+                activeOption = null;
+                activeField = null;
+
+                continue;
+            }
+
+            fields[key] = value;
+            activeOption = null;
+            activeField = key;
+
+            continue;
+        }
+
+        if (activeOption !== null) {
+            activeOption.text += ` ${trimmed}`;
+
+            continue;
+        }
+
+        if (activeField !== null) {
+            fields[activeField] =
+                `${fields[activeField] ?? ''} ${trimmed}`.trim();
+
+            continue;
+        }
+
+        return null;
+    }
+
+    const question = fields.question?.trim();
+    const correct = fields.correct?.trim().toUpperCase();
+
+    if (!question || !correct || options.length < 2) {
+        return null;
+    }
+
+    if (!options.some((option) => option.label === correct)) {
+        return null;
+    }
+
+    return {
+        question,
+        correct,
+        options,
+        hint: fields.hint?.trim() || undefined,
+        incorrect: fields.incorrect?.trim() || undefined,
+        correctMessage: fields.correctMessage?.trim() || undefined,
+        explanation: fields.explanation?.trim() || undefined,
+    };
+}
+
 function pushTreeDirective(
     processedLines: string[],
     nodes: TreeNode[],
@@ -1036,6 +1207,23 @@ function pushTreeDirective(
 
     pushBlankLineIfNeeded();
     pushLine(':::tree');
+    pushLine('```json');
+    pushLine(json);
+    pushLine('```');
+    pushLine('');
+    pushLine(':::');
+}
+
+function pushQuizDirective(
+    processedLines: string[],
+    quiz: QuizContent,
+    pushBlankLineIfNeeded: () => void,
+    pushLine: (value: string) => void,
+): void {
+    const json = JSON.stringify(quiz);
+
+    pushBlankLineIfNeeded();
+    pushLine(':::quiz');
     pushLine('```json');
     pushLine(json);
     pushLine('```');
