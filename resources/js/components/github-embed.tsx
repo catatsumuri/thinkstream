@@ -257,8 +257,14 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
                     {info.owner}/{info.repo}
                 </a>
             </div>
-            <div className="overflow-x-auto bg-[#282c34]">
-                <pre className="my-0 font-mono text-sm text-gray-200">
+            <div
+                className="max-h-[32rem] overflow-auto overscroll-contain bg-[#282c34]"
+                data-test="embed-github-scroll"
+            >
+                <pre
+                    className="my-0 min-w-max font-mono text-sm text-gray-200"
+                    data-test="embed-github-code"
+                >
                     <code>
                         {highlightedLines.map((html, index) => (
                             <div
