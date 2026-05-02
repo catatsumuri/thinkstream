@@ -539,6 +539,63 @@ app/Ai
     assert.match(output, /└── Agents/);
 });
 
+test('preprocessMarkdownSyntax converts quiz fenced blocks to a quiz directive with JSON payload', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`quiz
+question: How does Next.js optimize fonts?
+correct: D
+
+A: It causes additional network requests which improve performance.
+B: It disables all custom fonts.
+C: It preloads all fonts at runtime.
+D: It hosts font files with other static assets so that there are no additional network requests.
+
+hint: Additional requests can impact performance.
+incorrect: Not Quite
+correctMessage: Correct
+explanation: Next.js can self-host optimized font assets so the browser avoids extra third-party font requests.
+\`\`\``);
+
+    assert.match(output, /:::quiz/);
+    assert.match(output, /```json/);
+    assert.match(output, /"question":"How does Next\.js optimize fonts\?"/);
+    assert.match(output, /"correct":"D"/);
+    assert.match(output, /"label":"A"/);
+    assert.match(output, /"label":"D"/);
+    assert.match(output, /"incorrect":"Not Quite"/);
+    assert.match(output, /"correctMessage":"Correct"/);
+    assert.match(output, /"explanation":"Next\.js can self-host optimized font assets so the browser avoids extra third-party font requests\."/);
+    assert.match(output, /^:::\s*$/m);
+});
+
+test('preprocessMarkdownSyntax leaves invalid quiz fenced blocks untouched', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`quiz
+question: Missing correct answer
+
+A: One
+B: Two
+\`\`\``);
+
+    assert.doesNotMatch(output, /:::quiz/);
+    assert.match(output, /```quiz/);
+    assert.match(output, /question: Missing correct answer/);
+});
+
+test('preprocessMarkdownSyntax leaves quiz fences untouched inside longer fenced code blocks', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`\`md
+\`\`\`quiz
+question: Example
+correct: A
+
+A: One
+B: Two
+\`\`\`
+\`\`\`\``);
+
+    assert.doesNotMatch(output, /:::quiz/);
+    assert.match(output, /```quiz/);
+    assert.match(output, /correct: A/);
+});
+
 test('preprocessMarkdownSyntax joins multiline Tree child tags before encoding JSON', () => {
     const output = preprocessMarkdownSyntax(`<Tree>
   <Tree.Folder

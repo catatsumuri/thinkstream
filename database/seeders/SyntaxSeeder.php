@@ -1528,6 +1528,56 @@ Thinkstream includes a few authoring shortcuts on top of standard Markdown, Zenn
 
 ---
 
+## Quiz Fence
+
+Thinkstream supports a lightweight `quiz` fenced code block for single-question multiple-choice prompts.
+
+Live example:
+
+```quiz
+question: How does Next.js optimize fonts?
+correct: D
+
+A: It causes additional network requests which improve performance.
+B: It disables all custom fonts.
+C: It preloads all fonts at runtime.
+D: It hosts font files with other static assets so that there are no additional network requests.
+
+hint: Additional requests can impact performance.
+incorrect: Not Quite
+correctMessage: Correct
+explanation: Next.js can self-host optimized font assets so the browser avoids extra third-party font requests.
+```
+
+Source:
+
+````md
+```quiz
+question: How does Next.js optimize fonts?
+correct: D
+
+A: It causes additional network requests which improve performance.
+B: It disables all custom fonts.
+C: It preloads all fonts at runtime.
+D: It hosts font files with other static assets so that there are no additional network requests.
+
+hint: Additional requests can impact performance.
+incorrect: Not Quite
+correctMessage: Correct
+explanation: Next.js can self-host optimized font assets so the browser avoids extra third-party font requests.
+```
+````
+
+Notes:
+
+- `question:` defines the prompt shown above the answers.
+- `correct:` points to the correct choice using `A`, `B`, `C`, or `D`.
+- Choices use `A:` style labels so the block stays easy to type in plain Markdown.
+- `hint:` and `incorrect:` can drive the retry state shown after a wrong answer.
+- `correctMessage:` and `explanation:` customize the successful result state.
+
+---
+
 ## Tree Fence
 
 Use a `tree` fenced code block when you want to paste a file tree directly from your terminal. Thinkstream converts it into the interactive tree renderer automatically.

@@ -153,6 +153,12 @@ test('syntax seeder creates the thinkstream syntax page', function () {
     expect($post)->not->toBeNull();
     expect($post->title)->toBe('Thinkstream Syntax');
     expect($post->content)->toContain('# Thinkstream Syntax');
+    expect($post->content)->toContain('```quiz');
+    expect($post->content)->toContain('question: How does Next.js optimize fonts?');
+    expect($post->content)->toContain('correct: D');
+    expect($post->content)->toContain('incorrect: Not Quite');
+    expect($post->content)->toContain('correctMessage: Correct');
+    expect($post->content)->toContain('explanation: Next.js can self-host optimized font assets so the browser avoids extra third-party font requests.');
     expect($post->content)->toContain('```tree');
     expect($post->content)->toContain('app/Ai');
     expect($post->content)->toContain('└── Agents');
