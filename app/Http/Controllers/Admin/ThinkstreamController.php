@@ -335,7 +335,7 @@ class ThinkstreamController extends Controller
         $this->authorizePage($request, $page);
 
         $validated = $request->validate([
-            'content' => ['required', 'string', 'max:10000'],
+            'content' => ['required', 'string', 'max:200000'],
         ]);
 
         Thought::create([
@@ -352,7 +352,7 @@ class ThinkstreamController extends Controller
         $this->authorizeThought($request, $page, $thought);
 
         $validated = $request->validate([
-            'content' => ['required', 'string', 'max:10000'],
+            'content' => ['required', 'string', 'max:200000'],
         ]);
 
         $thought->update($validated);

@@ -147,12 +147,33 @@ test('authenticated users can post a thought', function () {
     expect(Thought::first()->page_id)->toBe($page->id);
 });
 
+test('authenticated users can post a thought longer than ten thousand characters', function () {
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $content = implode(' ', array_fill(0, 1_100, 'Long thought'));
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.store', $page), ['content' => $content])
+        ->assertRedirect();
+
+    expect(Thought::first()->content)->toBe($content);
+});
+
 test('thought content is required', function () {
     $user = User::factory()->create();
     $page = ThinkstreamPage::factory()->for($user)->create();
 
     $this->actingAs($user)
         ->post(route('admin.thinkstream.store', $page), ['content' => ''])
+        ->assertSessionHasErrors('content');
+});
+
+test('thought content cannot exceed two hundred thousand characters', function () {
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.store', $page), ['content' => str_repeat('a', 200_001)])
         ->assertSessionHasErrors('content');
 });
 
@@ -168,6 +189,19 @@ test('authenticated users can update a thought', function () {
         ->assertRedirect();
 
     expect($thought->fresh()->content)->toBe('Updated content');
+});
+
+test('authenticated users can update a thought longer than ten thousand characters', function () {
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+    $content = implode(' ', array_fill(0, 700, 'Updated long thought'));
+
+    $this->actingAs($user)
+        ->patch(route('admin.thinkstream.update', [$page, $thought]), ['content' => $content])
+        ->assertRedirect();
+
+    expect($thought->fresh()->content)->toBe($content);
 });
 
 test('update is scoped to the current canvas', function () {
@@ -189,6 +223,17 @@ test('update content is required', function () {
     $this->actingAs($user)
         ->patchJson(route('admin.thinkstream.update', [$page, $thought]), ['content' => ''])
         ->assertUnprocessable();
+});
+
+test('updated thought content cannot exceed two hundred thousand characters', function () {
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+
+    $this->actingAs($user)
+        ->patchJson(route('admin.thinkstream.update', [$page, $thought]), ['content' => str_repeat('a', 200_001)])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('content');
 });
 
 // DestroyMany
@@ -675,6 +720,14 @@ test('backup accepts an optional description stored in yaml', function () {
     $zip->close();
 
     expect($yaml['description'])->toBe('snapshot note');
+});
+
+test('backup rejects descriptions longer than two thousand characters', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.backup'), ['description' => str_repeat('a', 2_001)])
+        ->assertSessionHasErrors('description');
 });
 
 test('latest backup is shown on the index after creating one', function () {
