@@ -22,6 +22,10 @@ test('authenticated users can upload an image to a thinkstream page', function (
         ->assertRedirect(route('admin.thinkstream.show', $page));
 
     Storage::disk('public')->assertExists("thoughts/{$page->id}/{$image->hashName()}");
+    $this->assertDatabaseHas('uploaded_images', [
+        'path' => "thoughts/{$page->id}/{$image->hashName()}",
+        'disk' => 'public',
+    ]);
 });
 
 test('guests cannot upload thinkstream images', function () {
@@ -70,4 +74,41 @@ test('thinkstream image upload rejects files over 5MB', function () {
             'image' => UploadedFile::fake()->image('large.jpg')->size(6000),
         ])
         ->assertSessionHasErrors('image');
+});
+
+test('thinkstream image upload resizes oversized images', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $image = UploadedFile::fake()->image('big.jpg', 4096, 3000);
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.uploadImage', $page), ['image' => $image])
+        ->assertSessionHasNoErrors();
+
+    $path = "thoughts/{$page->id}/{$image->hashName()}";
+    $contents = Storage::disk('public')->get($path);
+    [$width, $height] = getimagesizefromstring($contents);
+
+    expect(max($width, $height))->toBeLessThanOrEqual(2048);
+});
+
+test('thinkstream gif upload is stored as-is without resize', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $image = UploadedFile::fake()->image('anim.gif', 100, 100);
+
+    $this->actingAs($user)
+        ->post(route('admin.thinkstream.uploadImage', $page), ['image' => $image])
+        ->assertSessionHasNoErrors();
+
+    Storage::disk('public')->assertExists("thoughts/{$page->id}/{$image->hashName()}");
+    $this->assertDatabaseHas('uploaded_images', [
+        'path' => "thoughts/{$page->id}/{$image->hashName()}",
+        'disk' => 'public',
+        'exif_data' => null,
+    ]);
 });

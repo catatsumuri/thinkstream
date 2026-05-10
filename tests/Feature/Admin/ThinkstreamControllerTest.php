@@ -240,6 +240,18 @@ test('updated thought content cannot exceed two hundred thousand characters', fu
         ->assertJsonValidationErrors('content');
 });
 
+test('updating a thought records the last editor', function () {
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+
+    $this->actingAs($user)
+        ->patch(route('admin.thinkstream.update', [$page, $thought]), ['content' => 'Updated'])
+        ->assertRedirect();
+
+    expect($thought->fresh()->last_edited_by_user_id)->toBe($user->id);
+});
+
 // DestroyMany
 
 test('authenticated users can bulk delete thoughts', function () {
@@ -660,6 +672,26 @@ test('refine title returns 403 when AI is disabled', function () {
     $this->actingAs($user)
         ->postJson(route('admin.thinkstream.refineTitle', $page))
         ->assertForbidden();
+});
+
+test('refining a canvas title with AI does not overwrite the last editor', function () {
+    ThinkstreamTitleAgent::fake([
+        ['title' => 'AI Title'],
+    ]);
+    config()->set('thinkstream.ai.enabled', true);
+
+    $editor = User::factory()->create();
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create([
+        'last_edited_by_user_id' => $editor->id,
+    ]);
+    Thought::factory()->for($user)->for($page, 'page')->create();
+
+    $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.refineTitle', $page))
+        ->assertOk();
+
+    expect($page->fresh()->last_edited_by_user_id)->toBe($editor->id);
 });
 
 // SaveToScrap

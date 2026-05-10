@@ -31,6 +31,7 @@ class Post extends Model
         'is_syncing',
         'sync_file_path',
         'last_synced_at',
+        'last_edited_by_user_id',
     ];
 
     protected function casts(): array
@@ -104,6 +105,11 @@ class Post extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function lastEditedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'last_edited_by_user_id');
     }
 
     public function tags(): BelongsToMany

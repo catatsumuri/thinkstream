@@ -172,27 +172,27 @@ export default function Revisions({
                                 post: post.slug,
                             })}
                         >
-                            編集に戻る
+                            Back to Edit
                         </Link>
                     </Button>
                 </div>
 
                 <Card className="space-y-3 p-4">
                     <p className="text-sm text-muted-foreground">
-                        2つのバージョンにチェックを入れると差分が表示されます。
+                        Select two versions to view the diff.
                     </p>
                     {selectedRevisions.length !== 2 ? (
                         <div className="rounded-md border border-dashed border-muted-foreground/40 p-4 text-sm text-muted-foreground">
                             {selectedRevisions.length === 0
-                                ? 'まだ選択されていません。'
-                                : 'あと1つ選択してください。'}
+                                ? 'No versions selected.'
+                                : 'Select one more version.'}
                         </div>
                     ) : (
                         <div className="rounded-md border p-4">
                             <div className="mb-3 flex flex-col gap-1 text-sm">
                                 <span className="font-semibold">
-                                    {olderRevision.title || '無題'} →{' '}
-                                    {newerRevision.title || '無題'}
+                                    {olderRevision.title || 'Untitled'} →{' '}
+                                    {newerRevision.title || 'Untitled'}
                                 </span>
                                 <span className="text-muted-foreground">
                                     {new Date(
@@ -236,7 +236,7 @@ export default function Revisions({
                 <Card className="divide-y">
                     {revisionList.length === 0 ? (
                         <div className="p-4 text-sm text-muted-foreground">
-                            まだ履歴はありません。
+                            No revision history yet.
                         </div>
                     ) : (
                         revisionList.map((revision) => (
@@ -257,11 +257,11 @@ export default function Revisions({
                                             className="size-4 accent-foreground"
                                         />
                                         <span className="truncate font-medium">
-                                            {revision.title || '無題'}
+                                            {revision.title || 'Untitled'}
                                         </span>
                                         {revision.is_current && (
                                             <span className="rounded bg-muted px-2 py-0.5 text-[11px] font-semibold text-muted-foreground">
-                                                現在
+                                                Current
                                             </span>
                                         )}
                                     </label>
@@ -289,7 +289,7 @@ export default function Revisions({
                                                 size="sm"
                                                 disabled={processing}
                                             >
-                                                復元
+                                                Restore
                                             </Button>
                                         )}
                                     </Form>

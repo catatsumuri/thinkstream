@@ -21,4 +21,8 @@ return [
         'enabled' => (bool) env('THINKSTREAM_AI_ENABLED', false),
     ],
 
+    'images' => [
+        'max_dimension' => (int) env('THINKSTREAM_IMAGE_MAX_DIMENSION', 2048),
+    ],
+
 ];

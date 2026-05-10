@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\ProcessUploadedImage;
 use App\Ai\Agents\MarkdownStructureAgent;
 use App\Ai\Agents\TranslateSelectionAgent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\RestorePostRevisionRequest;
 use App\Http\Requests\Admin\StorePostRequest;
 use App\Http\Requests\Admin\UpdatePostRequest;
-use App\Http\Requests\Admin\UploadPostImageRequest;
+use App\Http\Requests\Admin\UploadImageRequest;
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\PostRevision;
@@ -35,6 +36,8 @@ use Symfony\Component\Yaml\Yaml;
 
 class PostController extends Controller
 {
+    public function __construct(private readonly ProcessUploadedImage $processUploadedImage) {}
+
     public function index(Request $request): Response
     {
         $allowedColumns = ['name', 'posts_count', 'is_published'];
@@ -683,6 +686,7 @@ class PostController extends Controller
             ]);
         }
 
+        $filteredData['last_edited_by_user_id'] = $request->user()->id;
         $post->update($filteredData);
         $this->syncTags($post, $tags);
 
@@ -721,12 +725,17 @@ class PostController extends Controller
                 'is_current' => false,
             ]);
 
+        $post->loadMissing('lastEditedByUser');
+
         $currentRevision = [
             'id' => 0,
             'title' => $post->title,
             'content' => $post->content,
             'created_at' => $post->updated_at?->toISOString(),
-            'user' => null,
+            'user' => $post->lastEditedByUser ? [
+                'id' => $post->lastEditedByUser->id,
+                'name' => $post->lastEditedByUser->name,
+            ] : null,
             'is_current' => true,
         ];
 
@@ -758,6 +767,7 @@ class PostController extends Controller
         $post->update([
             'title' => $revision->title,
             'content' => $revision->content,
+            'last_edited_by_user_id' => $request->user()->id,
         ]);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Revision restored.']);
@@ -827,19 +837,25 @@ class PostController extends Controller
         ]);
     }
 
-    public function uploadNamespaceImage(UploadPostImageRequest $request, PostNamespace $namespace): RedirectResponse
+    public function uploadNamespaceImage(UploadImageRequest $request, PostNamespace $namespace): RedirectResponse
     {
-        $path = $request->file('image')->store("posts/{$namespace->full_path}", 'public');
+        $uploadedImage = $this->processUploadedImage->handle(
+            $request->file('image'),
+            "posts/{$namespace->full_path}",
+        );
 
-        return to_route('admin.posts.create', $namespace)->with('imageUrl', '/images/'.$path);
+        return to_route('admin.posts.create', $namespace)->with('imageUrl', '/images/'.$uploadedImage->path);
     }
 
-    public function uploadImage(UploadPostImageRequest $request, PostNamespace $namespace, Post $post): RedirectResponse
+    public function uploadImage(UploadImageRequest $request, PostNamespace $namespace, Post $post): RedirectResponse
     {
-        $path = $request->file('image')->store("posts/{$post->id}", 'public');
+        $uploadedImage = $this->processUploadedImage->handle(
+            $request->file('image'),
+            "posts/{$post->id}",
+        );
 
         return to_route('admin.posts.edit', ['namespace' => $namespace, 'post' => $post->slug])
-            ->with('imageUrl', '/images/'.$path);
+            ->with('imageUrl', '/images/'.$uploadedImage->path);
     }
 
     public function destroy(PostNamespace $namespace, Post $post): RedirectResponse

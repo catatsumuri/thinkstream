@@ -5,11 +5,8 @@ namespace App\Http\Requests\Admin;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
-class UploadPostImageRequest extends FormRequest
+class UploadImageRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
@@ -22,6 +19,7 @@ class UploadPostImageRequest extends FormRequest
     {
         return [
             'image' => ['required', 'image', 'max:5120', 'mimes:jpg,jpeg,png,gif,webp'],
+            'upload_key' => ['nullable', 'string', 'max:64'],
         ];
     }
 }
