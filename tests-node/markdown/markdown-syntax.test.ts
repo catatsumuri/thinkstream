@@ -1,11 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import type { Root } from 'mdast';
 import { MARKDOWN_SYNTAX_MANIFEST } from '../../resources/js/lib/markdown-syntax-manifest.ts';
 import {
     parseMarkdownImageMetadata,
     preprocessMarkdownContent,
     preprocessMarkdownSyntax,
 } from '../../resources/js/lib/markdown-syntax.ts';
+import { remarkFallbackDirective } from '../../resources/js/lib/remark-fallback-directive.ts';
 
 test('preprocessMarkdownSyntax normalizes Zenn shorthand and Mintlify tabs', () => {
     const output = preprocessMarkdownSyntax(`:::message alert
@@ -137,6 +139,44 @@ test('preprocessMarkdownSyntax converts Mintlify callout tags to message directi
     assert.match(output, /:::message\n/);
     assert.match(output, /:::message\{\.alert\}/);
     assert.match(output, /:::message\{\.check\}/);
+});
+
+test('remarkFallbackDirective restores unhandled text directives to literal text', () => {
+    const tree: Root = {
+        type: 'root',
+        children: [
+            {
+                type: 'paragraph',
+                children: [
+                    { type: 'text', value: 'Use lang' },
+                    {
+                        type: 'textDirective',
+                        name: 'add',
+                        attributes: {},
+                        children: [],
+                        data: {},
+                    },
+                    { type: 'text', value: ' for additions.' },
+                ],
+            },
+        ],
+    };
+
+    remarkFallbackDirective()(tree);
+
+    assert.deepEqual(tree, {
+        type: 'root',
+        children: [
+            {
+                type: 'paragraph',
+                children: [
+                    { type: 'text', value: 'Use lang' },
+                    { type: 'text', value: ':add' },
+                    { type: 'text', value: ' for additions.' },
+                ],
+            },
+        ],
+    });
 });
 
 test('markdown syntax manifest freezes the supported extension surface', () => {

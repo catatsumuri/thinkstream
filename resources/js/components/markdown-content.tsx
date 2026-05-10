@@ -46,6 +46,7 @@ import { remarkTabsDirective } from '@/lib/remark-tabs-directive';
 import { remarkTooltipDirective } from '@/lib/remark-tooltip-directive';
 import { remarkTreeDirective } from '@/lib/remark-tree-directive';
 import { remarkUpdateDirective } from '@/lib/remark-update-directive';
+import { remarkFallbackDirective } from '@/lib/remark-fallback-directive';
 import { remarkZennDirective } from '@/lib/remark-zenn-directive';
 import { cn } from '@/lib/utils';
 
@@ -283,6 +284,7 @@ export default function MarkdownContent({
                     remarkTreeDirective,
                     remarkQuizDirective,
                     remarkCodeGroupDirective,
+                    remarkFallbackDirective,
                     remarkLinkifyToCard,
                     remarkSupersub,
                     remarkDefinitionList,

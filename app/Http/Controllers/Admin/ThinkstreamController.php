@@ -23,6 +23,7 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use JsonException;
+use Laravel\Ai\Files\Document;
 use RuntimeException;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use Symfony\Component\Yaml\Yaml;
@@ -396,8 +397,15 @@ class ThinkstreamController extends Controller
             'Thoughts:',
             $thoughts->map(fn ($t) => $t->content)->join("\n\n---\n\n"),
         ]);
+        $syntaxGuide = File::get(resource_path('ai/thinkstream-syntax-guide.md'));
 
-        $agentResponse = (new ThinkstreamStructureAgent)->prompt($combined);
+        $agentResponse = (new ThinkstreamStructureAgent)->prompt(
+            'Structure the attached thoughts into a coherent document.',
+            attachments: [
+                Document::fromString($combined, 'text/plain'),
+                Document::fromString($syntaxGuide, 'text/markdown'),
+            ],
+        );
 
         $cost = AiCostCalculator::forText($agentResponse->meta, $agentResponse->usage);
 

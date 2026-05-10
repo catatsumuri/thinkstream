@@ -52,6 +52,7 @@ import { getMarkdownLinkPasteResult } from '@/lib/markdown-link-paste';
 import { timeAgo } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { toast } from 'sonner';
 
 const thoughtMarkdownComponents = createMarkdownComponents();
 
@@ -123,9 +124,6 @@ export default function ThinkstreamShow({
     const [editSaving, setEditSaving] = useState(false);
     const [structuredTitle, setStructuredTitle] = useState<string | null>(null);
     const [structuredContent, setStructuredContent] = useState<string | null>(
-        null,
-    );
-    const [structuredMessage, setStructuredMessage] = useState<string | null>(
         null,
     );
     const [structuredExpanded, setStructuredExpanded] = useState(false);
@@ -328,8 +326,13 @@ export default function ThinkstreamShow({
                 };
                 setStructuredTitle(title);
                 setStructuredContent(content);
-                setStructuredMessage(message ?? null);
                 setScrapUrl(null);
+                if (message) {
+                    toast.success(message);
+                }
+            },
+            onError: () => {
+                toast.error('Failed to refine for Scrap. Please try again.');
             },
         });
     }
@@ -1098,7 +1101,6 @@ export default function ThinkstreamShow({
                                         setStructuredExpanded(false);
                                         setStructuredTitle(null);
                                         setStructuredContent(null);
-                                        setStructuredMessage(null);
                                         setScrapUrl(null);
                                     }}
                                 >
@@ -1109,11 +1111,6 @@ export default function ThinkstreamShow({
                         {structuredTitle && (
                             <p className="mb-2 text-sm font-medium">
                                 {structuredTitle}
-                            </p>
-                        )}
-                        {structuredMessage && (
-                            <p className="mb-3 text-xs text-muted-foreground">
-                                {structuredMessage}
                             </p>
                         )}
                         <div className="prose prose-sm max-w-none prose-neutral dark:prose-invert">
