@@ -7,9 +7,11 @@ use App\Models\PostNamespace;
 use App\Models\ThinkstreamPage;
 use App\Models\Thought;
 use App\Models\User;
+use Illuminate\Contracts\Filesystem\FileNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
+use Laravel\Ai\Files\Base64Document;
 use Symfony\Component\Yaml\Yaml;
 
 uses(RefreshDatabase::class);
@@ -284,7 +286,30 @@ test('authenticated users can structure thoughts with AI', function () {
             'ids' => $thoughts->pluck('id')->all(),
         ]);
 
-    $response->assertOk()->assertJsonStructure(['title', 'content', 'message']);
+    $response
+        ->assertOk()
+        ->assertJson([
+            'title' => 'Canvas Title Draft',
+            'content' => "# Canvas Title Draft\n\nContent here.",
+            'message' => 'Content structured. (cost: $0.0000)',
+        ]);
+
+    ThinkstreamStructureAgent::assertPrompted(function ($prompt) use ($page, $thoughts) {
+        $thoughtsAttachment = $prompt->attachments->first();
+        $guideAttachment = $prompt->attachments->last();
+
+        return $prompt->prompt === 'Structure the attached thoughts into a coherent document.'
+            && $prompt->attachments->count() === 2
+            && $thoughtsAttachment instanceof Base64Document
+            && $thoughtsAttachment->mimeType() === 'text/plain'
+            && str_contains($thoughtsAttachment->content(), 'Canvas title: '.$page->title)
+            && str_contains($thoughtsAttachment->content(), $thoughts[0]->content)
+            && str_contains($thoughtsAttachment->content(), $thoughts[1]->content)
+            && $guideAttachment instanceof Base64Document
+            && $guideAttachment->mimeType() === 'text/markdown'
+            && str_contains($guideAttachment->content(), '# Thinkstream Markdown Syntax Guide')
+            && str_contains($guideAttachment->content(), 'Critical Rule: URLs Must Be Standalone');
+    });
 });
 
 test('structure thoughts returns 403 when AI is disabled', function () {
@@ -299,6 +324,28 @@ test('structure thoughts returns 403 when AI is disabled', function () {
             'ids' => $thoughts->pluck('id')->all(),
         ])
         ->assertForbidden();
+});
+
+test('structure thoughts fails when the syntax guide cannot be read', function () {
+    ThinkstreamStructureAgent::fake()->preventStrayPrompts();
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+
+    File::partialMock()
+        ->shouldReceive('get')
+        ->once()
+        ->with(resource_path('ai/thinkstream-syntax-guide.md'))
+        ->andThrow(new FileNotFoundException('Missing syntax guide.'));
+
+    $this->withoutExceptionHandling();
+
+    expect(fn () => $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.structureThoughts', $page), [
+            'ids' => [$thought->id],
+        ]))->toThrow(FileNotFoundException::class);
 });
 
 test('users cannot structure another users thoughts with AI', function () {

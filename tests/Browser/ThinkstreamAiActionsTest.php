@@ -66,8 +66,16 @@ test('thinkstream refine for scrap sends the currently selected thoughts', funct
         ->assertNoJavaScriptErrors();
 
     ThinkstreamStructureAgent::assertPrompted(
-        fn ($prompt) => str_contains($prompt->prompt, 'Second thought should be included in the refine request.')
-            && ! str_contains($prompt->prompt, 'First thought should stay out of the refine request.'),
+        fn ($prompt) => $prompt->prompt === 'Structure the attached thoughts into a coherent document.'
+            && $prompt->attachments->count() === 2
+            && str_contains(
+                (string) $prompt->attachments->first(),
+                'Second thought should be included in the refine request.',
+            )
+            && ! str_contains(
+                (string) $prompt->attachments->first(),
+                'First thought should stay out of the refine request.',
+            ),
     );
 
     $post = Post::first();
