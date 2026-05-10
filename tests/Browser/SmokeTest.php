@@ -1,5 +1,6 @@
 <?php
 
+use App\Ai\Agents\MarkdownStructureAgent;
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\Tag;
@@ -1262,6 +1263,117 @@ test('admin post edit warns before leaving with unsaved changes', function () {
         ->assertMissing('[data-test="manage-post-revisions-link"]')
         ->assertMissing('[data-test="manage-post-delete-trigger"]')
         ->fill('title', 'Todo updated');
+
+    expect($page->script(<<<'JS'
+        (() => {
+            let confirmCalls = 0;
+
+            window.confirm = () => {
+                confirmCalls += 1;
+                return false;
+            };
+
+            document.querySelector('[data-test="view-post-link"]')?.click();
+
+            return {
+                confirmCalls,
+                path: window.location.pathname,
+            };
+        })()
+    JS))->toBe([
+        'confirmCalls' => 1,
+        'path' => route('admin.posts.edit', [
+            'namespace' => $namespace->id,
+            'post' => $post->slug,
+        ], false),
+    ]);
+});
+
+test('admin post edit warns before leaving after AI rewrites selected markdown', function () {
+    config()->set('thinkstream.ai.enabled', true);
+
+    MarkdownStructureAgent::fake([
+        ['content' => "## Todo Updated\n\n- [x] Ship it"],
+    ]);
+
+    $user = User::factory()->create([
+        'email' => 'test@example.com',
+    ]);
+
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'name' => 'Guides',
+    ]);
+
+    $post = Post::factory()->for($namespace, 'namespace')->create([
+        'slug' => 'todo',
+        'title' => 'Todo',
+        'content' => 'todo list draft',
+    ]);
+
+    $this->actingAs($user);
+
+    $page = visit(route('admin.posts.edit', [
+        'namespace' => $namespace->id,
+        'post' => $post->slug,
+    ], absolute: false))->resize(1440, 900);
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertMissing('[data-test="manage-post-revisions-link"]')
+        ->assertMissing('[data-test="manage-post-delete-trigger"]');
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const textarea = document.querySelector('textarea[name="content"]');
+
+            if (! (textarea instanceof HTMLTextAreaElement)) {
+                return null;
+            }
+
+            textarea.focus();
+            textarea.setSelectionRange(0, textarea.value.length);
+            textarea.dispatchEvent(new Event('select', { bubbles: true }));
+            textarea.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+            textarea.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key: 'Shift' }));
+
+            return {
+                value: textarea.value,
+                selectionStart: textarea.selectionStart,
+                selectionEnd: textarea.selectionEnd,
+            };
+        })()
+    JS))->toBe([
+        'value' => 'todo list draft',
+        'selectionStart' => 0,
+        'selectionEnd' => strlen('todo list draft'),
+    ]);
+
+    $page->wait(0.2);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const button = document.querySelector('[data-test="post-structure-selection-button"]');
+
+            return button instanceof HTMLButtonElement ? button.disabled : null;
+        })()
+    JS))->toBeFalse();
+
+    $page
+        ->click('[data-test="post-structure-selection-button"]')
+        ->wait(0.5);
+
+    expect($page->script(<<<'JS'
+        (() => {
+            const textarea = document.querySelector('textarea[name="content"]');
+
+            if (! (textarea instanceof HTMLTextAreaElement)) {
+                return null;
+            }
+
+            return textarea.value;
+        })()
+    JS))->toBe("## Todo Updated\n\n- [x] Ship it");
 
     expect($page->script(<<<'JS'
         (() => {
