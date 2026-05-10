@@ -2,8 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Ai\Agents\MarkdownStructureAgent;
 use App\Ai\Agents\ThinkstreamStructureAgent;
 use App\Ai\Agents\ThinkstreamTitleAgent;
+use App\Ai\Agents\TranslateSelectionAgent;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\UploadThoughtImageRequest;
 use App\Models\Post;
@@ -423,6 +425,72 @@ class ThinkstreamController extends Controller
 
         return response()->json([
             'title' => $agentResponse['title'],
+            'content' => $agentResponse['content'],
+            'message' => $message,
+        ]);
+    }
+
+    public function structureThought(Request $request, ThinkstreamPage $page, Thought $thought): JsonResponse
+    {
+        abort_unless(config('thinkstream.ai.enabled'), 403);
+        $this->authorizeThought($request, $page, $thought);
+
+        $validated = $request->validate([
+            'content' => ['required', 'string', 'max:200000'],
+        ]);
+
+        $agentResponse = (new MarkdownStructureAgent)->prompt($validated['content']);
+
+        $cost = AiCostCalculator::forText($agentResponse->meta, $agentResponse->usage);
+
+        Log::info('Thought structured with AI', [
+            'page_id' => $page->id,
+            'thought_id' => $thought->id,
+            'agent_model' => $agentResponse->meta->model,
+            'agent_usage' => $agentResponse->usage->toArray(),
+            'cost_usd' => $cost,
+        ]);
+
+        $message = $cost !== null
+            ? __('Content structured. (cost: $:cost)', ['cost' => number_format($cost, 4)])
+            : __('Content structured.');
+
+        return response()->json([
+            'content' => $agentResponse['content'],
+            'message' => $message,
+        ]);
+    }
+
+    public function translateThought(Request $request, ThinkstreamPage $page, Thought $thought): JsonResponse
+    {
+        abort_unless(config('thinkstream.ai.enabled'), 403);
+        $this->authorizeThought($request, $page, $thought);
+
+        $validated = $request->validate([
+            'content' => ['required', 'string', 'max:200000'],
+        ]);
+
+        $locale = (string) config('app.locale', 'en');
+        $targetLanguage = \Locale::getDisplayLanguage($locale, 'en') ?: $locale;
+
+        $agentResponse = (new TranslateSelectionAgent($targetLanguage))->prompt($validated['content']);
+
+        $cost = AiCostCalculator::forText($agentResponse->meta, $agentResponse->usage);
+
+        Log::info('Thought translated with AI', [
+            'page_id' => $page->id,
+            'thought_id' => $thought->id,
+            'target_language' => $targetLanguage,
+            'agent_model' => $agentResponse->meta->model,
+            'agent_usage' => $agentResponse->usage->toArray(),
+            'cost_usd' => $cost,
+        ]);
+
+        $message = $cost !== null
+            ? __('Translated to :language. (cost: $:cost)', ['language' => $targetLanguage, 'cost' => number_format($cost, 4)])
+            : __('Translated to :language.', ['language' => $targetLanguage]);
+
+        return response()->json([
             'content' => $agentResponse['content'],
             'message' => $message,
         ]);

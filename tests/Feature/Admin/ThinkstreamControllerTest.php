@@ -1,7 +1,9 @@
 <?php
 
+use App\Ai\Agents\MarkdownStructureAgent;
 use App\Ai\Agents\ThinkstreamStructureAgent;
 use App\Ai\Agents\ThinkstreamTitleAgent;
+use App\Ai\Agents\TranslateSelectionAgent;
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\ThinkstreamPage;
@@ -364,6 +366,245 @@ test('users cannot structure another users thoughts with AI', function () {
             'ids' => $thoughts->pluck('id')->all(),
         ])
         ->assertForbidden();
+});
+
+// StructureThought
+
+test('authenticated users can structure a thought draft with AI', function () {
+    MarkdownStructureAgent::fake([
+        ['content' => "## Structured note\n\nCleaned up."],
+    ]);
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create([
+        'content' => 'Original thought.',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.structureThought', [$page, $thought]), [
+            'content' => 'messy draft content',
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJson([
+            'content' => "## Structured note\n\nCleaned up.",
+            'message' => 'Content structured. (cost: $0.0000)',
+        ]);
+
+    MarkdownStructureAgent::assertPrompted('messy draft content');
+    expect($thought->fresh()->content)->toBe('Original thought.');
+});
+
+test('authenticated users can structure a long thought draft with AI', function () {
+    MarkdownStructureAgent::fake([
+        ['content' => "## Structured note\n\nCleaned up."],
+    ]);
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+    $content = str_repeat('Long thought. ', 4_500);
+
+    $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.structureThought', [$page, $thought]), [
+            'content' => $content,
+        ])
+        ->assertOk()
+        ->assertJsonPath('content', "## Structured note\n\nCleaned up.");
+});
+
+test('structure thought returns 403 when AI is disabled', function () {
+    config()->set('thinkstream.ai.enabled', false);
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+
+    $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.structureThought', [$page, $thought]), [
+            'content' => 'Some content.',
+        ])
+        ->assertForbidden();
+});
+
+test('structure thought is scoped to the current canvas', function () {
+    MarkdownStructureAgent::fake([
+        ['content' => 'Structured'],
+    ]);
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create();
+    $page1 = ThinkstreamPage::factory()->for($user)->create();
+    $page2 = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page2, 'page')->create();
+
+    $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.structureThought', [$page1, $thought]), [
+            'content' => 'Some content.',
+        ])
+        ->assertForbidden();
+});
+
+test('structure thought validates content is required', function () {
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+
+    $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.structureThought', [$page, $thought]), [])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['content']);
+});
+
+test('structure thought validates content max length', function () {
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+
+    $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.structureThought', [$page, $thought]), [
+            'content' => str_repeat('a', 200001),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['content']);
+});
+
+test('guests cannot structure a thought draft', function () {
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+
+    $this->postJson(route('admin.thinkstream.structureThought', [$page, $thought]), [
+        'content' => 'Some content.',
+    ])->assertUnauthorized();
+});
+
+// TranslateThought
+
+test('authenticated users can translate a thought draft with AI', function () {
+    TranslateSelectionAgent::fake([
+        ['content' => 'こんにちは世界'],
+    ]);
+    config()->set('thinkstream.ai.enabled', true);
+    config()->set('app.locale', 'ja');
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create([
+        'content' => 'Original thought.',
+    ]);
+
+    $response = $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.translateThought', [$page, $thought]), [
+            'content' => 'Hello world',
+        ]);
+
+    $response
+        ->assertOk()
+        ->assertJsonPath('content', 'こんにちは世界')
+        ->assertJsonPath('message', fn (string $message): bool => str_contains($message, 'Japanese'));
+
+    TranslateSelectionAgent::assertPrompted('Hello world');
+    expect($thought->fresh()->content)->toBe('Original thought.');
+});
+
+test('authenticated users can translate a long thought draft with AI', function () {
+    TranslateSelectionAgent::fake([
+        ['content' => 'こんにちは世界'],
+    ]);
+    config()->set('thinkstream.ai.enabled', true);
+    config()->set('app.locale', 'ja');
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+    $content = str_repeat('Hello world. ', 4_500);
+
+    $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.translateThought', [$page, $thought]), [
+            'content' => $content,
+        ])
+        ->assertOk()
+        ->assertJsonPath('content', 'こんにちは世界');
+});
+
+test('translate thought returns 403 when AI is disabled', function () {
+    config()->set('thinkstream.ai.enabled', false);
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+
+    $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.translateThought', [$page, $thought]), [
+            'content' => 'Hello',
+        ])
+        ->assertForbidden();
+});
+
+test('translate thought is scoped to the current canvas', function () {
+    TranslateSelectionAgent::fake([
+        ['content' => 'こんにちは'],
+    ]);
+    config()->set('thinkstream.ai.enabled', true);
+    config()->set('app.locale', 'ja');
+
+    $user = User::factory()->create();
+    $page1 = ThinkstreamPage::factory()->for($user)->create();
+    $page2 = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page2, 'page')->create();
+
+    $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.translateThought', [$page1, $thought]), [
+            'content' => 'Hello',
+        ])
+        ->assertForbidden();
+});
+
+test('translate thought validates content is required', function () {
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+
+    $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.translateThought', [$page, $thought]), [])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['content']);
+});
+
+test('translate thought validates content max length', function () {
+    config()->set('thinkstream.ai.enabled', true);
+
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+
+    $this->actingAs($user)
+        ->postJson(route('admin.thinkstream.translateThought', [$page, $thought]), [
+            'content' => str_repeat('a', 200001),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['content']);
+});
+
+test('guests cannot translate a thought draft', function () {
+    $user = User::factory()->create();
+    $page = ThinkstreamPage::factory()->for($user)->create();
+    $thought = Thought::factory()->for($user)->for($page, 'page')->create();
+
+    $this->postJson(route('admin.thinkstream.translateThought', [$page, $thought]), [
+        'content' => 'Hello',
+    ])->assertUnauthorized();
 });
 
 // RefineTitle

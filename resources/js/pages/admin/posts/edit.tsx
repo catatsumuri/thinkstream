@@ -132,6 +132,7 @@ export default function Edit({
                     selection.end,
                     content,
                 );
+                setHasUnsavedChanges(true);
                 toast.success(message);
             },
             onError: (errors: Record<string, string>) => {
@@ -465,6 +466,7 @@ export default function Edit({
                                                             type="button"
                                                             variant="outline"
                                                             size="sm"
+                                                            data-test="post-structure-selection-button"
                                                             disabled={
                                                                 !hasSelection ||
                                                                 structuring ||
@@ -492,6 +494,7 @@ export default function Edit({
                                                             type="button"
                                                             variant="outline"
                                                             size="sm"
+                                                            data-test="post-translate-selection-button"
                                                             disabled={
                                                                 !hasSelection ||
                                                                 structuring ||

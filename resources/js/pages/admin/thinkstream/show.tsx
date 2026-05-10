@@ -10,6 +10,7 @@ import {
     BookmarkPlus,
     Brain,
     ExternalLink,
+    Languages,
     ListChecks,
     PanelRightClose,
     PanelRightOpen,
@@ -28,7 +29,9 @@ import {
     saveToScrap as thinkstreamSaveToScrap,
     show as thinkstreamShow,
     store as thinkstreamStore,
+    structureThought as thinkstreamStructureThought,
     structureThoughts as thinkstreamStructureThoughts,
+    translateThought as thinkstreamTranslateThought,
     update as thinkstreamUpdate,
     uploadImage as thinkstreamUploadImage,
 } from '@/actions/App/Http/Controllers/Admin/ThinkstreamController';
@@ -156,6 +159,18 @@ export default function ThinkstreamShow({
         delete_canvas: false,
         page_id: null as number | null,
     });
+
+    const {
+        post: structureThoughtPost,
+        processing: structuringThought,
+        transform: transformStructureThought,
+    } = useHttp({ content: '' });
+
+    const {
+        post: translateThoughtPost,
+        processing: translatingThought,
+        transform: transformTranslateThought,
+    } = useHttp({ content: '' });
 
     setLayoutProps({
         breadcrumbs: [
@@ -364,6 +379,51 @@ export default function ThinkstreamShow({
                 }
             },
         });
+    }
+
+    function runThoughtAiAction(
+        thought: Thought,
+        post: (url: string, options: object) => Promise<unknown>,
+        transform: (fn: () => { content: string }) => void,
+        url: string,
+        errorMessage: string,
+    ) {
+        transform(() => ({ content: editingContent }));
+        post(url, {
+            onSuccess: (response: unknown) => {
+                const { content, message } = response as {
+                    content: string;
+                    message: string;
+                };
+                setEditingContent(content);
+                if (message) {
+                    toast.success(message);
+                }
+            },
+            onError: () => {
+                toast.error(errorMessage);
+            },
+        });
+    }
+
+    function structureThought(thought: Thought) {
+        runThoughtAiAction(
+            thought,
+            structureThoughtPost,
+            transformStructureThought,
+            thinkstreamStructureThought.url([page.id, thought.id]),
+            'Failed to structure content.',
+        );
+    }
+
+    function translateThought(thought: Thought) {
+        runThoughtAiAction(
+            thought,
+            translateThoughtPost,
+            transformTranslateThought,
+            thinkstreamTranslateThought.url([page.id, thought.id]),
+            'Failed to translate content.',
+        );
     }
 
     function toggleSelected(id: number) {
@@ -752,52 +812,104 @@ export default function ThinkstreamShow({
                                                             e.stopPropagation()
                                                         }
                                                     >
-                                                        <div
-                                                            aria-label="Edit mode"
-                                                            className="flex w-fit gap-1 rounded-lg bg-muted/50 p-0.5"
-                                                        >
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    setEditPreviewMode(
-                                                                        false,
-                                                                    )
-                                                                }
-                                                                aria-label="Write mode"
-                                                                aria-pressed={
-                                                                    !editPreviewMode
-                                                                }
-                                                                data-test="thinkstream-edit-write-tab"
-                                                                className={cn(
-                                                                    'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                                                                    !editPreviewMode
-                                                                        ? 'bg-card text-foreground shadow-sm'
-                                                                        : 'text-muted-foreground hover:text-foreground',
-                                                                )}
+                                                        <div className="flex items-center justify-between gap-2">
+                                                            <div
+                                                                aria-label="Edit mode"
+                                                                className="flex w-fit gap-1 rounded-lg bg-muted/50 p-0.5"
                                                             >
-                                                                Write
-                                                            </button>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() =>
-                                                                    setEditPreviewMode(
-                                                                        true,
-                                                                    )
-                                                                }
-                                                                aria-label="Preview mode"
-                                                                aria-pressed={
-                                                                    editPreviewMode
-                                                                }
-                                                                data-test="thinkstream-edit-preview-tab"
-                                                                className={cn(
-                                                                    'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
-                                                                    editPreviewMode
-                                                                        ? 'bg-card text-foreground shadow-sm'
-                                                                        : 'text-muted-foreground hover:text-foreground',
-                                                                )}
-                                                            >
-                                                                Preview
-                                                            </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setEditPreviewMode(
+                                                                            false,
+                                                                        )
+                                                                    }
+                                                                    aria-label="Write mode"
+                                                                    aria-pressed={
+                                                                        !editPreviewMode
+                                                                    }
+                                                                    data-test="thinkstream-edit-write-tab"
+                                                                    className={cn(
+                                                                        'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                                                                        !editPreviewMode
+                                                                            ? 'bg-card text-foreground shadow-sm'
+                                                                            : 'text-muted-foreground hover:text-foreground',
+                                                                    )}
+                                                                >
+                                                                    Write
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() =>
+                                                                        setEditPreviewMode(
+                                                                            true,
+                                                                        )
+                                                                    }
+                                                                    aria-label="Preview mode"
+                                                                    aria-pressed={
+                                                                        editPreviewMode
+                                                                    }
+                                                                    data-test="thinkstream-edit-preview-tab"
+                                                                    className={cn(
+                                                                        'rounded-md px-3 py-1.5 text-xs font-medium transition-all',
+                                                                        editPreviewMode
+                                                                            ? 'bg-card text-foreground shadow-sm'
+                                                                            : 'text-muted-foreground hover:text-foreground',
+                                                                    )}
+                                                                >
+                                                                    Preview
+                                                                </button>
+                                                            </div>
+                                                            {aiEnabled && (
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        disabled={
+                                                                            structuringThought ||
+                                                                            translatingThought
+                                                                        }
+                                                                        onClick={() =>
+                                                                            structureThought(
+                                                                                thought,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        {structuringThought ? (
+                                                                            <Spinner className="mr-1.5" />
+                                                                        ) : (
+                                                                            <Sparkles className="mr-1.5 size-3.5" />
+                                                                        )}
+                                                                        {structuringThought
+                                                                            ? 'Structuring…'
+                                                                            : 'Structure'}
+                                                                    </Button>
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        disabled={
+                                                                            structuringThought ||
+                                                                            translatingThought
+                                                                        }
+                                                                        onClick={() =>
+                                                                            translateThought(
+                                                                                thought,
+                                                                            )
+                                                                        }
+                                                                    >
+                                                                        {translatingThought ? (
+                                                                            <Spinner className="mr-1.5" />
+                                                                        ) : (
+                                                                            <Languages className="mr-1.5 size-3.5" />
+                                                                        )}
+                                                                        {translatingThought
+                                                                            ? 'Translating…'
+                                                                            : 'Translate'}
+                                                                    </Button>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                         {editPreviewMode ? (
                                                             <div
@@ -865,6 +977,10 @@ export default function ThinkstreamShow({
                                                                 rows={12}
                                                                 data-test="thinkstream-edit-thought-textarea"
                                                                 className="min-h-[24rem] resize-none px-4 py-3 text-[15px] leading-7 sm:min-h-[30rem]"
+                                                                disabled={
+                                                                    structuringThought ||
+                                                                    translatingThought
+                                                                }
                                                                 autoFocus
                                                             />
                                                         )}
@@ -872,6 +988,10 @@ export default function ThinkstreamShow({
                                                             <Button
                                                                 size="sm"
                                                                 variant="secondary"
+                                                                disabled={
+                                                                    structuringThought ||
+                                                                    translatingThought
+                                                                }
                                                                 onClick={() => {
                                                                     setEditPreviewMode(
                                                                         false,
@@ -886,7 +1006,9 @@ export default function ThinkstreamShow({
                                                             <Button
                                                                 size="sm"
                                                                 disabled={
-                                                                    editSaving
+                                                                    editSaving ||
+                                                                    structuringThought ||
+                                                                    translatingThought
                                                                 }
                                                                 onClick={() =>
                                                                     saveEdit(
