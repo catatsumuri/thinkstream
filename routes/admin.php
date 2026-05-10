@@ -24,6 +24,8 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::patch('thinkstream/{page}/thoughts/{thought}', [ThinkstreamController::class, 'update'])->name('thinkstream.update');
     Route::post('thinkstream/{page}/delete', [ThinkstreamController::class, 'destroyMany'])->name('thinkstream.destroyMany');
     Route::post('thinkstream/{page}/structure', [ThinkstreamController::class, 'structureThoughts'])->name('thinkstream.structureThoughts');
+    Route::post('thinkstream/{page}/thoughts/{thought}/structure', [ThinkstreamController::class, 'structureThought'])->name('thinkstream.structureThought');
+    Route::post('thinkstream/{page}/thoughts/{thought}/translate', [ThinkstreamController::class, 'translateThought'])->name('thinkstream.translateThought');
 
     Route::patch('namespaces/reorder', [NamespaceController::class, 'reorder'])->name('namespaces.reorder');
     Route::resource('namespaces', NamespaceController::class)->except(['index', 'show']);
