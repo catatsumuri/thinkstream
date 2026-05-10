@@ -13,11 +13,16 @@ class ThinkstreamPage extends Model
     /** @use HasFactory<ThinkstreamPageFactory> */
     use HasFactory;
 
-    protected $fillable = ['user_id', 'title'];
+    protected $fillable = ['user_id', 'title', 'last_edited_by_user_id'];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function lastEditedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'last_edited_by_user_id');
     }
 
     public function thoughts(): HasMany

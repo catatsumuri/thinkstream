@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Actions\ProcessUploadedImage;
 use App\Ai\Agents\MarkdownStructureAgent;
 use App\Ai\Agents\ThinkstreamStructureAgent;
 use App\Ai\Agents\ThinkstreamTitleAgent;
 use App\Ai\Agents\TranslateSelectionAgent;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\UploadThoughtImageRequest;
+use App\Http\Requests\Admin\UploadImageRequest;
 use App\Models\Post;
 use App\Models\PostNamespace;
 use App\Models\ThinkstreamPage;
@@ -33,6 +34,8 @@ use ZipArchive;
 
 class ThinkstreamController extends Controller
 {
+    public function __construct(private readonly ProcessUploadedImage $processUploadedImage) {}
+
     public function index(Request $request): Response
     {
         $pages = ThinkstreamPage::query()
@@ -317,13 +320,16 @@ class ThinkstreamController extends Controller
         ]);
     }
 
-    public function uploadImage(UploadThoughtImageRequest $request, ThinkstreamPage $page): RedirectResponse
+    public function uploadImage(UploadImageRequest $request, ThinkstreamPage $page): RedirectResponse
     {
         $this->authorizePage($request, $page);
 
-        $path = $request->file('image')->store("thoughts/{$page->id}", 'public');
+        $uploadedImage = $this->processUploadedImage->handle(
+            $request->file('image'),
+            "thoughts/{$page->id}",
+        );
 
-        $imageUrl = '/images/'.$path;
+        $imageUrl = '/images/'.$uploadedImage->path;
 
         return to_route('admin.thinkstream.show', $page)
             ->with('thoughtImageUrl', $imageUrl)
@@ -358,7 +364,7 @@ class ThinkstreamController extends Controller
             'content' => ['required', 'string', 'max:200000'],
         ]);
 
-        $thought->update($validated);
+        $thought->update([...$validated, 'last_edited_by_user_id' => $request->user()->id]);
 
         return back();
     }
@@ -494,6 +500,19 @@ class ThinkstreamController extends Controller
             'content' => $agentResponse['content'],
             'message' => $message,
         ]);
+    }
+
+    public function updateTitle(Request $request, ThinkstreamPage $page): JsonResponse
+    {
+        $this->authorizePage($request, $page);
+
+        $validated = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+        ]);
+
+        $page->update(['title' => $validated['title'], 'last_edited_by_user_id' => $request->user()->id]);
+
+        return response()->json(['title' => $page->title]);
     }
 
     public function refineTitle(Request $request, ThinkstreamPage $page): JsonResponse

@@ -20,6 +20,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::get('thinkstream/{page}', [ThinkstreamController::class, 'show'])->name('thinkstream.show');
     Route::post('thinkstream/{page}/image', [ThinkstreamController::class, 'uploadImage'])->name('thinkstream.uploadImage');
     Route::post('thinkstream/{page}', [ThinkstreamController::class, 'store'])->name('thinkstream.store');
+    Route::patch('thinkstream/{page}/title', [ThinkstreamController::class, 'updateTitle'])->name('thinkstream.updateTitle');
     Route::post('thinkstream/{page}/refine-title', [ThinkstreamController::class, 'refineTitle'])->name('thinkstream.refineTitle');
     Route::patch('thinkstream/{page}/thoughts/{thought}', [ThinkstreamController::class, 'update'])->name('thinkstream.update');
     Route::post('thinkstream/{page}/delete', [ThinkstreamController::class, 'destroyMany'])->name('thinkstream.destroyMany');

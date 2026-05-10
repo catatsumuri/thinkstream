@@ -152,3 +152,71 @@ test('restoring a revision from another post returns 404', function () {
         ->post(route('admin.posts.revisions.restore', [$namespace, $post->slug, $revision]))
         ->assertNotFound();
 });
+
+test('updating a post records the last editor', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->recycle($namespace)->create([
+        'title' => 'Original Title',
+        'content' => 'Original content.',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post->slug]), [
+            'title' => 'Updated Title',
+            'content' => 'Updated content.',
+            'slug' => $post->slug,
+            'is_draft' => false,
+            'published_at' => $post->published_at,
+        ])
+        ->assertRedirect();
+
+    expect($post->fresh()->last_edited_by_user_id)->toBe($user->id);
+});
+
+test('revisions page shows the last editor for the current state', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->recycle($namespace)->create([
+        'title' => 'Original Title',
+        'content' => 'Original content.',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.posts.update', [$namespace, $post->slug]), [
+            'title' => 'Updated Title',
+            'content' => 'Updated content.',
+            'slug' => $post->slug,
+            'is_draft' => false,
+            'published_at' => $post->published_at,
+        ]);
+
+    $this->actingAs($user)
+        ->get(route('admin.posts.revisions', [$namespace, $post->slug]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->where('revisions.0.is_current', true)
+            ->where('revisions.0.user.name', $user->name)
+        );
+});
+
+test('restoring a revision records the restoring user as last editor', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->recycle($namespace)->create([
+        'title' => 'Current Title',
+        'content' => 'Current content.',
+    ]);
+    $revision = PostRevision::factory()->create([
+        'post_id' => $post->id,
+        'user_id' => $user->id,
+        'title' => 'Old Title',
+        'content' => 'Old content.',
+    ]);
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.revisions.restore', [$namespace, $post->slug, $revision]))
+        ->assertRedirect();
+
+    expect($post->fresh()->last_edited_by_user_id)->toBe($user->id);
+});

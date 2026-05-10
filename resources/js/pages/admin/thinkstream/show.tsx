@@ -33,6 +33,7 @@ import {
     structureThoughts as thinkstreamStructureThoughts,
     translateThought as thinkstreamTranslateThought,
     update as thinkstreamUpdate,
+    updateTitle as thinkstreamUpdateTitle,
     uploadImage as thinkstreamUploadImage,
 } from '@/actions/App/Http/Controllers/Admin/ThinkstreamController';
 import MarkdownContent from '@/components/markdown-content';
@@ -114,6 +115,15 @@ export default function ThinkstreamShow({
     const editingContentRef = useRef('');
 
     const [pageTitle, setPageTitle] = useState(page.title);
+    const [isEditingTitle, setIsEditingTitle] = useState(false);
+    const [titleDraft, setTitleDraft] = useState(page.title);
+    const [isTitleHovered, setIsTitleHovered] = useState(false);
+    const titleInputRef = useRef<HTMLInputElement>(null);
+    const {
+        patch: updateTitlePatch,
+        transform: transformTitleUpdate,
+        processing: updatingTitle,
+    } = useHttp({ title: '' });
     const { data, setData, post, processing, errors, reset } = useForm({
         content: '',
     });
@@ -140,6 +150,52 @@ export default function ThinkstreamShow({
     useEffect(() => {
         editingContentRef.current = editingContent;
     }, [editingContent]);
+
+    useEffect(() => {
+        if (isEditingTitle) {
+            titleInputRef.current?.focus();
+            titleInputRef.current?.select();
+        }
+    }, [isEditingTitle]);
+
+    function startTitleEdit() {
+        setTitleDraft(pageTitle);
+        setIsEditingTitle(true);
+    }
+
+    function cancelTitleEdit() {
+        setIsEditingTitle(false);
+    }
+
+    function saveTitleEdit() {
+        const trimmed = titleDraft.trim();
+
+        if (!trimmed || trimmed === pageTitle) {
+            cancelTitleEdit();
+            return;
+        }
+
+        transformTitleUpdate(() => ({ title: trimmed }));
+        updateTitlePatch(thinkstreamUpdateTitle.url(page.id), {
+            onSuccess: (response) => {
+                const { title } = response as { title: string };
+                setPageTitle(title);
+                setIsEditingTitle(false);
+            },
+            onError: () => {
+                setIsEditingTitle(false);
+            },
+        });
+    }
+
+    function handleTitleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            saveTitleEdit();
+        } else if (e.key === 'Escape') {
+            cancelTitleEdit();
+        }
+    }
 
     const {
         post: structurePost,
@@ -603,9 +659,47 @@ export default function ThinkstreamShow({
                                 <p className="text-xs font-medium tracking-[0.18em] text-muted-foreground uppercase">
                                     Canvas
                                 </p>
-                                <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                                    {pageTitle}
-                                </h1>
+                                {isEditingTitle ? (
+                                    <input
+                                        ref={titleInputRef}
+                                        type="text"
+                                        value={titleDraft}
+                                        onChange={(e) =>
+                                            setTitleDraft(e.target.value)
+                                        }
+                                        onBlur={saveTitleEdit}
+                                        onKeyDown={handleTitleKeyDown}
+                                        disabled={updatingTitle}
+                                        className="w-full bg-transparent text-2xl font-semibold tracking-tight outline-none sm:text-3xl"
+                                    />
+                                ) : (
+                                    <div
+                                        className="flex items-center gap-2"
+                                        onMouseEnter={() =>
+                                            setIsTitleHovered(true)
+                                        }
+                                        onMouseLeave={() =>
+                                            setIsTitleHovered(false)
+                                        }
+                                    >
+                                        <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                                            {pageTitle}
+                                        </h1>
+                                        <button
+                                            type="button"
+                                            onClick={startTitleEdit}
+                                            className={cn(
+                                                'text-muted-foreground transition-opacity',
+                                                isTitleHovered
+                                                    ? 'opacity-100'
+                                                    : 'opacity-0',
+                                            )}
+                                            aria-label="Edit title"
+                                        >
+                                            <Pencil className="size-4" />
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                             <div className="flex flex-wrap items-center gap-2 sm:justify-end">
                                 {thoughts.length > 0 && (

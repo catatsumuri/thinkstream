@@ -1923,6 +1923,10 @@ test('authenticated users can upload an image to a post', function () {
         ->assertRedirect(route('admin.posts.edit', [$namespace, $post]));
 
     Storage::disk('public')->assertExists("posts/{$post->id}/{$image->hashName()}");
+    $this->assertDatabaseHas('uploaded_images', [
+        'path' => "posts/{$post->id}/{$image->hashName()}",
+        'disk' => 'public',
+    ]);
 });
 
 test('guests cannot upload images', function () {
@@ -1961,6 +1965,49 @@ test('authenticated users can upload an image during post creation', function ()
         ->assertRedirect(route('admin.posts.create', $namespace));
 
     Storage::disk('public')->assertExists("posts/{$namespace->full_path}/{$image->hashName()}");
+    $this->assertDatabaseHas('uploaded_images', [
+        'path' => "posts/{$namespace->full_path}/{$image->hashName()}",
+        'disk' => 'public',
+    ]);
+});
+
+test('post image upload resizes oversized images', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create(['namespace_id' => $namespace->id]);
+    $image = UploadedFile::fake()->image('big.jpg', 4096, 3000);
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.uploadImage', [$namespace, $post]), ['image' => $image])
+        ->assertSessionHasNoErrors();
+
+    $path = "posts/{$post->id}/{$image->hashName()}";
+    $contents = Storage::disk('public')->get($path);
+    [$width, $height] = getimagesizefromstring($contents);
+
+    expect(max($width, $height))->toBeLessThanOrEqual(2048);
+});
+
+test('post image upload does not resize small images', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($user)->create(['namespace_id' => $namespace->id]);
+    $image = UploadedFile::fake()->image('small.jpg', 800, 600);
+
+    $this->actingAs($user)
+        ->post(route('admin.posts.uploadImage', [$namespace, $post]), ['image' => $image])
+        ->assertSessionHasNoErrors();
+
+    $path = "posts/{$post->id}/{$image->hashName()}";
+    $contents = Storage::disk('public')->get($path);
+    [$width, $height] = getimagesizefromstring($contents);
+
+    expect($width)->toBeLessThanOrEqual(800)
+        ->and($height)->toBeLessThanOrEqual(600);
 });
 
 test('storing a post syncs tags', function () {

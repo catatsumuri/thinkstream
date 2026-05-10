@@ -12,11 +12,16 @@ class Thought extends Model
     /** @use HasFactory<ThoughtFactory> */
     use HasFactory;
 
-    protected $fillable = ['user_id', 'page_id', 'content'];
+    protected $fillable = ['user_id', 'page_id', 'content', 'last_edited_by_user_id'];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function lastEditedByUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'last_edited_by_user_id');
     }
 
     public function page(): BelongsTo
