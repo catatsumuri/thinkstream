@@ -4,10 +4,12 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\PostNamespace;
+use App\Support\NamespaceBackupArchive;
 use App\Support\NamespaceBackupIndex;
 use App\Support\NamespaceRestoreArchive;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\File;
 use Illuminate\Validation\Rule;
@@ -15,6 +17,9 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\Yaml\Exception\ParseException;
+use Symfony\Component\Yaml\Yaml;
+use ZipArchive;
 
 class BackupController extends Controller
 {
@@ -59,6 +64,7 @@ class BackupController extends Controller
             'delete_backups_url' => route('admin.backups.destroyMany', absolute: false),
             'restore_backups_url' => route('admin.backups.restoreMany', absolute: false),
             'restore_upload_url' => route('admin.posts.restore.upload', absolute: false),
+            'upload_backup_url' => route('admin.backups.upload', absolute: false),
             'restore_preview' => $restorePreview,
             'backups' => $backups
                 ->map(fn (array $backup): array => [
@@ -203,6 +209,64 @@ class BackupController extends Controller
         abort_unless($backupRecord !== null && File::exists($backupRecord['path']), 404);
 
         return response()->download($backupRecord['path'], $backupRecord['filename']);
+    }
+
+    public function upload(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'backup' => ['required', 'file', 'extensions:zip', 'max:102400'],
+        ]);
+
+        /** @var UploadedFile $file */
+        $file = $data['backup'];
+        $directory = NamespaceBackupArchive::directory();
+
+        $zip = new ZipArchive;
+
+        if ($zip->open($file->getPathname()) !== true) {
+            throw ValidationException::withMessages([
+                'backup' => 'The uploaded file is not a valid ZIP archive.',
+            ]);
+        }
+
+        $namespaceYaml = $zip->getFromName(NamespaceBackupArchive::NAMESPACE_MANIFEST);
+        $zip->close();
+
+        $fullPath = null;
+
+        if (is_string($namespaceYaml) && $namespaceYaml !== '') {
+            try {
+                $metadata = Yaml::parse($namespaceYaml);
+                $rawPath = trim((string) (is_array($metadata) ? ($metadata['full_path'] ?? '') : ''), '/');
+
+                if ($rawPath !== '') {
+                    $fullPath = $rawPath;
+                }
+            } catch (ParseException) {
+                // fall back to original filename
+            }
+        }
+
+        if ($fullPath !== null) {
+            $filename = str_replace('/', '--', $fullPath).'-'.now()->format('Ymd-His').'.zip';
+        } else {
+            $sanitized = preg_replace('/[^a-zA-Z0-9._-]/', '-', $file->getClientOriginalName()) ?? 'backup.zip';
+            $filename = str_ends_with($sanitized, '.zip') ? $sanitized : $sanitized.'.zip';
+        }
+
+        $targetPath = $directory.'/'.$filename;
+
+        if (File::exists($targetPath)) {
+            $filename = str_replace('.zip', '-'.now()->format('Ymd-His').'.zip', $filename);
+            $targetPath = $directory.'/'.$filename;
+        }
+
+        File::ensureDirectoryExists($directory);
+        File::copy($file->getPathname(), $targetPath);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Backup uploaded.']);
+
+        return to_route('admin.backups.index');
     }
 
     public function restore(

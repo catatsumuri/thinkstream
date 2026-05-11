@@ -4,6 +4,7 @@ use App\Models\PostNamespace;
 use App\Models\User;
 use App\Support\NamespaceBackupArchive;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Symfony\Component\Yaml\Yaml;
 
@@ -139,6 +140,7 @@ test('authenticated users can view the backups index', function () {
                 ->where('delete_backups_url', route('admin.backups.destroyMany', absolute: false))
                 ->where('create_backups_url', route('admin.backups.storeMany', absolute: false))
                 ->where('restore_upload_url', route('admin.posts.restore.upload', absolute: false))
+                ->where('upload_backup_url', route('admin.backups.upload', absolute: false))
                 ->where('restore_preview', null)
             );
     });
@@ -451,4 +453,187 @@ test('bulk restore rejects selecting multiple backups for the same namespace', f
     } finally {
         File::delete([$firstPath, $secondPath]);
     }
+});
+
+test('guests are redirected from the backup upload endpoint', function () {
+    $this->post(route('admin.backups.upload'))->assertRedirect(route('login'));
+});
+
+test('authenticated users can upload a backup zip and it is stored in the backup directory', function () {
+    withinIsolatedAdminBackupDirectory(function (string $backupDirectory): void {
+        $user = User::factory()->create();
+        $tmpZip = tempnam(sys_get_temp_dir(), 'backup-upload-test').'.zip';
+
+        createBackupControllerNamespaceBackupZip($tmpZip, [
+            'name' => 'Uploaded Namespace',
+            'slug' => 'uploaded-namespace',
+            'full_path' => 'uploaded-namespace',
+        ]);
+
+        $uploadedFile = new UploadedFile($tmpZip, 'uploaded-namespace.zip', 'application/zip', null, true);
+
+        try {
+            $this->actingAs($user)
+                ->post(route('admin.backups.upload'), ['backup' => $uploadedFile])
+                ->assertRedirect(route('admin.backups.index'));
+
+            $files = glob($backupDirectory.'/*.zip') ?: [];
+            expect($files)->toHaveCount(1);
+            expect(basename($files[0]))->toStartWith('uploaded-namespace-');
+        } finally {
+            @unlink($tmpZip);
+        }
+    });
+});
+
+test('uploaded backup zip with nested namespace path uses double-dash prefix', function () {
+    withinIsolatedAdminBackupDirectory(function (string $backupDirectory): void {
+        $user = User::factory()->create();
+        $tmpZip = tempnam(sys_get_temp_dir(), 'backup-upload-test').'.zip';
+
+        createBackupControllerNamespaceBackupZip($tmpZip, [
+            'name' => 'Child Namespace',
+            'slug' => 'child',
+            'full_path' => 'parent/child',
+        ]);
+
+        $uploadedFile = new UploadedFile($tmpZip, 'child.zip', 'application/zip', null, true);
+
+        try {
+            $this->actingAs($user)
+                ->post(route('admin.backups.upload'), ['backup' => $uploadedFile])
+                ->assertRedirect(route('admin.backups.index'));
+
+            $files = glob($backupDirectory.'/*.zip') ?: [];
+            expect($files)->toHaveCount(1);
+            expect(basename($files[0]))->toStartWith('parent--child-');
+        } finally {
+            @unlink($tmpZip);
+        }
+    });
+});
+
+test('backup upload uses original filename when zip has no namespace manifest', function () {
+    withinIsolatedAdminBackupDirectory(function (string $backupDirectory): void {
+        $user = User::factory()->create();
+        $tmpZip = tempnam(sys_get_temp_dir(), 'backup-upload-test').'.zip';
+
+        $zip = new ZipArchive;
+        $zip->open($tmpZip, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('some-file.txt', 'content');
+        $zip->close();
+
+        $uploadedFile = new UploadedFile($tmpZip, 'my-custom-backup.zip', 'application/zip', null, true);
+
+        try {
+            $this->actingAs($user)
+                ->post(route('admin.backups.upload'), ['backup' => $uploadedFile])
+                ->assertRedirect(route('admin.backups.index'));
+
+            $files = glob($backupDirectory.'/*.zip') ?: [];
+            expect($files)->toHaveCount(1);
+            expect(basename($files[0]))->toBe('my-custom-backup.zip');
+        } finally {
+            @unlink($tmpZip);
+        }
+    });
+});
+
+test('backup upload uses original filename when namespace manifest is invalid', function () {
+    withinIsolatedAdminBackupDirectory(function (string $backupDirectory): void {
+        $user = User::factory()->create();
+        $tmpZip = tempnam(sys_get_temp_dir(), 'backup-upload-test').'.zip';
+
+        $zip = new ZipArchive;
+        $zip->open($tmpZip, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('_namespace.yaml', "full_path: [broken\n");
+        $zip->close();
+
+        $uploadedFile = new UploadedFile($tmpZip, 'broken-manifest.zip', 'application/zip', null, true);
+
+        try {
+            $this->actingAs($user)
+                ->post(route('admin.backups.upload'), ['backup' => $uploadedFile])
+                ->assertRedirect(route('admin.backups.index'));
+
+            $files = glob($backupDirectory.'/*.zip') ?: [];
+            expect($files)->toHaveCount(1);
+            expect(basename($files[0]))->toBe('broken-manifest.zip');
+        } finally {
+            @unlink($tmpZip);
+        }
+    });
+});
+
+test('backup upload rejects files with a zip extension that are not valid zip archives', function () {
+    $user = User::factory()->create();
+    $tmpFile = tempnam(sys_get_temp_dir(), 'backup-upload-test').'.zip';
+    file_put_contents($tmpFile, 'not a valid zip archive');
+
+    $uploadedFile = new UploadedFile($tmpFile, 'broken.zip', 'application/zip', null, true);
+
+    try {
+        $this->actingAs($user)
+            ->post(route('admin.backups.upload'), ['backup' => $uploadedFile])
+            ->assertSessionHasErrors(['backup' => 'The uploaded file is not a valid ZIP archive.']);
+    } finally {
+        @unlink($tmpFile);
+    }
+});
+
+test('backup upload requires a zip file', function () {
+    $user = User::factory()->create();
+    $tmpFile = tempnam(sys_get_temp_dir(), 'backup-upload-test').'.txt';
+    file_put_contents($tmpFile, 'not a zip');
+
+    $uploadedFile = new UploadedFile($tmpFile, 'backup.txt', 'text/plain', null, true);
+
+    try {
+        $this->actingAs($user)
+            ->post(route('admin.backups.upload'), ['backup' => $uploadedFile])
+            ->assertSessionHasErrors('backup');
+    } finally {
+        @unlink($tmpFile);
+    }
+});
+
+test('backup upload requires a file to be present', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.backups.upload'))
+        ->assertSessionHasErrors('backup');
+});
+
+test('backup upload does not overwrite an existing file with the same name', function () {
+    withinIsolatedAdminBackupDirectory(function (string $backupDirectory): void {
+        $user = User::factory()->create();
+        $tmpZip = tempnam(sys_get_temp_dir(), 'backup-upload-test').'.zip';
+
+        $zip = new ZipArchive;
+        $zip->open($tmpZip, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('some-file.txt', 'content');
+        $zip->close();
+
+        $originalFile = $backupDirectory.'/my-backup.zip';
+        File::copy($tmpZip, $originalFile);
+
+        $uploadedFile = new UploadedFile($tmpZip, 'my-backup.zip', 'application/zip', null, true);
+
+        try {
+            $this->actingAs($user)
+                ->post(route('admin.backups.upload'), ['backup' => $uploadedFile])
+                ->assertRedirect(route('admin.backups.index'));
+
+            $files = glob($backupDirectory.'/*.zip') ?: [];
+            expect($files)->toHaveCount(2);
+            expect($files)->toContain($originalFile);
+            expect(collect($files)->first(fn (string $file) => $file !== $originalFile))
+                ->not->toBe($originalFile)
+                ->and(collect($files)->first(fn (string $file) => $file !== $originalFile))
+                ->toMatch('/my-backup-\d{8}-\d{6}\.zip$/');
+        } finally {
+            @unlink($tmpZip);
+        }
+    });
 });

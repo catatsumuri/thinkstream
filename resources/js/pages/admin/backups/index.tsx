@@ -421,6 +421,180 @@ function RestorePreviewPanel({
     );
 }
 
+function UploadBackupDialog({ uploadBackupUrl }: { uploadBackupUrl: string }) {
+    const [isOpen, setIsOpen] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const inputRef = useRef<HTMLInputElement | null>(null);
+    const dragCounterRef = useRef(0);
+    const uploadForm = useForm<{ backup: File | null }>({ backup: null });
+
+    function handleFile(file: File | null) {
+        if (!file) {
+            return;
+        }
+
+        const isZip =
+            file.type === 'application/zip' || file.name.endsWith('.zip');
+
+        if (!isZip) {
+            return;
+        }
+
+        uploadForm.setData('backup', file);
+
+        if (inputRef.current) {
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            inputRef.current.files = transfer.files;
+        }
+    }
+
+    function handleDragEnter(event: React.DragEvent<HTMLDivElement>) {
+        event.preventDefault();
+        dragCounterRef.current++;
+        setIsDragging(true);
+    }
+
+    function handleDragLeave() {
+        dragCounterRef.current = Math.max(0, dragCounterRef.current - 1);
+
+        if (dragCounterRef.current === 0) {
+            setIsDragging(false);
+        }
+    }
+
+    function handleDrop(event: React.DragEvent<HTMLDivElement>) {
+        event.preventDefault();
+        dragCounterRef.current = 0;
+        setIsDragging(false);
+        handleFile(event.dataTransfer.files[0] ?? null);
+    }
+
+    function handleSubmit(event: React.FormEvent) {
+        event.preventDefault();
+        uploadForm.post(uploadBackupUrl, {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                setIsOpen(false);
+                uploadForm.reset('backup');
+            },
+        });
+    }
+
+    return (
+        <Dialog open={isOpen} onOpenChange={setIsOpen}>
+            <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                    <Upload className="size-4" />
+                    Upload Backup
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogTitle>Upload Backup ZIP</DialogTitle>
+                <DialogDescription>
+                    Upload a backup ZIP to add it to the backup list without
+                    immediately restoring it.
+                </DialogDescription>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div
+                        onClick={() => inputRef.current?.click()}
+                        onDragEnter={handleDragEnter}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDragLeave={handleDragLeave}
+                        onDrop={handleDrop}
+                        className={cn(
+                            'cursor-pointer rounded-lg border border-dashed p-8 transition-colors',
+                            isDragging
+                                ? 'border-ring bg-ring/8'
+                                : 'border-input bg-muted/30 hover:border-ring/60 hover:bg-muted/50',
+                        )}
+                    >
+                        <div className="flex flex-col items-center gap-3 text-center">
+                            <div
+                                className={cn(
+                                    'rounded-full border-2 border-dashed p-4 transition-colors',
+                                    isDragging
+                                        ? 'border-ring text-ring'
+                                        : 'border-muted-foreground/30 text-muted-foreground',
+                                )}
+                            >
+                                <Upload className="size-8" />
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-sm font-medium">
+                                    {isDragging
+                                        ? 'Drop zip to upload'
+                                        : uploadForm.data.backup
+                                          ? uploadForm.data.backup.name
+                                          : 'Drop zip here'}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                    {uploadForm.data.backup
+                                        ? 'Click or drop another zip to replace.'
+                                        : 'or click to browse for a backup zip'}
+                                </p>
+                            </div>
+                            <p className="text-xs text-muted-foreground/80">
+                                ZIP archive only
+                            </p>
+                        </div>
+                    </div>
+                    <input
+                        ref={inputRef}
+                        type="file"
+                        name="backup"
+                        accept=".zip,application/zip"
+                        className="sr-only"
+                        onChange={(event) =>
+                            handleFile(event.currentTarget.files?.[0] ?? null)
+                        }
+                    />
+                    {uploadForm.progress && (
+                        <p className="text-sm text-muted-foreground">
+                            Uploading... {uploadForm.progress.percentage}%
+                        </p>
+                    )}
+                    {uploadForm.data.backup && (
+                        <button
+                            type="button"
+                            onClick={() => {
+                                uploadForm.setData('backup', null);
+
+                                if (inputRef.current) {
+                                    inputRef.current.files =
+                                        new DataTransfer().files;
+                                }
+                            }}
+                            className="text-xs text-muted-foreground hover:text-destructive"
+                        >
+                            Clear selection
+                        </button>
+                    )}
+                    {uploadForm.errors.backup && (
+                        <InputError message={uploadForm.errors.backup} />
+                    )}
+                    <DialogFooter className="gap-2">
+                        <DialogClose asChild>
+                            <Button variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button
+                            type="submit"
+                            disabled={
+                                uploadForm.processing ||
+                                uploadForm.data.backup === null
+                            }
+                        >
+                            <Upload className="size-4" />
+                            Upload Backup
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
 function RestoreNamespacesDialog({
     restoreUploadUrl,
     restorePreview,
@@ -648,6 +822,7 @@ export default function AdminBackupsIndex({
     delete_backups_url,
     restore_backups_url,
     restore_upload_url,
+    upload_backup_url,
     restore_preview,
 }: {
     namespaces: NamespaceSummary[];
@@ -656,6 +831,7 @@ export default function AdminBackupsIndex({
     delete_backups_url: string;
     restore_backups_url: string;
     restore_upload_url: string;
+    upload_backup_url: string;
     restore_preview: RestorePreview | null;
 }) {
     const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
@@ -1035,6 +1211,10 @@ export default function AdminBackupsIndex({
                             </div>
 
                             <div className="flex flex-wrap items-center gap-2">
+                                <UploadBackupDialog
+                                    uploadBackupUrl={upload_backup_url}
+                                />
+
                                 <RestoreNamespacesDialog
                                     restoreUploadUrl={restore_upload_url}
                                     restorePreview={restore_preview}

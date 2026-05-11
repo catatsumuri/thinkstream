@@ -79,9 +79,17 @@ class NamespaceController extends Controller
 
     public function edit(PostNamespace $namespace): InertiaResponse
     {
+        $excludedIds = [$namespace->id, ...$namespace->descendantIds()];
+
+        $availableParents = PostNamespace::query()
+            ->whereNotIn('id', $excludedIds)
+            ->orderBy('full_path')
+            ->get(['id', 'name', 'full_path']);
+
         return Inertia::render('admin/namespaces/edit', [
             'ancestors' => $this->ancestorOptions($namespace),
             'namespace' => $namespace,
+            'availableParents' => $availableParents,
             'aiEnabled' => config('thinkstream.ai.enabled'),
         ]);
     }

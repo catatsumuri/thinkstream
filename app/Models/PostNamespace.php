@@ -164,6 +164,33 @@ class PostNamespace extends Model
     }
 
     /**
+     * @return array<int, int>
+     */
+    public function descendantIds(): array
+    {
+        return self::collectDescendantIds($this->getKey());
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private static function collectDescendantIds(int $parentId): array
+    {
+        $childIds = static::query()
+            ->where('parent_id', $parentId)
+            ->pluck('id')
+            ->all();
+
+        $result = $childIds;
+
+        foreach ($childIds as $childId) {
+            $result = array_merge($result, self::collectDescendantIds($childId));
+        }
+
+        return $result;
+    }
+
+    /**
      * @return Collection<int, PostNamespace>
      */
     public function ancestors(): Collection
