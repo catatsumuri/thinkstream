@@ -400,7 +400,7 @@ class PostController extends Controller
     public function show(PostNamespace $namespace, Post $post): Response
     {
         $rootNamespace = $this->rootNamespace($namespace);
-        $post->load('tags', 'referrers');
+        $post->load('tags', 'referrers', 'user', 'lastEditedByUser');
 
         return Inertia::render('admin/posts/show', [
             'namespace' => [
@@ -429,6 +429,8 @@ class PostController extends Controller
                 ]),
                 'is_syncing' => $post->is_syncing,
                 'sync_file_path' => $post->sync_file_path,
+                'user' => $post->user ? ['id' => $post->user->id, 'name' => $post->user->name] : null,
+                'last_edited_by_user' => $post->lastEditedByUser ? ['id' => $post->lastEditedByUser->id, 'name' => $post->lastEditedByUser->name] : null,
                 'tags' => $post->tags->pluck('name')->values()->all(),
                 'referrers' => $post->referrers
                     ->sortByDesc('count')

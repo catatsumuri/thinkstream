@@ -1978,18 +1978,23 @@ test('admin post details show scheduled status and tags in the info panel', func
     $user = User::factory()->create([
         'email' => 'test@example.com',
     ]);
+    $author = User::factory()->create([
+        'name' => 'Author Name',
+    ]);
 
     $namespace = PostNamespace::factory()->create([
         'slug' => 'guides',
         'name' => 'Guides',
     ]);
 
-    $post = Post::factory()->for($namespace, 'namespace')->create([
+    $post = Post::factory()->for($author)->create([
+        'namespace_id' => $namespace->id,
         'slug' => 'release-plan',
         'title' => 'Release Plan',
         'content' => "# Plan\n\n## Next steps\n\nShip it.",
         'is_draft' => false,
         'published_at' => now()->addDay(),
+        'last_edited_by_user_id' => $user->id,
     ]);
 
     $post->tags()->attach([
@@ -2022,6 +2027,10 @@ test('admin post details show scheduled status and tags in the info panel', func
                 hasVisibleFromCopy: statusCard.textContent?.includes('Visible from') ?? false,
                 hasLaravelTag: tagsCard.textContent?.includes('laravel') ?? false,
                 hasReleaseTag: tagsCard.textContent?.includes('release') ?? false,
+                hasAuthorLabel: document.body.textContent?.includes('Author') ?? false,
+                hasAuthorName: document.body.textContent?.includes('Author Name') ?? false,
+                hasLastEditorLabel: document.body.textContent?.includes('Last edited by') ?? false,
+                hasLastEditorName: document.body.textContent?.includes('test@example.com') ?? false,
             };
         })()
     JS))->toBe([
@@ -2029,7 +2038,55 @@ test('admin post details show scheduled status and tags in the info panel', func
         'hasVisibleFromCopy' => true,
         'hasLaravelTag' => true,
         'hasReleaseTag' => true,
+        'hasAuthorLabel' => true,
+        'hasAuthorName' => true,
+        'hasLastEditorLabel' => true,
+        'hasLastEditorName' => true,
     ]);
+});
+
+test('public content pages show the ThinkStream footer link', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+        'name' => 'Guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'footer-check',
+        'full_path' => 'guides/footer-check',
+        'title' => 'Footer Check',
+    ]);
+    $tag = Tag::firstOrCreate(['name' => 'footer']);
+    $post->tags()->attach($tag);
+
+    foreach ([
+        route('posts.path', ['path' => $namespace->full_path], false),
+        route('posts.path', ['path' => $post->full_path], false),
+        route('tags.show', 'footer', false),
+    ] as $path) {
+        $page = visit($path);
+
+        $page
+            ->assertNoJavaScriptErrors()
+            ->assertSee('Powered by ThinkStream')
+            ->assertAttribute(
+                '[data-test="thinkstream-footer-link"]',
+                'href',
+                'https://github.com/catatsumuri/thinkstream',
+            )
+            ->assertAttribute(
+                '[data-test="thinkstream-footer-link"]',
+                'target',
+                '_blank',
+            )
+            ->assertAttribute(
+                '[data-test="thinkstream-footer-link"]',
+                'rel',
+                'noopener noreferrer',
+            )
+            ->assertPresent('[data-test="thinkstream-footer-icon"]');
+    }
 });
 
 test('admin post details can collapse and reopen the right info panel', function () {

@@ -1425,6 +1425,32 @@ test('admin post details page includes post tags', function () {
         );
 });
 
+test('admin post details page includes author and last editor metadata', function () {
+    $manager = User::factory()->create();
+    $author = User::factory()->create([
+        'name' => 'Author Name',
+    ]);
+    $editor = User::factory()->create([
+        'name' => 'Editor Name',
+    ]);
+    $namespace = PostNamespace::factory()->create();
+    $post = Post::factory()->for($author)->create([
+        'namespace_id' => $namespace->id,
+        'last_edited_by_user_id' => $editor->id,
+    ]);
+
+    $this->actingAs($manager)
+        ->get(route('admin.posts.show', [$namespace, $post]))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('admin/posts/show')
+            ->where('post.user.id', $author->id)
+            ->where('post.user.name', 'Author Name')
+            ->where('post.last_edited_by_user.id', $editor->id)
+            ->where('post.last_edited_by_user.name', 'Editor Name')
+        );
+});
+
 test('admin post details page includes admin navigation rooted at the top namespace', function () {
     $user = User::factory()->create();
     $root = PostNamespace::factory()->create([

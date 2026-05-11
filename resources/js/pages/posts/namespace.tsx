@@ -8,6 +8,8 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import type { ContentNavNode } from '@/components/content-nav-tree';
+import { SimpleIconSvg } from '@/components/markdown-card-group';
+import { getSimpleIcon } from '@/lib/simple-icon-lookup';
 import ContentNavTree from '@/components/content-nav-tree';
 import DocsHeaderActions from '@/components/docs-header-actions';
 import MarkdownPageActions from '@/components/markdown-page-actions';
@@ -75,6 +77,7 @@ export default function Namespace({
     const navVisible = navOverride ?? !isBelowDesktop;
     const markdownPagesEnabled = thinkstream.markdown_pages.enabled;
     const markdownUrl = contentPathMarkdown.url({ path: namespace.full_path });
+    const githubIcon = getSimpleIcon('github');
 
     return (
         <>
@@ -368,6 +371,31 @@ export default function Namespace({
                         </section>
                     </main>
                 </div>
+
+                <footer className="border-t">
+                    <div className="mx-auto flex max-w-7xl justify-center px-4 py-6 text-sm text-muted-foreground">
+                        <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+                            <span>Powered by ThinkStream</span>
+                            <a
+                                href="https://github.com/catatsumuri/thinkstream"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                data-test="thinkstream-footer-link"
+                                className="inline-flex items-center gap-2 font-medium text-foreground underline underline-offset-4 transition-opacity hover:opacity-70"
+                            >
+                                {githubIcon && (
+                                    <span data-test="thinkstream-footer-icon">
+                                        <SimpleIconSvg
+                                            icon={githubIcon}
+                                            className="size-4"
+                                        />
+                                    </span>
+                                )}
+                                github.com/catatsumuri/thinkstream
+                            </a>
+                        </p>
+                    </div>
+                </footer>
             </div>
         </>
     );

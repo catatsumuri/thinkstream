@@ -1116,8 +1116,18 @@ export default function ThinkstreamShow({
                                                     </div>
                                                 ) : (
                                                     <>
-                                                        {!editMode && (
-                                                            <div className="mb-3 flex justify-end">
+                                                        <div className="prose prose-sm max-w-none prose-neutral dark:prose-invert">
+                                                            <MarkdownContent
+                                                                content={
+                                                                    thought.content
+                                                                }
+                                                                components={
+                                                                    thoughtMarkdownComponents
+                                                                }
+                                                            />
+                                                        </div>
+                                                        <div className="mt-2 flex items-center justify-end gap-2">
+                                                            {!editMode && (
                                                                 <Button
                                                                     type="button"
                                                                     size="sm"
@@ -1136,37 +1146,28 @@ export default function ThinkstreamShow({
                                                                     <Pencil className="size-3" />
                                                                     Edit
                                                                 </Button>
-                                                            </div>
-                                                        )}
-                                                        <div className="prose prose-sm max-w-none prose-neutral dark:prose-invert">
-                                                            <MarkdownContent
-                                                                content={
-                                                                    thought.content
-                                                                }
-                                                                components={
-                                                                    thoughtMarkdownComponents
-                                                                }
-                                                            />
-                                                        </div>
-                                                        <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                                                            <span>
-                                                                {
-                                                                    thought.user
-                                                                        .name
-                                                                }{' '}
-                                                                ·{' '}
-                                                                <span
-                                                                    suppressHydrationWarning
-                                                                    title={new Date(
-                                                                        thought.created_at,
-                                                                    ).toLocaleString()}
-                                                                >
-                                                                    {timeAgo(
-                                                                        thought.created_at,
-                                                                    )}
+                                                            )}
+                                                            <p className="flex items-center gap-2 text-xs text-muted-foreground">
+                                                                <span>
+                                                                    {
+                                                                        thought
+                                                                            .user
+                                                                            .name
+                                                                    }{' '}
+                                                                    ·{' '}
+                                                                    <span
+                                                                        suppressHydrationWarning
+                                                                        title={new Date(
+                                                                            thought.created_at,
+                                                                        ).toLocaleString()}
+                                                                    >
+                                                                        {timeAgo(
+                                                                            thought.created_at,
+                                                                        )}
+                                                                    </span>
                                                                 </span>
-                                                            </span>
-                                                        </p>
+                                                            </p>
+                                                        </div>
                                                     </>
                                                 )}
                                             </div>

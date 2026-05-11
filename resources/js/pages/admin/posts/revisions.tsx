@@ -1,5 +1,5 @@
 import { Form, Head, Link, setLayoutProps } from '@inertiajs/react';
-import { History } from 'lucide-react';
+import { History, UserRound } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
@@ -265,14 +265,19 @@ export default function Revisions({
                                             </span>
                                         )}
                                     </label>
-                                    <p className="pl-6 text-xs text-muted-foreground">
-                                        {new Date(
-                                            revision.created_at,
-                                        ).toLocaleString()}
+                                    <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 pl-6">
+                                        <span className="text-xs text-muted-foreground">
+                                            {new Date(
+                                                revision.created_at,
+                                            ).toLocaleString()}
+                                        </span>
                                         {revision.user && (
-                                            <> · {revision.user.name}</>
+                                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                                                <UserRound className="size-3" />
+                                                by {revision.user.name}
+                                            </span>
                                         )}
-                                    </p>
+                                    </div>
                                 </div>
                                 {!revision.is_current && (
                                     <Form

@@ -8,19 +8,23 @@ import {
 } from '@inertiajs/react';
 import {
     AlertTriangle,
+    Calendar,
     ExternalLink,
     Eye,
     EyeOff,
     FileText,
     FolderSync,
     History,
+    Link2,
     PanelLeftClose,
     PanelLeftOpen,
     PanelRightClose,
     PanelRightOpen,
     Pencil,
+    Route,
     Trash2,
     Unlink,
+    UserRound,
 } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { ContentNavNode } from '@/components/content-nav-tree';
@@ -154,6 +158,8 @@ type Post = {
     is_draft: boolean;
     published_at: string | null;
     created_at: string;
+    user: { id: number; name: string } | null;
+    last_edited_by_user: { id: number; name: string } | null;
     reference_title: string | null;
     reference_url: string | null;
     is_syncing: boolean;
@@ -620,7 +626,8 @@ export default function Show({
                                         </div>
                                         <div className="divide-y divide-border">
                                             <div className="flex items-center justify-between px-4 py-3">
-                                                <span className="text-sm text-muted-foreground">
+                                                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                                    <Eye className="size-3.5" />
                                                     Views
                                                 </span>
                                                 <span className="text-sm font-medium">
@@ -628,7 +635,8 @@ export default function Show({
                                                 </span>
                                             </div>
                                             <div className="flex items-center justify-between px-4 py-3">
-                                                <span className="text-sm text-muted-foreground">
+                                                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                                    <Calendar className="size-3.5" />
                                                     Created
                                                 </span>
                                                 <span className="text-sm font-medium">
@@ -637,8 +645,37 @@ export default function Show({
                                                     ).toLocaleDateString()}
                                                 </span>
                                             </div>
+                                            {post.user && (
+                                                <div className="flex items-center justify-between px-4 py-3">
+                                                    <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                                        <UserRound className="size-3.5" />
+                                                        Author
+                                                    </span>
+                                                    <span className="text-sm font-medium">
+                                                        {post.user.name}
+                                                    </span>
+                                                </div>
+                                            )}
+                                            {post.last_edited_by_user &&
+                                                post.last_edited_by_user.id !==
+                                                    post.user?.id && (
+                                                    <div className="flex items-center justify-between px-4 py-3">
+                                                        <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                                            <Pencil className="size-3.5" />
+                                                            Last edited by
+                                                        </span>
+                                                        <span className="text-sm font-medium">
+                                                            {
+                                                                post
+                                                                    .last_edited_by_user
+                                                                    .name
+                                                            }
+                                                        </span>
+                                                    </div>
+                                                )}
                                             <div className="flex items-center justify-between px-4 py-3">
-                                                <span className="text-sm text-muted-foreground">
+                                                <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                                                    <Route className="size-3.5" />
                                                     Path
                                                 </span>
                                                 <span className="max-w-32 truncate font-mono text-xs text-muted-foreground">
@@ -646,7 +683,8 @@ export default function Show({
                                                 </span>
                                             </div>
                                             <div className="flex flex-col gap-1 px-4 py-3">
-                                                <span className="mb-1 text-sm text-muted-foreground">
+                                                <span className="mb-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                                                    <Link2 className="size-3.5" />
                                                     Referrers
                                                 </span>
                                                 {post.referrers.length > 0 ? (
