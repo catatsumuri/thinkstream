@@ -12,6 +12,8 @@ import {
 import { useMemo, useState } from 'react';
 import { siX } from 'simple-icons';
 import type { ContentNavNode } from '@/components/content-nav-tree';
+import { SimpleIconSvg } from '@/components/markdown-card-group';
+import { getSimpleIcon } from '@/lib/simple-icon-lookup';
 import ContentNavTree from '@/components/content-nav-tree';
 import DocsHeaderActions from '@/components/docs-header-actions';
 import MarkdownContent from '@/components/markdown-content';
@@ -171,6 +173,7 @@ export default function Show({
     const [mobileTocOpen, setMobileTocOpen] = useState(false);
     const [tocOverride, setTocOverride] = useState<boolean | null>(null);
     const [navOverride, setNavOverride] = useState<boolean | null>(null);
+    const githubIcon = getSimpleIcon('github');
 
     const handleEditHeading = ({
         level,
@@ -646,6 +649,31 @@ export default function Show({
                         </aside>
                     )}
                 </div>
+
+                <footer className="border-t">
+                    <div className="mx-auto flex max-w-7xl justify-center px-4 py-6 text-sm text-muted-foreground">
+                        <p className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 text-center">
+                            <span>Powered by ThinkStream</span>
+                            <a
+                                href="https://github.com/catatsumuri/thinkstream"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                data-test="thinkstream-footer-link"
+                                className="inline-flex items-center gap-2 font-medium text-foreground underline underline-offset-4 transition-opacity hover:opacity-70"
+                            >
+                                {githubIcon && (
+                                    <span data-test="thinkstream-footer-icon">
+                                        <SimpleIconSvg
+                                            icon={githubIcon}
+                                            className="size-4"
+                                        />
+                                    </span>
+                                )}
+                                github.com/catatsumuri/thinkstream
+                            </a>
+                        </p>
+                    </div>
+                </footer>
             </div>
         </>
     );

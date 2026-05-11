@@ -315,7 +315,8 @@ class PostController extends Controller
     {
         // 1. First image in post content
         if (preg_match('/!\[[^\]]*\]\(([^)]+)\)/', $post->content, $matches)) {
-            $url = $matches[1];
+            // Strip Zenn-style size specifiers like " =500x" or " =500x300"
+            $url = trim(explode(' ', trim($matches[1]))[0]);
 
             return str_starts_with($url, 'http') ? $url : url($url);
         }

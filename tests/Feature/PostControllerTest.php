@@ -827,3 +827,27 @@ test('post page social card image inherits grandparent cover image', function ()
             ->where('cardImage', fn ($url) => str_contains($url, 'grandparent.webp'))
         );
 });
+
+test('post page social card image strips zenn size specifiers from the first markdown image', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'full_path' => 'guides',
+        'is_published' => true,
+    ]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'slug' => 'zenn-card-image',
+        'full_path' => 'guides/zenn-card-image',
+        'content' => <<<'MARKDOWN'
+![Guide cover](/storage/namespaces/guide.png =250x)
+
+Body copy.
+MARKDOWN,
+    ]);
+
+    $this->get(route('posts.path', ['path' => $post->full_path]))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/show')
+            ->where('cardImage', url('/storage/namespaces/guide.png'))
+        );
+});
