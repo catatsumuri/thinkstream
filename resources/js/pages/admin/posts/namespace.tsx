@@ -47,6 +47,7 @@ import {
 } from '@/components/ui/dialog';
 import { timeAgo } from '@/lib/time';
 import { dashboard } from '@/routes';
+import { destroy as destroyNamespace } from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import { create as namespaceCreate } from '@/routes/admin/namespaces';
 import {
     create,
@@ -102,6 +103,7 @@ function SortableChildRow({
     child: ChildNamespace;
     reorderMode: boolean;
 }) {
+    const [isDeleteOpen, setIsDeleteOpen] = useState(false);
     const {
         attributes,
         listeners,
@@ -159,6 +161,50 @@ function SortableChildRow({
             </td>
             <td className="px-4 py-3 text-muted-foreground">
                 {child.posts_count} {child.posts_count === 1 ? 'post' : 'posts'}
+            </td>
+            <td className="px-4 py-3 text-right">
+                <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+                    <DialogTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                        >
+                            <Trash2 className="size-4" />
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogTitle>Delete namespace?</DialogTitle>
+                        <DialogDescription className="space-y-2">
+                            <p>
+                                This will permanently delete{' '}
+                                <strong>{child.name}</strong> and all of its
+                                posts and child namespaces.
+                            </p>
+                        </DialogDescription>
+                        <Form
+                            {...destroyNamespace.form(child.id)}
+                            onSuccess={() => setIsDeleteOpen(false)}
+                        >
+                            {({ processing }) => (
+                                <DialogFooter className="gap-2">
+                                    <DialogClose asChild>
+                                        <Button variant="secondary">
+                                            Cancel
+                                        </Button>
+                                    </DialogClose>
+                                    <Button
+                                        variant="destructive"
+                                        disabled={processing}
+                                        asChild
+                                    >
+                                        <button type="submit">Delete</button>
+                                    </Button>
+                                </DialogFooter>
+                            )}
+                        </Form>
+                    </DialogContent>
+                </Dialog>
             </td>
         </tr>
     );
