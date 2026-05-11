@@ -218,3 +218,24 @@ MARKDOWN,
     $page->assertNoJavaScriptErrors()
         ->assertPresent('[data-test="embed-github"]');
 });
+
+test('data URI images render without triggering empty src warning', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => <<<'MARKDOWN'
+# Data Image
+
+![Example](data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==)
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
+
+    $page->assertNoJavaScriptErrors();
+
+    $src = $page->script(<<<'JS'
+        (() => document.querySelector('img[alt="Example"]')?.getAttribute('src') ?? '')()
+    JS);
+
+    expect($src)->toStartWith('data:image/png;base64,');
+});

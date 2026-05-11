@@ -19,6 +19,24 @@ on:
       - 'routes/**'
       - 'tests/Browser/**'
       - 'vite.config.ts'
+  pull_request:
+    branches:
+      - main
+      - master
+    paths:
+      - '.github/workflows/browser-tests.yml'
+      - 'app/**'
+      - 'bootstrap/**'
+      - 'composer.json'
+      - 'composer.lock'
+      - 'config/**'
+      - 'database/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'resources/js/**'
+      - 'routes/**'
+      - 'tests/Browser/**'
+      - 'vite.config.ts'
   workflow_dispatch:
 
 jobs:
@@ -64,4 +82,4 @@ jobs:
         run: npm run build
 
       - name: Markdown Browser Tests
-        run: ./vendor/bin/pest --ci tests/Browser/ZennMarkdownRenderingTest.php tests/Browser/MintlifyTabsRenderingTest.php tests/Browser/CodeBlockHighlightingTest.php
+        run: ./vendor/bin/pest --ci tests/Browser/ZennMarkdownRenderingTest.php tests/Browser/MintlifyTabsRenderingTest.php tests/Browser/CodeBlockHighlightingTest.php tests/Browser/MarkdownEditorHeadingJumpTest.php

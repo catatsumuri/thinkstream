@@ -1,6 +1,6 @@
 import { AlertTriangle, CircleCheck, Info, Lightbulb } from 'lucide-react';
 import type { Components } from 'react-markdown';
-import ReactMarkdown from 'react-markdown';
+import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import {
     defListHastHandlers,
     remarkDefinitionList,
@@ -37,6 +37,7 @@ import { remarkBadgeDirective } from '@/lib/remark-badge-directive';
 import { remarkCardDirective } from '@/lib/remark-card-directive';
 import { remarkCodeGroupDirective } from '@/lib/remark-code-group-directive';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
+import { remarkFallbackDirective } from '@/lib/remark-fallback-directive';
 import { remarkFixUrlPorts } from '@/lib/remark-fix-url-ports';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
 import { remarkMark } from '@/lib/remark-mark';
@@ -46,7 +47,6 @@ import { remarkTabsDirective } from '@/lib/remark-tabs-directive';
 import { remarkTooltipDirective } from '@/lib/remark-tooltip-directive';
 import { remarkTreeDirective } from '@/lib/remark-tree-directive';
 import { remarkUpdateDirective } from '@/lib/remark-update-directive';
-import { remarkFallbackDirective } from '@/lib/remark-fallback-directive';
 import { remarkZennDirective } from '@/lib/remark-zenn-directive';
 import { cn } from '@/lib/utils';
 
@@ -303,6 +303,11 @@ export default function MarkdownContent({
                     } as any,
                 }}
                 components={markdownComponents}
+                urlTransform={(url, key) =>
+                    key === 'src' && url.startsWith('data:image/')
+                        ? url
+                        : defaultUrlTransform(url)
+                }
             >
                 {preprocessMarkdownContent(preprocessMarkdownSyntax(content))}
             </ReactMarkdown>

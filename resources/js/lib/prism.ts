@@ -2,6 +2,10 @@ import Prism from 'prismjs';
 
 let prismSetupPromise: Promise<typeof Prism> | null = null;
 
+// Prevent Prism from running highlightAll() on DOMContentLoaded, which would
+// mutate the DOM before React hydration and cause hydration mismatches.
+Prism.manual = true;
+
 function registerPrismGlobal(): void {
     (
         globalThis as typeof globalThis & {

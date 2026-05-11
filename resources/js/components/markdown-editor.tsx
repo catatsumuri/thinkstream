@@ -73,12 +73,14 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                         : updater;
 
                 valueRef.current = nextValue;
+
                 if (
                     textareaRef.current &&
                     textareaRef.current.value !== nextValue
                 ) {
                     textareaRef.current.value = nextValue;
                 }
+
                 setValue(nextValue);
             },
             [],
@@ -157,14 +159,32 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
             textarea.focus();
             textarea.setSelectionRange(clamped, selectionEnd);
 
-            const lineHeight =
-                Number.parseFloat(
-                    window.getComputedStyle(textarea).lineHeight,
-                ) || 20;
-            const lineIndex =
-                textarea.value.slice(0, clamped).split(/\r?\n/).length - 1;
+            // Mirror-div technique: measure actual pixel offset accounting for
+            // wrapped lines (simple lineIndex * lineHeight is wrong for CJK text).
+            const cs = window.getComputedStyle(textarea);
+            const lineHeight = Number.parseFloat(cs.lineHeight) || 20;
+            const mirror = document.createElement('div');
+            mirror.style.cssText = [
+                `font: ${cs.font}`,
+                `line-height: ${cs.lineHeight}`,
+                `padding: ${cs.padding}`,
+                `width: ${String(textarea.clientWidth)}px`,
+                `box-sizing: ${cs.boxSizing}`,
+                'white-space: pre-wrap',
+                'word-break: break-word',
+                'overflow-wrap: break-word',
+                'position: fixed',
+                'visibility: hidden',
+                'top: 0',
+                'left: -200%',
+                'height: auto',
+            ].join('; ');
+            mirror.textContent = textarea.value.slice(0, clamped);
+            document.body.appendChild(mirror);
+            const caretOffsetTop = mirror.scrollHeight;
+            document.body.removeChild(mirror);
             textarea.scrollTo({
-                top: Math.max(0, lineIndex * lineHeight - lineHeight * 2),
+                top: Math.max(0, caretOffsetTop - lineHeight * 2),
             });
 
             const line = textarea.value.slice(clamped, selectionEnd);

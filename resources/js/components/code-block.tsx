@@ -57,6 +57,7 @@ function parseCodeMeta(
         filename = afterPrefix.slice(colonIdx + 1);
     } else if (metastring) {
         // Fallback: meta carries "lang[:filename]"
+        // Skip key=value tokens (e.g. tab=Pest) — they are metadata, not language names.
         const langPart = metastring.split(/\s+/)[0] ?? '';
 
         if (langPart.includes(':')) {
@@ -67,7 +68,7 @@ function parseCodeMeta(
 
             language = normalizeLanguage(metaLanguage);
             filename = metaFilename;
-        } else if (langPart) {
+        } else if (langPart && !langPart.includes('=')) {
             language = normalizeLanguage(langPart);
         }
     }
@@ -284,6 +285,7 @@ export function CodeBlock({
                                 : undefined
                         }
                         style={{ background: 'transparent' }}
+                        suppressHydrationWarning
                         dangerouslySetInnerHTML={{
                             __html:
                                 prismReady &&
@@ -353,6 +355,7 @@ export function CodeBlock({
                               }
                             : {}),
                     }}
+                    suppressHydrationWarning
                     dangerouslySetInnerHTML={{
                         __html:
                             prismReady &&
