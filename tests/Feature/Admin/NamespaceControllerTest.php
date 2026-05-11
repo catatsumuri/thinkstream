@@ -230,6 +230,23 @@ test('authenticated users can view the edit form', function () {
     $this->actingAs($user)->get(route('admin.namespaces.edit', $namespace))->assertOk();
 });
 
+test('edit form includes available parents excluding self and descendants', function () {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create(['slug' => 'parent']);
+    $namespace = PostNamespace::factory()->create(['slug' => 'current']);
+    $child = PostNamespace::factory()->create(['parent_id' => $namespace->id, 'slug' => 'child']);
+    $sibling = PostNamespace::factory()->create(['slug' => 'sibling']);
+
+    $this->actingAs($user)
+        ->get(route('admin.namespaces.edit', $namespace))
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->has('availableParents', 2)
+            ->where('availableParents.0.id', $parent->id)
+            ->where('availableParents.1.id', $sibling->id)
+        );
+});
+
 test('edit form includes ancestor namespaces', function () {
     $user = User::factory()->create();
     $root = PostNamespace::factory()->create([
@@ -336,6 +353,27 @@ test('updating a namespace accepts a valid parent namespace', function () {
 
     expect($namespace->fresh()->parent_id)->toBe($parent->id);
     expect($namespace->fresh()->full_path)->toBe('parent/child');
+});
+
+test('updating a namespace can move it back to the root level', function () {
+    $user = User::factory()->create();
+    $parent = PostNamespace::factory()->create(['slug' => 'parent']);
+    $namespace = PostNamespace::factory()->create([
+        'parent_id' => $parent->id,
+        'slug' => 'child',
+        'full_path' => 'parent/child',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.namespaces.update', $namespace), [
+            'parent_id' => null,
+            'slug' => $namespace->slug,
+            'name' => $namespace->name,
+        ])
+        ->assertRedirect(route('admin.posts.namespace', $namespace));
+
+    expect($namespace->fresh()->parent_id)->toBeNull();
+    expect($namespace->fresh()->full_path)->toBe('child');
 });
 
 test('updating a namespace rejects setting a descendant as its parent', function () {

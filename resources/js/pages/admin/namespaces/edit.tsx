@@ -1,5 +1,5 @@
 import { Head, router, setLayoutProps, useForm } from '@inertiajs/react';
-import { Sparkles } from 'lucide-react';
+import { ExternalLink, Sparkles } from 'lucide-react';
 import { useState } from 'react';
 import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import CoverImageDropzone from '@/components/cover-image-dropzone';
@@ -15,6 +15,13 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
 import {
@@ -29,20 +36,30 @@ type Ancestor = {
 
 type Namespace = {
     id: number;
+    parent_id: number | null;
     slug: string;
+    full_path: string;
     name: string;
     description: string | null;
     is_published: boolean;
     cover_image_url: string | null;
 };
 
+type AvailableParent = {
+    id: number;
+    name: string;
+    full_path: string;
+};
+
 export default function Edit({
     ancestors,
     namespace,
+    availableParents,
     aiEnabled,
 }: {
     ancestors: Ancestor[];
     namespace: Namespace;
+    availableParents: AvailableParent[];
     aiEnabled: boolean;
 }) {
     setLayoutProps({
@@ -84,6 +101,7 @@ export default function Edit({
 
     const { data, setData, post, processing, errors } = useForm<{
         _method: string;
+        parent_id: number | null;
         name: string;
         slug: string;
         description: string;
@@ -91,6 +109,7 @@ export default function Edit({
         cover_image: File | null;
     }>({
         _method: 'put',
+        parent_id: namespace.parent_id,
         name: namespace.name,
         slug: namespace.slug,
         description: namespace.description ?? '',
@@ -116,6 +135,41 @@ export default function Edit({
                 </div>
 
                 <form onSubmit={submit} className="space-y-6">
+                    <div className="grid gap-2">
+                        <Label htmlFor="parent_id">Parent Namespace</Label>
+                        <Select
+                            value={
+                                data.parent_id === null
+                                    ? 'none'
+                                    : String(data.parent_id)
+                            }
+                            onValueChange={(v) =>
+                                setData(
+                                    'parent_id',
+                                    v === 'none' ? null : Number(v),
+                                )
+                            }
+                        >
+                            <SelectTrigger id="parent_id" className="w-full">
+                                <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="none">
+                                    — None (root level) —
+                                </SelectItem>
+                                {availableParents.map((parent) => (
+                                    <SelectItem
+                                        key={parent.id}
+                                        value={String(parent.id)}
+                                    >
+                                        {parent.full_path}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <InputError message={errors.parent_id} />
+                    </div>
+
                     <div className="grid gap-2">
                         <Label htmlFor="name">Name</Label>
                         <Input
@@ -217,17 +271,34 @@ export default function Edit({
                         </p>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="checkbox"
-                            id="is_published"
-                            checked={data.is_published}
-                            onChange={(e) =>
-                                setData('is_published', e.target.checked)
-                            }
-                            className="h-4 w-4 rounded border-input"
-                        />
-                        <Label htmlFor="is_published">Published</Label>
+                    <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="is_published"
+                                checked={data.is_published}
+                                onChange={(e) =>
+                                    setData('is_published', e.target.checked)
+                                }
+                                className="h-4 w-4 rounded border-input"
+                            />
+                            <Label htmlFor="is_published">Published</Label>
+                        </div>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            asChild
+                        >
+                            <a
+                                href={`/${namespace.full_path}`}
+                                target="_blank"
+                                rel="noreferrer"
+                            >
+                                <ExternalLink className="size-3.5" />
+                                View Site
+                            </a>
+                        </Button>
                     </div>
 
                     <div className="flex gap-3">

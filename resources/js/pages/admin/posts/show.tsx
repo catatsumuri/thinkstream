@@ -571,7 +571,7 @@ export default function Show({
                                                 Status
                                             </h3>
                                         </div>
-                                        <div className="p-4">
+                                        <div className="flex items-center justify-between p-4">
                                             <div className="flex items-center gap-3">
                                                 <div
                                                     className={cn(
@@ -615,6 +615,17 @@ export default function Show({
                                                     </p>
                                                 </div>
                                             </div>
+                                            {!post.is_draft && (
+                                                <a
+                                                    href={`/${post.full_path}`}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    className="flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
+                                                >
+                                                    <ExternalLink className="size-4 text-muted-foreground" />
+                                                    <span>View Site</span>
+                                                </a>
+                                            )}
                                         </div>
                                     </div>
 
@@ -842,15 +853,6 @@ export default function Show({
                                                     <span>Start Sync</span>
                                                 </button>
                                             )}
-                                            <a
-                                                href={`/${post.full_path}`}
-                                                target="_blank"
-                                                rel="noreferrer"
-                                                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm transition-colors hover:bg-accent"
-                                            >
-                                                <ExternalLink className="size-4 text-muted-foreground" />
-                                                <span>View Site</span>
-                                            </a>
                                             <Link
                                                 data-test="manage-post-revisions-link"
                                                 href={revisions.url({

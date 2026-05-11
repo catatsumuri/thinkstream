@@ -35,6 +35,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::post('backups/create', [BackupController::class, 'storeMany'])->name('backups.storeMany');
     Route::post('backups/delete', [BackupController::class, 'destroyMany'])->name('backups.destroyMany');
     Route::post('backups/restore', [BackupController::class, 'restoreMany'])->name('backups.restoreMany');
+    Route::post('backups/upload', [BackupController::class, 'upload'])->name('backups.upload');
     Route::get('backups/{backup}', [BackupController::class, 'download'])->name('backups.download');
     Route::post('backups/{backup}/restore', [BackupController::class, 'restore'])->name('backups.restore');
 
