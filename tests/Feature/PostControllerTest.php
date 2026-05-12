@@ -851,3 +851,42 @@ MARKDOWN,
             ->where('cardImage', url('/storage/namespaces/guide.png'))
         );
 });
+
+test('namespace with blog display_mode renders in blog mode with enriched post data', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'articles',
+        'is_published' => true,
+        'display_mode' => 'blog',
+    ]);
+    $tag = Tag::firstOrCreate(['name' => 'laravel']);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => 'Hello world, this is a test post.',
+    ]);
+    $post->tags()->attach($tag);
+
+    $this->get(route('posts.path', ['path' => 'articles']))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/namespace')
+            ->where('blog_mode', true)
+            ->has('posts.0.excerpt')
+            ->has('posts.0.tags')
+            ->has('posts.0.card_image')
+        );
+});
+
+test('namespace without blog display_mode does not render in blog mode', function () {
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'is_published' => true,
+        'display_mode' => null,
+    ]);
+    Post::factory()->for($namespace, 'namespace')->published()->create();
+
+    $this->get(route('posts.path', ['path' => 'guides']))
+        ->assertSuccessful()
+        ->assertInertia(fn ($page) => $page
+            ->component('posts/namespace')
+            ->where('blog_mode', false)
+        );
+});

@@ -355,6 +355,42 @@ test('updating a namespace accepts a valid parent namespace', function () {
     expect($namespace->fresh()->full_path)->toBe('parent/child');
 });
 
+test('updating a namespace can set blog display mode', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'display_mode' => null,
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.namespaces.update', $namespace), [
+            'slug' => $namespace->slug,
+            'name' => $namespace->name,
+            'display_mode' => 'blog',
+        ])
+        ->assertRedirect(route('admin.posts.namespace', $namespace));
+
+    expect($namespace->fresh()->display_mode)->toBe('blog');
+});
+
+test('updating a namespace can clear blog display mode', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create([
+        'slug' => 'guides',
+        'display_mode' => 'blog',
+    ]);
+
+    $this->actingAs($user)
+        ->put(route('admin.namespaces.update', $namespace), [
+            'slug' => $namespace->slug,
+            'name' => $namespace->name,
+            'display_mode' => '',
+        ])
+        ->assertRedirect(route('admin.posts.namespace', $namespace));
+
+    expect($namespace->fresh()->display_mode)->toBeNull();
+});
+
 test('updating a namespace can move it back to the root level', function () {
     $user = User::factory()->create();
     $parent = PostNamespace::factory()->create(['slug' => 'parent']);
@@ -523,6 +559,40 @@ test('storing a namespace accepts checkbox values', function () {
         ->assertRedirect(route('admin.posts.index'));
 
     $this->assertDatabaseHas('namespaces', ['slug' => 'published-guides', 'is_published' => true]);
+});
+
+test('storing a namespace can set blog display mode', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.namespaces.store'), [
+            'slug' => 'blog-guides',
+            'name' => 'Blog Guides',
+            'display_mode' => 'blog',
+        ])
+        ->assertRedirect(route('admin.posts.index'));
+
+    $this->assertDatabaseHas('namespaces', [
+        'slug' => 'blog-guides',
+        'display_mode' => 'blog',
+    ]);
+});
+
+test('storing a namespace normalizes empty display mode to null', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->post(route('admin.namespaces.store'), [
+            'slug' => 'default-guides',
+            'name' => 'Default Guides',
+            'display_mode' => '',
+        ])
+        ->assertRedirect(route('admin.posts.index'));
+
+    $this->assertDatabaseHas('namespaces', [
+        'slug' => 'default-guides',
+        'display_mode' => null,
+    ]);
 });
 
 test('updating a namespace can toggle is_published', function () {

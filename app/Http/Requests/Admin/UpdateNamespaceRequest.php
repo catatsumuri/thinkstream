@@ -41,6 +41,10 @@ class UpdateNamespaceRequest extends FormRequest
                 'is_published' => $this->boolean('is_published'),
             ]);
         }
+
+        if ($this->input('display_mode') === '') {
+            $this->merge(['display_mode' => null]);
+        }
     }
 
     /**
@@ -86,6 +90,7 @@ class UpdateNamespaceRequest extends FormRequest
                 Rule::dimensions()->ratio(16 / 9),
             ],
             'is_published' => ['boolean'],
+            'display_mode' => ['nullable', 'string', Rule::in(['blog'])],
         ];
     }
 

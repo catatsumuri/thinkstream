@@ -150,15 +150,34 @@ class PostController extends Controller
             ->withCount(['posts' => fn (Builder $query) => $this->applyPublishedPostScope($query)])
             ->get(['id', 'name', 'slug', 'full_path', 'description', 'cover_image']);
 
-        $posts = $namespace->posts()
-            ->tap(fn (Builder $query) => $this->applyPublishedPostScope($query))
-            ->orderBy('published_at')
-            ->orderBy('id')
-            ->get(['id', 'slug', 'full_path', 'title', 'published_at']);
-
         $resolvedCoverImageUrl = $namespace->resolvedCoverImageUrl($ancestors);
+        $isBlogMode = $namespace->display_mode === 'blog';
+
+        if ($isBlogMode) {
+            $blogPosts = $namespace->posts()
+                ->tap(fn (Builder $query) => $this->applyPublishedPostScope($query))
+                ->with('tags')
+                ->orderByDesc('published_at')
+                ->get(['id', 'slug', 'full_path', 'title', 'published_at', 'content']);
+
+            $postsData = $blogPosts->map(fn (Post $post): array => [
+                ...$post->only(['id', 'slug', 'full_path', 'title', 'published_at']),
+                'excerpt' => $this->extractExcerpt($post->content),
+                'card_image' => $this->resolveCardImage($post, $namespace, $ancestors),
+                'tags' => $post->tags->map(fn ($tag) => ['name' => $tag->name])->values()->all(),
+            ])->values()->all();
+        } else {
+            $posts = $namespace->posts()
+                ->tap(fn (Builder $query) => $this->applyPublishedPostScope($query))
+                ->orderBy('published_at')
+                ->orderBy('id')
+                ->get(['id', 'slug', 'full_path', 'title', 'published_at']);
+
+            $postsData = $namespace->sortPosts($posts);
+        }
 
         return Inertia::render('posts/namespace', [
+            'blog_mode' => $isBlogMode,
             'breadcrumbs' => $this->breadcrumbs($ancestors),
             'children' => $namespace->sortNamespaces($children)->map(fn (PostNamespace $child): array => [
                 ...$child->only(['id', 'name', 'slug', 'full_path', 'description']),
@@ -170,7 +189,7 @@ class PostController extends Controller
                 ...$namespace->only(['id', 'slug', 'full_path', 'name', 'description', 'is_published']),
                 'cover_image_url' => $resolvedCoverImageUrl,
             ],
-            'posts' => $namespace->sortPosts($posts),
+            'posts' => $postsData,
             'preview' => $preview,
         ]);
     }
@@ -306,6 +325,22 @@ class PostController extends Controller
         }
 
         return false;
+    }
+
+    private function extractExcerpt(string $content, int $maxLength = 160): string
+    {
+        $text = preg_replace('/```[\s\S]*?```/', '', $content) ?? '';
+        $text = preg_replace('/^#{1,6}\s+/m', '', $text) ?? '';
+        $text = preg_replace('/!\[[^\]]*\]\([^)]*\)/', '', $text) ?? '';
+        $text = preg_replace('/\[([^\]]+)\]\([^)]*\)/', '$1', $text) ?? '';
+        $text = preg_replace('/[*_]{1,3}([^*_]+)[*_]{1,3}/', '$1', $text) ?? '';
+        $text = trim(preg_replace('/\s+/', ' ', $text) ?? '');
+
+        if (mb_strlen($text) <= $maxLength) {
+            return $text;
+        }
+
+        return mb_substr($text, 0, $maxLength).'…';
     }
 
     /**
