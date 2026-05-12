@@ -181,6 +181,17 @@ class NamespaceController extends Controller
         return back();
     }
 
+    public function deleteCoverImage(PostNamespace $namespace): RedirectResponse
+    {
+        abort_if($namespace->is_system, 403);
+        abort_unless($namespace->cover_image, 404);
+
+        Storage::disk('public')->delete($namespace->cover_image);
+        $namespace->update(['cover_image' => null]);
+
+        return back();
+    }
+
     public function destroy(PostNamespace $namespace): RedirectResponse
     {
         abort_if($namespace->is_system, 403);

@@ -837,3 +837,52 @@ test('reorder validates namespace ids are distinct and existing', function () {
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['ids.1', 'ids.2']);
 });
+
+test('guests cannot delete cover image', function () {
+    $namespace = PostNamespace::factory()->create(['cover_image' => 'namespaces/test.jpg']);
+
+    $this->delete(route('admin.namespaces.delete-cover-image', $namespace))
+        ->assertRedirect(route('login'));
+});
+
+test('delete cover image removes file and clears column', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $path = 'namespaces/test.jpg';
+    Storage::disk('public')->put($path, 'fake');
+    $namespace = PostNamespace::factory()->create(['cover_image' => $path]);
+
+    $this->actingAs($user)
+        ->delete(route('admin.namespaces.delete-cover-image', $namespace))
+        ->assertRedirect();
+
+    Storage::disk('public')->assertMissing($path);
+    expect($namespace->fresh()->cover_image)->toBeNull();
+});
+
+test('delete cover image returns 404 when no cover image set', function () {
+    $user = User::factory()->create();
+    $namespace = PostNamespace::factory()->create(['cover_image' => null]);
+
+    $this->actingAs($user)
+        ->delete(route('admin.namespaces.delete-cover-image', $namespace))
+        ->assertNotFound();
+});
+
+test('delete cover image is forbidden for system namespaces', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $path = 'namespaces/system.jpg';
+    Storage::disk('public')->put($path, 'fake');
+    $namespace = PostNamespace::factory()->create([
+        'cover_image' => $path,
+        'is_system' => true,
+    ]);
+
+    $this->actingAs($user)
+        ->delete(route('admin.namespaces.delete-cover-image', $namespace))
+        ->assertForbidden();
+
+    Storage::disk('public')->assertExists($path);
+    expect($namespace->fresh()->cover_image)->toBe($path);
+});
