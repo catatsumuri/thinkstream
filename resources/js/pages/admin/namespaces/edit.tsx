@@ -42,6 +42,7 @@ type Namespace = {
     name: string;
     description: string | null;
     is_published: boolean;
+    display_mode: string | null;
     cover_image_url: string | null;
 };
 
@@ -99,13 +100,14 @@ export default function Edit({
         }
     }
 
-    const { data, setData, post, processing, errors } = useForm<{
+    const { data, setData, post, processing, errors, transform } = useForm<{
         _method: string;
         parent_id: number | null;
         name: string;
         slug: string;
         description: string;
         is_published: boolean;
+        display_mode: string;
         cover_image: File | null;
     }>({
         _method: 'put',
@@ -114,11 +116,19 @@ export default function Edit({
         slug: namespace.slug,
         description: namespace.description ?? '',
         is_published: namespace.is_published,
+        display_mode: namespace.display_mode ?? 'default',
         cover_image: null,
     });
 
     function submit(e: React.FormEvent) {
         e.preventDefault();
+        transform((currentData) => ({
+            ...currentData,
+            display_mode:
+                currentData.display_mode === 'default'
+                    ? ''
+                    : currentData.display_mode,
+        }));
         post(NamespaceController.update.url(namespace.id));
     }
 
@@ -269,6 +279,27 @@ export default function Edit({
                             Saved with 16:9 cropping. Recommended size is at
                             least 1600x900.
                         </p>
+                    </div>
+
+                    <div className="grid gap-2">
+                        <Label htmlFor="display_mode">Display Mode</Label>
+                        <Select
+                            value={data.display_mode}
+                            onValueChange={(v) => setData('display_mode', v)}
+                        >
+                            <SelectTrigger id="display_mode" className="w-full">
+                                <SelectValue placeholder="Default" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="default">Default</SelectItem>
+                                <SelectItem value="blog">Blog</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                            Blog mode displays posts as a card grid with
+                            excerpts and tags.
+                        </p>
+                        <InputError message={errors.display_mode} />
                     </div>
 
                     <div className="flex items-center justify-between gap-2">

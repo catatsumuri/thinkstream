@@ -403,7 +403,7 @@ function NamespacesHeaderPanel({
                                     <Button variant="outline" size="lg" asChild>
                                         <Link href={backupsIndex.url()}>
                                             <Archive className="size-4" />
-                                            Open Backups
+                                            Backup / Restore
                                         </Link>
                                     </Button>
                                 </div>

@@ -49,9 +49,13 @@ type Post = {
     title: string;
     full_path: string;
     published_at: string | null;
+    excerpt?: string;
+    card_image?: string | null;
+    tags?: Array<{ name: string }>;
 };
 
 export default function Namespace({
+    blog_mode = false,
     breadcrumbs,
     children,
     navRoot,
@@ -59,6 +63,7 @@ export default function Namespace({
     posts,
     preview = false,
 }: {
+    blog_mode?: boolean;
     breadcrumbs: Array<{ name: string; full_path: string }>;
     children: ChildNamespace[];
     navRoot: ContentNavNode;
@@ -73,7 +78,9 @@ export default function Namespace({
     const { currentUrl } = useCurrentUrl();
     const isBelowDesktop = useBelowDesktop();
     const [mobileNavOpen, setMobileNavOpen] = useState(false);
-    const [navOverride, setNavOverride] = useState<boolean | null>(null);
+    const [navOverride, setNavOverride] = useState<boolean | null>(
+        blog_mode ? false : null,
+    );
     const navVisible = navOverride ?? !isBelowDesktop;
     const markdownPagesEnabled = thinkstream.markdown_pages.enabled;
     const markdownUrl = contentPathMarkdown.url({ path: namespace.full_path });
@@ -328,6 +335,77 @@ export default function Namespace({
                                 <p className="text-muted-foreground">
                                     No direct posts in this namespace yet.
                                 </p>
+                            ) : blog_mode ? (
+                                <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                                    {posts.map((post) => (
+                                        <Link
+                                            key={post.id}
+                                            href={contentPath.url(
+                                                post.full_path,
+                                            )}
+                                            className="group overflow-hidden rounded-xl border transition-colors hover:bg-muted/50"
+                                        >
+                                            <div className="relative aspect-video overflow-hidden border-b">
+                                                {post.card_image ? (
+                                                    <img
+                                                        src={post.card_image}
+                                                        alt={post.title}
+                                                        className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                                    />
+                                                ) : (
+                                                    <>
+                                                        <PlaceholderPattern className="absolute inset-0 size-full stroke-neutral-900/20 dark:stroke-neutral-100/20" />
+                                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-muted-foreground/50">
+                                                            <ImageOff className="size-6" />
+                                                            <span className="text-xs font-medium tracking-wide uppercase">
+                                                                No image
+                                                            </span>
+                                                        </div>
+                                                    </>
+                                                )}
+                                            </div>
+                                            <div className="space-y-2 p-5">
+                                                <p className="font-semibold">
+                                                    {post.title}
+                                                </p>
+                                                <p
+                                                    suppressHydrationWarning
+                                                    className="text-xs text-muted-foreground"
+                                                >
+                                                    {post.published_at
+                                                        ? timeAgo(
+                                                              post.published_at,
+                                                          )
+                                                        : 'Draft'}
+                                                </p>
+                                                {post.tags &&
+                                                    post.tags.length > 0 && (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {post.tags.map(
+                                                                (tag) => (
+                                                                    <span
+                                                                        key={
+                                                                            tag.name
+                                                                        }
+                                                                        className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                                                                    >
+                                                                        {
+                                                                            tag.name
+                                                                        }
+                                                                    </span>
+                                                                ),
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                {post.excerpt && (
+                                                    <p className="line-clamp-3 text-sm text-muted-foreground">
+                                                        {post.excerpt}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        </Link>
+                                    ))}
+                                </div>
                             ) : (
                                 <div className="rounded-xl border">
                                     <div className="divide-y">

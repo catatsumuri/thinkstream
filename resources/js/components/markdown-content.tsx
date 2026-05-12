@@ -47,6 +47,7 @@ import { remarkTabsDirective } from '@/lib/remark-tabs-directive';
 import { remarkTooltipDirective } from '@/lib/remark-tooltip-directive';
 import { remarkTreeDirective } from '@/lib/remark-tree-directive';
 import { remarkUpdateDirective } from '@/lib/remark-update-directive';
+import { remarkWikilinks } from '@/lib/remark-wikilinks';
 import { remarkZennDirective } from '@/lib/remark-zenn-directive';
 import { cn } from '@/lib/utils';
 
@@ -154,12 +155,15 @@ function MessageBox({
 type MarkdownContentProps = {
     content: string;
     components?: Components;
+    resolveWikilink?: (path: string) => string;
 };
 
 export default function MarkdownContent({
     content,
     components,
+    resolveWikilink,
 }: MarkdownContentProps) {
+    const resolveWikilinkFn = resolveWikilink ?? ((path: string) => `/${path}`);
     const dispenseHeadingId = createHeadingIdDispenser();
 
     const customMarkdownComponents = {
@@ -284,6 +288,7 @@ export default function MarkdownContent({
                     remarkTreeDirective,
                     remarkQuizDirective,
                     remarkCodeGroupDirective,
+                    [remarkWikilinks, resolveWikilinkFn],
                     remarkFallbackDirective,
                     remarkLinkifyToCard,
                     remarkSupersub,

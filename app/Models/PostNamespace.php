@@ -29,6 +29,7 @@ class PostNamespace extends Model
         'is_published',
         'is_system',
         'post_order',
+        'display_mode',
     ];
 
     protected $appends = ['cover_image_url'];

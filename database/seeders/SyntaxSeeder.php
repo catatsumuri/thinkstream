@@ -1701,6 +1701,42 @@ Source:
 4 directories, 2 files
 ```
 ````
+
+---
+
+## Wikilinks
+
+Wikilinks are a Thinkstream-specific syntax for linking to other posts by their `full_path`. Unlike standard Markdown links, they are path-independent and can be detected programmatically (e.g. to find broken links after a rename).
+
+#### Basic Wikilink
+
+Use `[[full_path]]` to link to a post. The display text defaults to the last segment of the path.
+
+[[syntax/wikilinks]]
+
+Source:
+
+```md
+[[syntax/wikilinks]]
+```
+
+#### Wikilink with Label
+
+Use `[[full_path|label]]` to set custom display text.
+
+[[syntax/wikilinks|this page]]
+
+Source:
+
+```md
+[[syntax/wikilinks|this page]]
+```
+
+Notes:
+
+- `full_path` is the namespace path plus slug, e.g. `blog/my-post`.
+- Wikilinks always resolve to `/{full_path}` on the public site.
+- Existing `[label](/path)` Markdown links continue to work alongside wikilinks.
 MD),
                 'published_at' => now(),
             ]);
