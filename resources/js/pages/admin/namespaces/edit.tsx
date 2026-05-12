@@ -248,24 +248,27 @@ export default function Edit({
                         <div className="flex items-center justify-between gap-3">
                             <Label htmlFor="cover_image">Cover Image</Label>
                             <div className="flex items-center gap-2">
-                                {namespace.cover_image_url && !namespace.is_system && (
-                                    <Button
-                                        type="button"
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={
-                                            deletingCoverImage || processing
-                                        }
-                                        onClick={handleDeleteCoverImageClick}
-                                    >
-                                        {deletingCoverImage ? (
-                                            <Spinner className="mr-1.5" />
-                                        ) : (
-                                            <Trash2 className="mr-1.5 size-3.5" />
-                                        )}
-                                        Remove
-                                    </Button>
-                                )}
+                                {namespace.cover_image_url &&
+                                    !namespace.is_system && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={
+                                                deletingCoverImage || processing
+                                            }
+                                            onClick={
+                                                handleDeleteCoverImageClick
+                                            }
+                                        >
+                                            {deletingCoverImage ? (
+                                                <Spinner className="mr-1.5" />
+                                            ) : (
+                                                <Trash2 className="mr-1.5 size-3.5" />
+                                            )}
+                                            Remove
+                                        </Button>
+                                    )}
                                 {aiEnabled && (
                                     <Button
                                         type="button"
