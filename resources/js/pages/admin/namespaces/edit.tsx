@@ -1,7 +1,9 @@
 import { Head, router, setLayoutProps, useForm } from '@inertiajs/react';
-import { ExternalLink, Sparkles } from 'lucide-react';
+import { ExternalLink, Sparkles, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import NamespaceController from '@/actions/App/Http/Controllers/Admin/NamespaceController';
+import NamespaceController, {
+    deleteCoverImage,
+} from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import CoverImageDropzone from '@/components/cover-image-dropzone';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -42,6 +44,7 @@ type Namespace = {
     name: string;
     description: string | null;
     is_published: boolean;
+    is_system: boolean;
     display_mode: string | null;
     cover_image_url: string | null;
 };
@@ -77,8 +80,11 @@ export default function Edit({
     });
 
     const [generating, setGenerating] = useState(false);
+    const [deletingCoverImage, setDeletingCoverImage] = useState(false);
     const [additionalPrompt, setAdditionalPrompt] = useState('');
     const [showGenerateConfirm, setShowGenerateConfirm] = useState(false);
+    const [showDeleteCoverImageConfirm, setShowDeleteCoverImageConfirm] =
+        useState(false);
 
     function generateCoverImage() {
         setShowGenerateConfirm(false);
@@ -90,6 +96,18 @@ export default function Edit({
                 onFinish: () => setGenerating(false),
             },
         );
+    }
+
+    function handleDeleteCoverImageClick() {
+        setShowDeleteCoverImageConfirm(true);
+    }
+
+    function confirmDeleteCoverImage() {
+        setShowDeleteCoverImageConfirm(false);
+        router.delete(deleteCoverImage.url(namespace.id), {
+            onStart: () => setDeletingCoverImage(true),
+            onFinish: () => setDeletingCoverImage(false),
+        });
     }
 
     function handleGenerateClick() {
@@ -229,24 +247,47 @@ export default function Edit({
                     <div className="grid gap-2">
                         <div className="flex items-center justify-between gap-3">
                             <Label htmlFor="cover_image">Cover Image</Label>
-                            {aiEnabled && (
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    disabled={generating || processing}
-                                    onClick={handleGenerateClick}
-                                >
-                                    {generating ? (
-                                        <Spinner className="mr-1.5" />
-                                    ) : (
-                                        <Sparkles className="mr-1.5 size-3.5" />
+                            <div className="flex items-center gap-2">
+                                {namespace.cover_image_url &&
+                                    !namespace.is_system && (
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            disabled={
+                                                deletingCoverImage || processing
+                                            }
+                                            onClick={
+                                                handleDeleteCoverImageClick
+                                            }
+                                        >
+                                            {deletingCoverImage ? (
+                                                <Spinner className="mr-1.5" />
+                                            ) : (
+                                                <Trash2 className="mr-1.5 size-3.5" />
+                                            )}
+                                            Remove
+                                        </Button>
                                     )}
-                                    {generating
-                                        ? 'Generating…'
-                                        : 'Generate with AI'}
-                                </Button>
-                            )}
+                                {aiEnabled && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={generating || processing}
+                                        onClick={handleGenerateClick}
+                                    >
+                                        {generating ? (
+                                            <Spinner className="mr-1.5" />
+                                        ) : (
+                                            <Sparkles className="mr-1.5 size-3.5" />
+                                        )}
+                                        {generating
+                                            ? 'Generating…'
+                                            : 'Generate with AI'}
+                                    </Button>
+                                )}
+                            </div>
                         </div>
                         {aiEnabled && (
                             <Input
@@ -360,6 +401,29 @@ export default function Edit({
                         </DialogClose>
                         <Button onClick={generateCoverImage}>
                             Generate anyway
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+            <Dialog
+                open={showDeleteCoverImageConfirm}
+                onOpenChange={setShowDeleteCoverImageConfirm}
+            >
+                <DialogContent>
+                    <DialogTitle>Remove cover image?</DialogTitle>
+                    <DialogDescription>
+                        This will permanently delete the cover image for this
+                        namespace.
+                    </DialogDescription>
+                    <DialogFooter className="gap-2">
+                        <DialogClose asChild>
+                            <Button variant="secondary">Cancel</Button>
+                        </DialogClose>
+                        <Button
+                            variant="destructive"
+                            onClick={confirmDeleteCoverImage}
+                        >
+                            Remove
                         </Button>
                     </DialogFooter>
                 </DialogContent>

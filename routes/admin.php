@@ -31,6 +31,7 @@ Route::middleware(['auth'])->prefix('admin')->name('admin.')->group(function () 
     Route::patch('namespaces/reorder', [NamespaceController::class, 'reorder'])->name('namespaces.reorder');
     Route::resource('namespaces', NamespaceController::class)->except(['index', 'show']);
     Route::post('namespaces/{namespace}/generate-cover-image', [NamespaceController::class, 'generateCoverImage'])->name('namespaces.generate-cover-image');
+    Route::delete('namespaces/{namespace}/cover-image', [NamespaceController::class, 'deleteCoverImage'])->name('namespaces.delete-cover-image');
     Route::get('backups', [BackupController::class, 'index'])->name('backups.index');
     Route::post('backups/create', [BackupController::class, 'storeMany'])->name('backups.storeMany');
     Route::post('backups/delete', [BackupController::class, 'destroyMany'])->name('backups.destroyMany');
