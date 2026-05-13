@@ -1,4 +1,5 @@
 import { AlertTriangle, CircleCheck, Info, Lightbulb } from 'lucide-react';
+import { lazy, Suspense } from 'react';
 import type { Components } from 'react-markdown';
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown';
 import {
@@ -19,7 +20,6 @@ import {
     MarkdownCard,
     MarkdownCardGroup,
 } from '@/components/markdown-card-group';
-import { MarkdownChart } from '@/components/markdown-chart';
 import { MarkdownCodeGroup } from '@/components/markdown-code-group';
 import { MarkdownQuiz } from '@/components/markdown-quiz';
 import { MarkdownStep, MarkdownSteps } from '@/components/markdown-steps';
@@ -51,7 +51,30 @@ import { remarkTreeDirective } from '@/lib/remark-tree-directive';
 import { remarkUpdateDirective } from '@/lib/remark-update-directive';
 import { remarkWikilinks } from '@/lib/remark-wikilinks';
 import { remarkZennDirective } from '@/lib/remark-zenn-directive';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
+
+function MarkdownChartLoadFallback() {
+    return (
+        <div className="not-prose my-6 rounded-2xl border border-red-300 bg-red-50 px-6 py-4 text-sm text-red-700 dark:border-red-700/60 dark:bg-red-950/40 dark:text-red-200">
+            Failed to load chart. Please refresh and try again.
+        </div>
+    );
+}
+
+const MarkdownChart = lazy(async () => {
+    try {
+        const module = await import('@/components/markdown-chart');
+
+        return {
+            default: module.MarkdownChart,
+        };
+    } catch {
+        return {
+            default: MarkdownChartLoadFallback,
+        };
+    }
+});
 
 function DetailsBox({
     children,
@@ -270,7 +293,15 @@ export default function MarkdownContent({
             ] as string | undefined;
 
             if (chartJson) {
-                return <MarkdownChart data-chart={chartJson} />;
+                return (
+                    <Suspense
+                        fallback={
+                            <Skeleton className="not-prose my-6 h-48 rounded-2xl" />
+                        }
+                    >
+                        <MarkdownChart data-chart={chartJson} />
+                    </Suspense>
+                );
             }
 
             return <div {...props} />;
