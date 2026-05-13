@@ -31,6 +31,7 @@ import {
     Trash2,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { destroy as destroyNamespace } from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import NamespaceHeader from '@/components/namespace-header';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -47,7 +48,6 @@ import {
 } from '@/components/ui/dialog';
 import { timeAgo } from '@/lib/time';
 import { dashboard } from '@/routes';
-import { destroy as destroyNamespace } from '@/actions/App/Http/Controllers/Admin/NamespaceController';
 import { create as namespaceCreate } from '@/routes/admin/namespaces';
 import {
     create,

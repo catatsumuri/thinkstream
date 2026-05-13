@@ -12,10 +12,9 @@ import {
 import { useMemo, useState } from 'react';
 import { siX } from 'simple-icons';
 import type { ContentNavNode } from '@/components/content-nav-tree';
-import { SimpleIconSvg } from '@/components/markdown-card-group';
-import { getSimpleIcon } from '@/lib/simple-icon-lookup';
 import ContentNavTree from '@/components/content-nav-tree';
 import DocsHeaderActions from '@/components/docs-header-actions';
+import { SimpleIconSvg } from '@/components/markdown-card-group';
 import MarkdownContent from '@/components/markdown-content';
 import MarkdownPageActions from '@/components/markdown-page-actions';
 import TableOfContents from '@/components/table-of-contents';
@@ -30,6 +29,7 @@ import {
 import { useBelowDesktop } from '@/hooks/use-below-desktop';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
+import { getSimpleIcon } from '@/lib/simple-icon-lookup';
 import { timeAgo } from '@/lib/time';
 import {
     edit as adminPostEdit,

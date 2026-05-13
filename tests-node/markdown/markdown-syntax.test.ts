@@ -636,6 +636,49 @@ B: Two
     assert.match(output, /correct: A/);
 });
 
+test('preprocessMarkdownSyntax converts chart fenced blocks to a chart directive with JSON payload', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`chart:bar
+_title: Flavor Profile
+_min: 1
+_max: 10
+juniper: 9
+citrus: 4
+\`\`\``);
+
+    assert.match(output, /:::chart/);
+    assert.match(output, /```json/);
+    assert.match(output, /"type":"bar"/);
+    assert.match(output, /"title":"Flavor Profile"/);
+    assert.match(output, /"min":1/);
+    assert.match(output, /"max":10/);
+    assert.match(output, /"label":"juniper"/);
+    assert.match(output, /"value":9/);
+    assert.match(output, /^:::\s*$/m);
+});
+
+test('preprocessMarkdownSyntax leaves invalid chart fenced blocks untouched', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`chart:radar
+_title: Invalid Chart
+juniper: nope
+\`\`\``);
+
+    assert.doesNotMatch(output, /:::chart/);
+    assert.match(output, /```chart:radar/);
+    assert.match(output, /juniper: nope/);
+});
+
+test('preprocessMarkdownSyntax leaves chart fences untouched inside longer fenced code blocks', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`\`md
+\`\`\`chart:bar
+juniper: 9
+\`\`\`
+\`\`\`\``);
+
+    assert.doesNotMatch(output, /:::chart/);
+    assert.match(output, /```chart:bar/);
+    assert.match(output, /juniper: 9/);
+});
+
 test('preprocessMarkdownSyntax joins multiline Tree child tags before encoding JSON', () => {
     const output = preprocessMarkdownSyntax(`<Tree>
   <Tree.Folder

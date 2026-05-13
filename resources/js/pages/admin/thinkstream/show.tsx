@@ -22,6 +22,7 @@ import {
     X,
 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
+import { toast } from 'sonner';
 import {
     destroyMany as thinkstreamDestroyMany,
     index as thinkstreamIndex,
@@ -56,7 +57,6 @@ import { getMarkdownLinkPasteResult } from '@/lib/markdown-link-paste';
 import { timeAgo } from '@/lib/time';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import { toast } from 'sonner';
 
 const thoughtMarkdownComponents = createMarkdownComponents();
 
@@ -172,6 +172,7 @@ export default function ThinkstreamShow({
 
         if (!trimmed || trimmed === pageTitle) {
             cancelTitleEdit();
+
             return;
         }
 
@@ -398,6 +399,7 @@ export default function ThinkstreamShow({
                 setStructuredTitle(title);
                 setStructuredContent(content);
                 setScrapUrl(null);
+
                 if (message) {
                     toast.success(message);
                 }
@@ -452,6 +454,7 @@ export default function ThinkstreamShow({
                     message: string;
                 };
                 setEditingContent(content);
+
                 if (message) {
                     toast.success(message);
                 }

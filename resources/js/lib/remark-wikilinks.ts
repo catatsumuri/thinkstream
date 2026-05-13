@@ -6,16 +6,20 @@ const WIKILINK_RE = /\[\[([^\]|]+?)(?:\|([^\]]+?))?\]\]/g;
 export function remarkWikilinks(resolveWikilink: (path: string) => string) {
     return (tree: Root) => {
         visit(tree, 'text', (node: Text, index, parent) => {
-            if (parent === undefined || index === undefined) return;
+            if (parent === undefined || index === undefined) {
+                return;
+            }
 
             const parts: (Text | Link)[] = [];
             let lastIndex = 0;
             let match: RegExpExecArray | null;
 
             WIKILINK_RE.lastIndex = 0;
+
             while ((match = WIKILINK_RE.exec(node.value)) !== null) {
                 const [full, path, label] = match;
                 const trimmedPath = path.trim();
+
                 const displayLabel =
                     label?.trim() ??
                     trimmedPath.split('/').pop() ??
@@ -37,7 +41,9 @@ export function remarkWikilinks(resolveWikilink: (path: string) => string) {
                 lastIndex = match.index + full.length;
             }
 
-            if (parts.length === 0) return;
+            if (parts.length === 0) {
+                return;
+            }
 
             if (lastIndex < node.value.length) {
                 parts.push({
