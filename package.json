@@ -72,6 +72,7 @@
         "react": "^19.2.0",
         "react-dom": "^19.2.0",
         "react-markdown": "^10.1.0",
+        "recharts": "^3.8.1",
         "remark-definition-list": "^2.0.0",
         "remark-directive": "^4.0.0",
         "remark-emoji": "^5.0.2",

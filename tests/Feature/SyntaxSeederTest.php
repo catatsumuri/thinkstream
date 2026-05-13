@@ -165,6 +165,10 @@ test('syntax seeder creates the thinkstream syntax page', function () {
     expect($post->content)->toContain('resources/js');
     expect($post->content)->toContain('app/');
     expect($post->content)->toContain('4 directories, 2 files');
+    expect($post->content)->toContain('```chart:bar');
+    expect($post->content)->toContain('```chart:radar');
+    expect($post->content)->toContain('_title: Flavor Profile');
+    expect($post->content)->toContain('_max: 10');
     expect($post->published_at)->not->toBeNull();
 });
 

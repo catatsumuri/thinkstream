@@ -19,6 +19,7 @@ import {
     MarkdownCard,
     MarkdownCardGroup,
 } from '@/components/markdown-card-group';
+import { MarkdownChart } from '@/components/markdown-chart';
 import { MarkdownCodeGroup } from '@/components/markdown-code-group';
 import { MarkdownQuiz } from '@/components/markdown-quiz';
 import { MarkdownStep, MarkdownSteps } from '@/components/markdown-steps';
@@ -35,6 +36,7 @@ import {
 import { remarkApiFieldsDirective } from '@/lib/remark-api-fields-directive';
 import { remarkBadgeDirective } from '@/lib/remark-badge-directive';
 import { remarkCardDirective } from '@/lib/remark-card-directive';
+import { remarkChartDirective } from '@/lib/remark-chart-directive';
 import { remarkCodeGroupDirective } from '@/lib/remark-code-group-directive';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkFallbackDirective } from '@/lib/remark-fallback-directive';
@@ -263,6 +265,14 @@ export default function MarkdownContent({
                 return <MarkdownQuiz data-quiz={quizJson} />;
             }
 
+            const chartJson = (props as Record<string, unknown>)[
+                'data-chart'
+            ] as string | undefined;
+
+            if (chartJson) {
+                return <MarkdownChart data-chart={chartJson} />;
+            }
+
             return <div {...props} />;
         },
         ...customMarkdownComponents,
@@ -287,6 +297,7 @@ export default function MarkdownContent({
                     remarkUpdateDirective,
                     remarkTreeDirective,
                     remarkQuizDirective,
+                    remarkChartDirective,
                     remarkCodeGroupDirective,
                     [remarkWikilinks, resolveWikilinkFn],
                     remarkFallbackDirective,

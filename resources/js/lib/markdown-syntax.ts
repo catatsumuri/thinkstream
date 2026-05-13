@@ -39,6 +39,16 @@ type QuizContent = {
     explanation?: string;
 };
 
+type ChartType = 'bar' | 'radar';
+
+type ChartContent = {
+    type: ChartType;
+    title?: string;
+    min?: number;
+    max?: number;
+    data: { label: string; value: number }[];
+};
+
 export function isAbsoluteUrl(url: string): boolean {
     return (
         url.startsWith('http://') ||
@@ -290,6 +300,12 @@ export function preprocessMintlifySyntax(markdown: string): string {
         fence: string;
         lines: string[];
     } | null = null;
+    let chartFence: {
+        openingLine: string;
+        fence: string;
+        chartType: ChartType;
+        lines: string[];
+    } | null = null;
     let mintlifyTabsDepth = 0;
     const mintlifyCalloutColonCounts: number[] = [];
     const mintlifyTagStack: Array<
@@ -398,6 +414,45 @@ export function preprocessMintlifySyntax(markdown: string): string {
             continue;
         }
 
+        if (chartFence !== null) {
+            const remainder = fenceMatch
+                ? trimmedLine.slice(fenceMatch[1].length)
+                : '';
+
+            if (
+                fenceMatch &&
+                fenceMatch[1][0] === chartFence.fence[0] &&
+                fenceMatch[1].length >= chartFence.fence.length &&
+                remainder.trim() === ''
+            ) {
+                const chart = parseChartContent(
+                    chartFence.chartType,
+                    chartFence.lines,
+                );
+
+                if (chart === null) {
+                    processedLines.push(
+                        chartFence.openingLine,
+                        ...chartFence.lines,
+                        line,
+                    );
+                } else {
+                    pushChartDirective(
+                        processedLines,
+                        chart,
+                        pushBlankLineIfNeeded,
+                        pushLine,
+                    );
+                }
+
+                chartFence = null;
+            } else {
+                chartFence.lines.push(line);
+            }
+
+            continue;
+        }
+
         if (fenceMatch && activeFence === null) {
             const fence = fenceMatch[1];
             const infoString = trimmedLine.slice(fence.length).trim();
@@ -410,6 +465,19 @@ export function preprocessMintlifySyntax(markdown: string): string {
 
             if (/^quiz(?:\s|$)/.test(infoString)) {
                 quizFence = { openingLine: line, fence, lines: [] };
+
+                continue;
+            }
+
+            const chartMatch = /^chart:(bar|radar)(?:\s|$)/.exec(infoString);
+
+            if (chartMatch) {
+                chartFence = {
+                    openingLine: line,
+                    fence,
+                    chartType: chartMatch[1] as ChartType,
+                    lines: [],
+                };
 
                 continue;
             }
@@ -891,6 +959,10 @@ export function preprocessMintlifySyntax(markdown: string): string {
         processedLines.push(quizFence.openingLine, ...quizFence.lines);
     }
 
+    if (chartFence !== null) {
+        processedLines.push(chartFence.openingLine, ...chartFence.lines);
+    }
+
     return processedLines.join('\n');
 }
 
@@ -1209,6 +1281,81 @@ function pushTreeDirective(
     pushLine(':::tree');
     pushLine('```json');
     pushLine(json);
+    pushLine('```');
+    pushLine('');
+    pushLine(':::');
+}
+
+function parseChartContent(
+    type: ChartType,
+    lines: string[],
+): ChartContent | null {
+    const config: { title?: string; min?: number; max?: number } = {};
+    const data: { label: string; value: number }[] = [];
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+
+        if (!trimmed) {
+            continue;
+        }
+
+        const reservedMatch = /^_(?<key>title|max|min):\s*(?<value>.+)$/.exec(
+            trimmed,
+        );
+
+        if (reservedMatch?.groups?.key) {
+            const { key, value } = reservedMatch.groups;
+
+            if (key === 'title') {
+                config.title = value.trim();
+            } else if (key === 'max') {
+                const n = Number(value);
+
+                if (!isNaN(n)) {
+                    config.max = n;
+                }
+            } else if (key === 'min') {
+                const n = Number(value);
+
+                if (!isNaN(n)) {
+                    config.min = n;
+                }
+            }
+
+            continue;
+        }
+
+        const dataMatch = /^(?<label>[^:]+):\s*(?<value>[\d.]+)\s*$/.exec(
+            trimmed,
+        );
+
+        if (dataMatch?.groups?.label) {
+            const num = Number(dataMatch.groups.value);
+
+            if (!isNaN(num)) {
+                data.push({ label: dataMatch.groups.label.trim(), value: num });
+            }
+        }
+    }
+
+    if (data.length === 0) {
+        return null;
+    }
+
+    return { type, ...config, data };
+}
+
+function pushChartDirective(
+    processedLines: string[],
+    chart: ChartContent,
+    pushBlankLineIfNeeded: () => void,
+    pushLine: (value: string) => void,
+): void {
+    pushBlankLineIfNeeded();
+    pushLine(':::chart');
+    pushLine('```json');
+    pushLine(JSON.stringify(chart));
     pushLine('```');
     pushLine('');
     pushLine(':::');

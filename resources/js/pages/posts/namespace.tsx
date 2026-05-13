@@ -8,10 +8,9 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import type { ContentNavNode } from '@/components/content-nav-tree';
-import { SimpleIconSvg } from '@/components/markdown-card-group';
-import { getSimpleIcon } from '@/lib/simple-icon-lookup';
 import ContentNavTree from '@/components/content-nav-tree';
 import DocsHeaderActions from '@/components/docs-header-actions';
+import { SimpleIconSvg } from '@/components/markdown-card-group';
 import MarkdownPageActions from '@/components/markdown-page-actions';
 import { Button } from '@/components/ui/button';
 import { PlaceholderPattern } from '@/components/ui/placeholder-pattern';
@@ -24,6 +23,7 @@ import {
 } from '@/components/ui/sheet';
 import { useBelowDesktop } from '@/hooks/use-below-desktop';
 import { useCurrentUrl } from '@/hooks/use-current-url';
+import { getSimpleIcon } from '@/lib/simple-icon-lookup';
 import { timeAgo } from '@/lib/time';
 import { namespace as adminNamespaceRoute } from '@/routes/admin/posts';
 import { path as contentPath } from '@/routes/posts';

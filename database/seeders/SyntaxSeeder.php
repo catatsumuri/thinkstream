@@ -1704,6 +1704,42 @@ Source:
 
 ---
 
+## Charts
+
+Use `chart:bar` for a horizontal bar chart and `chart:radar` for a radar chart. Both use the same key-value format.
+
+### Bar Chart
+
+```chart:bar
+_title: Flavor Profile
+_max: 10
+juniper: 9
+citrus: 4
+spice: 6
+herbal: 5
+floral: 2
+sweetness: 2
+smoothness: 5
+```
+
+### Radar Chart
+
+```chart:radar
+_title: Flavor Profile
+_max: 10
+juniper: 9
+citrus: 4
+spice: 6
+herbal: 5
+floral: 2
+sweetness: 2
+smoothness: 5
+```
+
+Reserved keys (prefixed with `_`): `_title`, `_max`, `_min`. All other `label: value` lines are data points.
+
+---
+
 ## Wikilinks
 
 Wikilinks are a Thinkstream-specific syntax for linking to other posts by their `full_path`. Unlike standard Markdown links, they are path-independent and can be detected programmatically (e.g. to find broken links after a rename).
