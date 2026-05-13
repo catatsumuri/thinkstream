@@ -15,7 +15,8 @@ export type ChartConfig = {
 
 export function getChartDomain(chart: ChartConfig): [number, number] {
     const min = chart.min ?? 0;
-    const max = chart.max ?? Math.max(...chart.data.map((point) => point.value));
+    const max =
+        chart.max ?? Math.max(...chart.data.map((point) => point.value));
 
     if (max <= min) {
         return [min, min + 1];
@@ -87,11 +88,7 @@ export function parseChart(json: string | undefined): ChartConfig | null {
         const min = parseChartNumber(raw.min);
         const max = parseChartNumber(raw.max);
 
-        if (
-            min !== undefined &&
-            max !== undefined &&
-            min > max
-        ) {
+        if (min !== undefined && max !== undefined && min > max) {
             return null;
         }
 
