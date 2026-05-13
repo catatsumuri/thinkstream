@@ -1,12 +1,35 @@
 import { Check, Copy, MoveHorizontal, WrapText } from 'lucide-react';
 import type { ComponentPropsWithoutRef } from 'react';
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import type { ExtraProps } from 'react-markdown';
-import { MermaidBlock } from '@/components/mermaid-block';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useClipboard } from '@/hooks/use-clipboard';
+
 import Prism, { ensurePrismLoaded } from '@/lib/prism';
 
 type CodeBlockProps = ComponentPropsWithoutRef<'code'> & ExtraProps;
+
+function MermaidBlockLoadFallback() {
+    return (
+        <div className="not-prose my-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-700/60 dark:bg-red-950/40 dark:text-red-200">
+            Failed to load Mermaid diagram. Please refresh and try again.
+        </div>
+    );
+}
+
+const MermaidBlock = lazy(async () => {
+    try {
+        const module = await import('@/components/mermaid-block');
+
+        return {
+            default: module.MermaidBlock,
+        };
+    } catch {
+        return {
+            default: MermaidBlockLoadFallback,
+        };
+    }
+});
 
 const escapeHtml = (value: string) =>
     value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -121,7 +144,15 @@ export function CodeBlock({
     const highlightLang = language === 'blade' ? 'html' : language;
 
     if (highlightLang === 'mermaid') {
-        return <MermaidBlock code={content} />;
+        return (
+            <Suspense
+                fallback={
+                    <Skeleton className="not-prose my-4 h-40 rounded-lg" />
+                }
+            >
+                <MermaidBlock code={content} />
+            </Suspense>
+        );
     }
 
     const handleCopy = async () => {

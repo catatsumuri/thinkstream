@@ -107,6 +107,30 @@ MARKDOWN,
         ->assertSee('Success state.');
 });
 
+test('mintlify-style mermaid code blocks render without javascript errors', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => <<<'MARKDOWN'
+# Mermaid
+
+```mermaid
+graph TD
+  A[Start] --> B{Choice}
+  B -->|Yes| C[Success]
+```
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertDontSee('Mermaid render error:')
+        ->assertSee('Start')
+        ->assertSee('Choice')
+        ->assertSee('Success');
+});
+
 test('mintlify-style Columns renders as a card group grid', function () {
     $namespace = PostNamespace::factory()->create(['is_published' => true]);
     $post = Post::factory()->for($namespace, 'namespace')->published()->create([
@@ -131,6 +155,30 @@ MARKDOWN,
         ->assertPresent('[data-test="markdown-card-group"]')
         ->assertSee('Vite Plugin')
         ->assertSee('HTTP Requests');
+});
+
+test('mintlify-style chart blocks render without javascript errors', function () {
+    $namespace = PostNamespace::factory()->create(['is_published' => true]);
+    $post = Post::factory()->for($namespace, 'namespace')->published()->create([
+        'content' => <<<'MARKDOWN'
+# Chart
+
+```chart:bar
+_title: Flavor Profile
+juniper: 9
+citrus: 4
+```
+MARKDOWN,
+    ]);
+
+    $page = visit(route('posts.path', ['path' => $post->full_path]));
+
+    $page
+        ->assertNoJavaScriptErrors()
+        ->assertPresent('[data-test="markdown-chart"]')
+        ->assertSee('Flavor Profile')
+        ->assertSee('juniper')
+        ->assertSee('citrus');
 });
 
 test('mintlify-style codegroup renders icons declared in code meta', function () {
