@@ -1710,6 +1710,8 @@ Use `chart:bar` for a horizontal bar chart and `chart:radar` for a radar chart. 
 
 ### Bar Chart
 
+Live example:
+
 ```chart:bar
 _title: Flavor Profile
 _max: 10
@@ -1722,7 +1724,25 @@ sweetness: 2
 smoothness: 5
 ```
 
+Source:
+
+````md
+```chart:bar
+_title: Flavor Profile
+_max: 10
+juniper: 9
+citrus: 4
+spice: 6
+herbal: 5
+floral: 2
+sweetness: 2
+smoothness: 5
+```
+````
+
 ### Radar Chart
+
+Live example:
 
 ```chart:radar
 _title: Flavor Profile
@@ -1735,6 +1755,22 @@ floral: 2
 sweetness: 2
 smoothness: 5
 ```
+
+Source:
+
+````md
+```chart:radar
+_title: Flavor Profile
+_max: 10
+juniper: 9
+citrus: 4
+spice: 6
+herbal: 5
+floral: 2
+sweetness: 2
+smoothness: 5
+```
+````
 
 Reserved keys (prefixed with `_`): `_title`, `_max`, `_min`. All other `label: value` lines are data points.
 
