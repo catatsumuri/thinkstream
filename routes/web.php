@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\OgpController;
+use App\Http\Controllers\Api\PostSuggestController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ImageController;
 use App\Http\Controllers\PostController;
@@ -26,6 +27,10 @@ Route::middleware('private.mode')->group(function () {
 Route::get('/api/ogp', [OgpController::class, 'fetch'])
     ->middleware('throttle:60,1')
     ->name('api.ogp');
+
+Route::get('/api/posts/suggest', [PostSuggestController::class, 'suggest'])
+    ->middleware(['auth', 'throttle:120,1'])
+    ->name('api.posts.suggest');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');

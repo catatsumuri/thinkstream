@@ -9,6 +9,7 @@ import {
     useState,
 } from 'react';
 import type React from 'react';
+import { suggest as suggestPosts } from '@/actions/App/Http/Controllers/Api/PostSuggestController';
 import InputError from '@/components/input-error';
 import MarkdownContent from '@/components/markdown-content';
 import { Label } from '@/components/ui/label';
@@ -52,10 +53,20 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
         }: Props,
         ref,
     ) {
+        type WikiSuggestion = { title: string; full_path: string };
+        type WikiState = {
+            query: string;
+            triggerStart: number;
+            suggestions: WikiSuggestion[];
+            activeIndex: number;
+            popupPosition: { top: number; left: number; above: boolean };
+        } | null;
+
         const [value, setValue] = useState(defaultValue);
         const [activeTab, setActiveTab] = useState<'write' | 'preview'>(
             'write',
         );
+        const [wikiState, setWikiState] = useState<WikiState>(null);
         const valueRef = useRef(defaultValue);
         const lastSelectionRef = useRef<{
             text: string;
@@ -105,6 +116,70 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
         );
         const textareaRef = useRef<HTMLTextAreaElement>(null);
         const previewRef = useRef<HTMLDivElement>(null);
+        const wikiQuery = wikiState?.query;
+
+        function getCaretCoords(
+            textarea: HTMLTextAreaElement,
+            position: number,
+        ) {
+            const cs = window.getComputedStyle(textarea);
+            const rect = textarea.getBoundingClientRect();
+            const mirror = document.createElement('div');
+            mirror.style.cssText = [
+                'position: fixed',
+                `top: ${rect.top - textarea.scrollTop}px`,
+                `left: ${rect.left}px`,
+                `width: ${textarea.clientWidth}px`,
+                `font: ${cs.font}`,
+                `line-height: ${cs.lineHeight}`,
+                `padding: ${cs.padding}`,
+                'box-sizing: border-box',
+                'white-space: pre-wrap',
+                'word-break: break-word',
+                'overflow-wrap: break-word',
+                'visibility: hidden',
+                'pointer-events: none',
+                'height: auto',
+            ].join('; ');
+            const pre = document.createTextNode(
+                textarea.value.slice(0, position),
+            );
+            const span = document.createElement('span');
+            span.textContent = '\u200b';
+            mirror.appendChild(pre);
+            mirror.appendChild(span);
+            document.body.appendChild(mirror);
+            const s = span.getBoundingClientRect();
+            document.body.removeChild(mirror);
+            const above = window.innerHeight - s.bottom < 200;
+
+            return {
+                top: above ? s.top - 4 : s.bottom + 4,
+                left: s.left,
+                above,
+            };
+        }
+
+        function insertWikiSuggestion(s: WikiSuggestion) {
+            if (!wikiState || !textareaRef.current) {
+                return;
+            }
+
+            const insert = `[[${s.full_path}|${s.title}]]`;
+            const cursor = textareaRef.current.selectionStart;
+            updateValue(
+                (prev) =>
+                    prev.slice(0, wikiState.triggerStart) +
+                    insert +
+                    prev.slice(cursor),
+            );
+            const newPos = wikiState.triggerStart + insert.length;
+            setTimeout(() => {
+                textareaRef.current?.setSelectionRange(newPos, newPos);
+                textareaRef.current?.focus();
+            }, 0);
+            setWikiState(null);
+        }
         const { props } = usePage<{ imageUrl?: string }>();
         const previousImageUrlRef = useRef<string | undefined>(undefined);
         const hasJumpedRef = useRef(false);
@@ -214,6 +289,50 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
 
             hasJumpedRef.current = true;
         }, [jumpTo]);
+
+        useEffect(() => {
+            if (wikiQuery === undefined) {
+                return;
+            }
+
+            const abortController = new AbortController();
+            const timeoutId = window.setTimeout(() => {
+                void (async () => {
+                    try {
+                        const res = await fetch(
+                            suggestPosts.url({
+                                query: { q: wikiQuery },
+                            }),
+                            { signal: abortController.signal },
+                        );
+
+                        if (!res.ok) {
+                            return;
+                        }
+
+                        const data = (await res.json()) as WikiSuggestion[];
+
+                        setWikiState((prev) =>
+                            prev?.query === wikiQuery
+                                ? { ...prev, suggestions: data, activeIndex: 0 }
+                                : prev,
+                        );
+                    } catch (error) {
+                        if (
+                            error instanceof DOMException &&
+                            error.name === 'AbortError'
+                        ) {
+                            return;
+                        }
+                    }
+                })();
+            }, 200);
+
+            return () => {
+                window.clearTimeout(timeoutId);
+                abortController.abort();
+            };
+        }, [wikiQuery]);
 
         const handleImageUpload = (file: File) => {
             if (!uploadUrl || !file.type.startsWith('image/')) {
@@ -415,6 +534,43 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                                 onChange={(e) => {
                                     valueRef.current = e.target.value;
                                     setValue(e.target.value);
+
+                                    const cursor = e.target.selectionStart;
+                                    const before = e.target.value.slice(
+                                        0,
+                                        cursor,
+                                    );
+                                    const lastOpen = before.lastIndexOf('[[');
+
+                                    if (lastOpen !== -1) {
+                                        const between = before.slice(
+                                            lastOpen + 2,
+                                        );
+
+                                        if (
+                                            !between.includes(']]') &&
+                                            !between.includes('\n')
+                                        ) {
+                                            const pos = getCaretCoords(
+                                                e.target,
+                                                lastOpen,
+                                            );
+                                            setWikiState((prev) => ({
+                                                query: between,
+                                                triggerStart: lastOpen,
+                                                suggestions:
+                                                    prev?.query === between
+                                                        ? prev.suggestions
+                                                        : [],
+                                                activeIndex: 0,
+                                                popupPosition: pos,
+                                            }));
+
+                                            return;
+                                        }
+                                    }
+
+                                    setWikiState(null);
                                 }}
                                 onSelect={(e) => {
                                     const t = e.currentTarget;
@@ -464,6 +620,64 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                                         : null;
                                     onSelectionChange?.(has);
                                 }}
+                                onKeyDown={(e) => {
+                                    if (
+                                        !wikiState ||
+                                        wikiState.suggestions.length === 0
+                                    ) {
+                                        return;
+                                    }
+
+                                    if (e.key === 'ArrowDown') {
+                                        e.preventDefault();
+                                        setWikiState((prev) =>
+                                            prev
+                                                ? {
+                                                      ...prev,
+                                                      activeIndex:
+                                                          (prev.activeIndex +
+                                                              1) %
+                                                          prev.suggestions
+                                                              .length,
+                                                  }
+                                                : prev,
+                                        );
+                                    } else if (e.key === 'ArrowUp') {
+                                        e.preventDefault();
+                                        setWikiState((prev) =>
+                                            prev
+                                                ? {
+                                                      ...prev,
+                                                      activeIndex:
+                                                          (prev.activeIndex -
+                                                              1 +
+                                                              prev.suggestions
+                                                                  .length) %
+                                                          prev.suggestions
+                                                              .length,
+                                                  }
+                                                : prev,
+                                        );
+                                    } else if (
+                                        e.key === 'Enter' ||
+                                        e.key === 'Tab'
+                                    ) {
+                                        const s =
+                                            wikiState.suggestions[
+                                                wikiState.activeIndex
+                                            ];
+
+                                        if (s) {
+                                            e.preventDefault();
+                                            insertWikiSuggestion(s);
+                                        }
+                                    } else if (e.key === 'Escape') {
+                                        setWikiState(null);
+                                    }
+                                }}
+                                onBlur={() =>
+                                    setTimeout(() => setWikiState(null), 150)
+                                }
                                 onDrop={uploadUrl ? handleDrop : undefined}
                                 onDragOver={
                                     uploadUrl
@@ -479,6 +693,44 @@ const MarkdownEditor = forwardRef<MarkdownEditorRef, Props>(
                                     disabled && 'cursor-not-allowed opacity-50',
                                 )}
                             />
+                            {wikiState && wikiState.suggestions.length > 0 && (
+                                <div
+                                    data-test="markdown-editor-wikilink-suggestions"
+                                    style={{
+                                        position: 'fixed',
+                                        top: wikiState.popupPosition.top,
+                                        left: wikiState.popupPosition.left,
+                                        transform: wikiState.popupPosition.above
+                                            ? 'translateY(-100%)'
+                                            : undefined,
+                                    }}
+                                    className="z-50 max-h-48 w-72 overflow-y-auto rounded-md border border-border bg-popover shadow-md"
+                                >
+                                    {wikiState.suggestions.map((s, i) => (
+                                        <button
+                                            key={s.full_path}
+                                            type="button"
+                                            data-test="markdown-editor-wikilink-suggestion"
+                                            className={cn(
+                                                'w-full px-3 py-2 text-left text-sm hover:bg-accent hover:text-accent-foreground',
+                                                i === wikiState.activeIndex &&
+                                                    'bg-accent text-accent-foreground',
+                                            )}
+                                            onMouseDown={(e) => {
+                                                e.preventDefault();
+                                                insertWikiSuggestion(s);
+                                            }}
+                                        >
+                                            <div className="truncate font-medium">
+                                                {s.title}
+                                            </div>
+                                            <div className="truncate text-xs text-muted-foreground">
+                                                {s.full_path}
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
 
                         {/* Preview column */}
