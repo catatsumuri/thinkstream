@@ -17,7 +17,8 @@ export function remarkCodeMeta() {
         visit(tree, 'code', (node: Code) => {
             if (node.meta) {
                 const data = node.data || (node.data = {});
-                const hProperties = data.hProperties || (data.hProperties = {});
+                const hProperties = (data.hProperties ||
+                    (data.hProperties = {})) as Record<string, any>;
                 hProperties.metastring = node.meta;
             }
         });

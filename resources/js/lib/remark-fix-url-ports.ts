@@ -17,7 +17,8 @@ export function remarkFixUrlPorts() {
                 parent === undefined ||
                 index === undefined ||
                 !/^\d+$/.test(node.name) ||
-                node.children.length !== 0
+                node.children.length !== 0 ||
+                !('children' in parent)
             ) {
                 return;
             }
@@ -27,7 +28,7 @@ export function remarkFixUrlPorts() {
                 value: ':' + node.name,
             };
 
-            parent.children.splice(index, 1, text);
+            (parent as any).children.splice(index, 1, text);
 
             return index;
         });

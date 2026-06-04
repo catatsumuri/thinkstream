@@ -32,3 +32,6 @@ testing
 /tests/Browser/Screenshots
 /.playwright-cli
 /.tmp
+/v0
+/docs
+/FEATURES.md

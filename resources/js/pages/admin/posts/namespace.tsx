@@ -352,13 +352,21 @@ export default function Namespace({
     const [selectedPostIds, setSelectedPostIds] = useState<number[]>([]);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
+    // Synchronize child namespace list with prop changes
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setChildren(initialChildren);
     }, [initialChildren]);
+
+    // Synchronize posts list with prop changes
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setPosts(initialPosts);
     }, [initialPosts]);
+
+    // Filter out deleted posts from selection
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSelectedPostIds((current) =>
             current.filter((id) => initialPosts.some((post) => post.id === id)),
         );

@@ -52,7 +52,14 @@ export function remarkWikilinks(resolveWikilink: (path: string) => string) {
                 });
             }
 
-            parent.children.splice(index, 1, ...parts);
+            if (
+                parent &&
+                index !== null &&
+                index !== undefined &&
+                'children' in parent
+            ) {
+                (parent as any).children.splice(index, 1, ...parts);
+            }
 
             return index;
         });

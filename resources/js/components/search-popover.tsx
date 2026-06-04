@@ -45,6 +45,7 @@ export default function SearchPopover({
     const panelId = useId();
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setSearchNamespace(defaultNamespace);
     }, [defaultNamespace]);
 

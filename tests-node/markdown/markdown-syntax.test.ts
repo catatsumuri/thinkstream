@@ -157,7 +157,7 @@ test('remarkFallbackDirective restores unhandled text directives to literal text
                         data: {},
                     },
                     { type: 'text', value: ' for additions.' },
-                ],
+                ] as any,
             },
         ],
     };

@@ -69,6 +69,7 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
     }, [prismReady]);
 
     React.useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setLines(null);
         setError(false);
         setLoading(true);
