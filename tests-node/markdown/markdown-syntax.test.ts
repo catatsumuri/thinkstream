@@ -216,6 +216,7 @@ test('markdown syntax manifest freezes the supported extension surface', () => {
                 'Tabs',
                 'Tab',
                 'Accordion',
+                'AccordionGroup',
                 'Steps',
                 'Step',
                 'ResponseField',
@@ -237,6 +238,7 @@ test('markdown syntax manifest freezes the supported extension surface', () => {
                 'Tabs',
                 'Tab',
                 'Accordion',
+                'AccordionGroup',
                 'Steps',
                 'Step',
                 'ResponseField',
@@ -268,6 +270,7 @@ test('markdown syntax manifest freezes the supported extension surface', () => {
             'tab',
             'card',
             'cardgroup',
+            'accordion-group',
             'steps',
             'step',
             'responsefield',
@@ -337,6 +340,22 @@ test('preprocessMarkdownSyntax converts Mintlify Accordion to details directive'
     assert.match(output, /Follow our quickstart guide\./);
 });
 
+test('preprocessMarkdownSyntax converts Mintlify AccordionGroup to directive syntax', () => {
+    const output = preprocessMarkdownSyntax(`<AccordionGroup>
+  <Accordion title="What is ThinkStream?">
+    ThinkStream is a documentation platform.
+  </Accordion>
+  <Accordion title="Which syntax is supported?">
+    Markdown, GFM, Zenn syntax, and Mintlify MDX components.
+  </Accordion>
+</AccordionGroup>`);
+
+    assert.match(output, /::::accordion-group/);
+    assert.match(output, /:::details\[What is ThinkStream\?\]/);
+    assert.match(output, /:::details\[Which syntax is supported\?\]/);
+    assert.match(output, /^::::\s*$/m);
+});
+
 test('preprocessMarkdownSyntax converts Mintlify Steps/Step to directive syntax', () => {
     const output = preprocessMarkdownSyntax(`<Steps>
   <Step title="Create a file">
@@ -377,6 +396,19 @@ test('preprocessMarkdownSyntax leaves Accordion tags untouched inside fenced cod
 
     assert.doesNotMatch(output, /:::details/);
     assert.match(output, /<Accordion title="What is Mintlify\?">/);
+});
+
+test('preprocessMarkdownSyntax leaves AccordionGroup tags untouched inside fenced code blocks', () => {
+    const output = preprocessMarkdownSyntax(`\`\`\`mdx
+<AccordionGroup>
+  <Accordion title="What is ThinkStream?">
+    ThinkStream is a documentation platform.
+  </Accordion>
+</AccordionGroup>
+\`\`\``);
+
+    assert.doesNotMatch(output, /::::accordion-group/);
+    assert.match(output, /<AccordionGroup>/);
 });
 
 test('preprocessMarkdownSyntax converts ResponseField to directive syntax', () => {

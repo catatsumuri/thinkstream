@@ -315,6 +315,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
         | 'CardGroup'
         | 'Columns'
         | 'Accordion'
+        | 'AccordionGroup'
         | 'Steps'
         | 'Step'
         | 'ResponseField'
@@ -725,6 +726,28 @@ export function preprocessMintlifySyntax(markdown: string): string {
             pushBlankLineIfNeeded();
             pushLine(mintlifyTabsDepth > 0 ? '::::' : ':::');
             mintlifyTabsDepth = Math.max(0, mintlifyTabsDepth - 1);
+
+            continue;
+        }
+
+        if (trimmedLine === '<AccordionGroup>') {
+            pushBlankLineIfNeeded();
+            pushLine('::::accordion-group');
+            pushLine('');
+            mintlifyTagLeadingSpaces.push(leadingSpaces);
+            mintlifyTagStack.push('AccordionGroup');
+
+            continue;
+        }
+
+        if (trimmedLine === '</AccordionGroup>') {
+            if (mintlifyTagStack.at(-1) === 'AccordionGroup') {
+                mintlifyTagStack.pop();
+                mintlifyTagLeadingSpaces.pop();
+            }
+
+            pushBlankLineIfNeeded();
+            pushLine('::::');
 
             continue;
         }

@@ -1159,6 +1159,39 @@ Mintlify is a documentation platform.
 :::
 ```
 
+### AccordionGroup
+
+Use `<AccordionGroup>` to wrap multiple `<Accordion>` items into a single visually connected block.
+
+Live example:
+
+<AccordionGroup>
+  <Accordion title="What is ThinkStream?">
+    ThinkStream is a documentation platform built on Laravel and React.
+  </Accordion>
+  <Accordion title="Which syntax is supported?">
+    ThinkStream supports Markdown, GFM, Zenn syntax, and Mintlify MDX components.
+  </Accordion>
+  <Accordion title="Can I use custom icons?">
+    The `icon` attribute is accepted but currently ignored by this renderer.
+  </Accordion>
+</AccordionGroup>
+
+Source:
+
+```mdx
+<AccordionGroup>
+  <Accordion title="What is ThinkStream?">
+    ThinkStream is a documentation platform built on Laravel and React.
+  </Accordion>
+  <Accordion title="Which syntax is supported?">
+    ThinkStream supports Markdown, GFM, Zenn syntax, and Mintlify MDX components.
+  </Accordion>
+</AccordionGroup>
+```
+
+> Note: nesting other container components (e.g. `<Steps>`) inside an `<Accordion>` within an `<AccordionGroup>` is not yet supported and will render incorrectly.
+
 ---
 
 ## Steps
