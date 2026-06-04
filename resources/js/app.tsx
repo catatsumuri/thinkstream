@@ -66,7 +66,7 @@ function restoreHashTarget(): void {
         requestAnimationFrame(scrollIntoView);
     };
 
-    requestAnimationFrame(scrollIntoView);
+    setTimeout(() => requestAnimationFrame(scrollIntoView), 0);
 }
 
 if (typeof window !== 'undefined') {
