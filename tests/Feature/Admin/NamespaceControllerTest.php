@@ -67,7 +67,7 @@ test('storing a namespace accepts a valid parent namespace', function () {
             'slug' => 'child',
             'name' => 'Child',
         ])
-        ->assertRedirect(route('admin.posts.index'));
+        ->assertRedirect(route('admin.posts.namespace', $parent));
 
     $this->assertDatabaseHas('namespaces', [
         'slug' => 'child',
@@ -108,7 +108,7 @@ test('storing a child namespace allows reserved slugs', function (string $slug) 
             'slug' => $slug,
             'name' => ucfirst($slug),
         ])
-        ->assertRedirect(route('admin.posts.index'));
+        ->assertRedirect(route('admin.posts.namespace', $parent));
 
     $this->assertDatabaseHas('namespaces', [
         'parent_id' => $parent->id,
@@ -182,7 +182,7 @@ test('storing a namespace allows the same slug under a different parent', functi
             'slug' => 'shared',
             'name' => 'Shared',
         ])
-        ->assertRedirect(route('admin.posts.index'));
+        ->assertRedirect(route('admin.posts.namespace', $parentB));
 
     $this->assertDatabaseHas('namespaces', [
         'parent_id' => $parentB->id,

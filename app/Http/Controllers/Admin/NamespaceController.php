@@ -74,6 +74,12 @@ class NamespaceController extends Controller
 
         PostNamespace::create($data);
 
+        if (! empty($data['parent_id'])) {
+            $parent = PostNamespace::find($data['parent_id']);
+
+            return to_route('admin.posts.namespace', $parent);
+        }
+
         return to_route('admin.posts.index');
     }
 
