@@ -37,6 +37,7 @@ import { remarkApiFieldsDirective } from '@/lib/remark-api-fields-directive';
 import { remarkBadgeDirective } from '@/lib/remark-badge-directive';
 import { remarkCardDirective } from '@/lib/remark-card-directive';
 import { remarkChartDirective } from '@/lib/remark-chart-directive';
+import { remarkAccordionGroupDirective } from '@/lib/remark-accordion-group-directive';
 import { remarkCodeGroupDirective } from '@/lib/remark-code-group-directive';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkFallbackDirective } from '@/lib/remark-fallback-directive';
@@ -88,6 +89,21 @@ function DetailsBox({
         >
             {children}
         </details>
+    );
+}
+
+function AccordionGroupBox({
+    children,
+    ...props
+}: React.ComponentPropsWithoutRef<'div'>) {
+    return (
+        <div
+            className="accordion-group-block my-6 overflow-hidden rounded-md border border-border [&_.details-block]:my-0 [&_.details-block]:rounded-none [&_.details-block]:border-0 [&_.details-block+.details-block]:border-t [&_.details-block+.details-block]:border-border"
+            data-test="accordion-group-block"
+            {...props}
+        >
+            {children}
+        </div>
     );
 }
 
@@ -192,6 +208,11 @@ export default function MarkdownContent({
     const dispenseHeadingId = createHeadingIdDispenser();
 
     const customMarkdownComponents = {
+        'accordion-group': (props: Record<string, unknown>) => (
+            <AccordionGroupBox
+                {...(props as React.ComponentPropsWithoutRef<'div'>)}
+            />
+        ),
         tabs: (props: Record<string, unknown>) => <MarkdownTabs {...props} />,
         tab: (props: Record<string, unknown>) => <MarkdownTab {...props} />,
         card: (props: Record<string, unknown>) => (
@@ -319,6 +340,7 @@ export default function MarkdownContent({
                     remarkDirective,
                     remarkFixUrlPorts,
                     remarkZennDirective,
+                    remarkAccordionGroupDirective,
                     remarkTabsDirective,
                     remarkCardDirective,
                     remarkStepsDirective,

@@ -111,6 +111,10 @@ test('syntax seeder creates the mintlify syntax page', function () {
     expect($post->content)->toContain('yarn install');
     expect($post->content)->toContain('<Accordion title="What is Mintlify?">');
     expect($post->content)->toContain('<Accordion title="How do I get started?" icon="rocket">');
+    expect($post->content)->toContain('### AccordionGroup');
+    expect($post->content)->toContain('<AccordionGroup>');
+    expect($post->content)->toContain('</AccordionGroup>');
+    expect($post->content)->toContain('Use `<AccordionGroup>` to wrap multiple `<Accordion>` items into a single visually connected block.');
     expect($post->content)->toContain('<Note>');
     expect($post->content)->toContain('<Warning>');
     expect($post->content)->toContain('<Check>');
