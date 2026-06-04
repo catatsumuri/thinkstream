@@ -350,10 +350,14 @@ test('preprocessMarkdownSyntax converts Mintlify AccordionGroup to directive syn
   </Accordion>
 </AccordionGroup>`);
 
-    assert.match(output, /::::accordion-group/);
+    const lines = output.split('\n');
+    const openLine = lines.find((line) => line.includes('accordion-group')) ?? '';
+    const openColonCount = (openLine.match(/^(:{3,})/)?.[1] ?? '').length;
+
+    assert.ok(openColonCount >= 3);
     assert.match(output, /:::details\[What is ThinkStream\?\]/);
     assert.match(output, /:::details\[Which syntax is supported\?\]/);
-    assert.match(output, /^::::\s*$/m);
+    assert.match(output, new RegExp(`^:{${openColonCount}}\\s*$`, 'm'));
 });
 
 test('preprocessMarkdownSyntax converts Mintlify Steps/Step to directive syntax', () => {
@@ -474,10 +478,86 @@ x = 1
 
 </CodeGroup>`);
 
-    assert.match(output, /:::codegroup/);
-    assert.match(output, /^:::\s*$/m);
+    const lines = output.split('\n');
+    const openLine = lines.find((line) => line.includes('codegroup')) ?? '';
+    const openColonCount = (openLine.match(/^(:{3,})/)?.[1] ?? '').length;
+
+    assert.ok(openColonCount >= 3);
+    assert.match(output, new RegExp(`^:{${openColonCount}}\\s*$`, 'm'));
     assert.match(output, /```javascript JavaScript/);
     assert.match(output, /```python Python/);
+});
+
+test('preprocessMarkdownSyntax nests AccordionGroup > Accordion > Steps using decreasing colon depths', () => {
+    const output = preprocessMarkdownSyntax(`<AccordionGroup>
+  <Accordion title="Cloudflare">
+    Intro text.
+    <Steps>
+      <Step title="Step one">
+        Do this.
+      </Step>
+      <Step title="Step two">
+        Do that.
+      </Step>
+    </Steps>
+  </Accordion>
+</AccordionGroup>`);
+
+    const lines = output.split('\n');
+    const groupLine = lines.find((line) => line.includes('accordion-group')) ?? '';
+    const accordionLine = lines.find((line) => line.includes('details[Cloudflare]')) ?? '';
+    const stepsLine = lines.find((line) => line.includes('steps')) ?? '';
+    const stepLine = lines.find((line) => line.includes('step{title="Step one"}')) ?? '';
+    const groupColons = (groupLine.match(/^(:{3,})/)?.[1] ?? '').length;
+    const accordionColons = (accordionLine.match(/^(:{3,})/)?.[1] ?? '').length;
+    const stepsColons = (stepsLine.match(/^(:{3,})/)?.[1] ?? '').length;
+    const stepColons = (stepLine.match(/^(:{3,})/)?.[1] ?? '').length;
+
+    assert.ok(groupColons >= 3);
+    assert.ok(accordionColons >= 3);
+    assert.ok(stepsColons >= 3);
+    assert.ok(stepColons >= 3);
+    assert.ok(groupColons > accordionColons);
+    assert.ok(accordionColons > stepsColons);
+    assert.ok(stepsColons > stepColons);
+    assert.match(output, /Intro text\./);
+    assert.match(output, /Do this\./);
+    assert.match(output, /Do that\./);
+});
+
+test('preprocessMarkdownSyntax nests Steps > Step > Tabs using decreasing colon depths', () => {
+    const output = preprocessMarkdownSyntax(`<Steps>
+  <Step title="Choose method">
+    <Tabs>
+      <Tab title="Option A">
+        Content A.
+      </Tab>
+      <Tab title="Option B">
+        Content B.
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>`);
+
+    const lines = output.split('\n');
+    const stepsLine = lines.find((line) => line.includes('steps')) ?? '';
+    const stepLine = lines.find((line) => line.includes('step{title="Choose method"}')) ?? '';
+    const tabsLine = lines.find((line) => line.includes('tabs')) ?? '';
+    const tabLine = lines.find((line) => line.includes('tab{title="Option A"}')) ?? '';
+    const stepsColons = (stepsLine.match(/^(:{3,})/)?.[1] ?? '').length;
+    const stepColons = (stepLine.match(/^(:{3,})/)?.[1] ?? '').length;
+    const tabsColons = (tabsLine.match(/^(:{3,})/)?.[1] ?? '').length;
+    const tabColons = (tabLine.match(/^(:{3,})/)?.[1] ?? '').length;
+
+    assert.ok(stepsColons >= 3);
+    assert.ok(stepColons >= 3);
+    assert.ok(tabsColons >= 3);
+    assert.ok(tabColons >= 3);
+    assert.ok(stepsColons > stepColons);
+    assert.ok(stepColons > tabsColons);
+    assert.ok(tabsColons > tabColons);
+    assert.match(output, /Content A\./);
+    assert.match(output, /Content B\./);
 });
 
 test('preprocessMarkdownSyntax converts Mintlify Tree to a tree directive with JSON payload', () => {

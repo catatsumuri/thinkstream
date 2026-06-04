@@ -306,9 +306,21 @@ export function preprocessMintlifySyntax(markdown: string): string {
         chartType: ChartType;
         lines: string[];
     } | null = null;
-    let mintlifyTabsDepth = 0;
     const mintlifyCalloutColonCounts: number[] = [];
-    const mintlifyTagStack: Array<
+
+    // Dynamic colon depth: items increment this when opened, decrement when closed.
+    // Containers read it to pick colon counts that properly nest inside items.
+    // Base is 10 so we support up to 4 nesting levels before hitting the minimum of 3.
+    let mintlifyItemDepth = 0;
+    const MINTLIFY_BASE_COLONS = 10;
+
+    const colonC = (): string =>
+        ':'.repeat(MINTLIFY_BASE_COLONS - mintlifyItemDepth * 2);
+
+    const colonI = (): string =>
+        ':'.repeat(MINTLIFY_BASE_COLONS - mintlifyItemDepth * 2 - 1);
+
+    type MintlifyTagName =
         | 'Tabs'
         | 'Tab'
         | 'Card'
@@ -322,8 +334,11 @@ export function preprocessMintlifySyntax(markdown: string): string {
         | 'ParamField'
         | 'CodeGroup'
         | 'Update'
-        | MintlifyCalloutTag
-    > = [];
+        | MintlifyCalloutTag;
+
+    type MintlifyStackEntry = { name: MintlifyTagName; colonCount: number };
+
+    const mintlifyTagStack: MintlifyStackEntry[] = [];
     const mintlifyTagLeadingSpaces: number[] = [];
     let treeBuffer: string[] | null = null;
 
@@ -550,7 +565,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
             pushLine(':'.repeat(colonCount) + directiveBody);
             pushLine('');
             mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push(tag);
+            mintlifyTagStack.push({ name: tag, colonCount });
             mintlifyCalloutColonCounts.push(colonCount);
 
             continue;
@@ -564,7 +579,7 @@ export function preprocessMintlifySyntax(markdown: string): string {
             const tag = calloutCloseMatch.groups!.tag as MintlifyCalloutTag;
             let colonCount = 3;
 
-            if (mintlifyTagStack.at(-1) === tag) {
+            if (mintlifyTagStack.at(-1)?.name === tag) {
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
                 colonCount = mintlifyCalloutColonCounts.pop() ?? 3;
@@ -585,23 +600,32 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 cardGroupOpenMatch.groups?.attributes ?? '',
             );
 
+            const cgColons = colonC();
+
             pushBlankLineIfNeeded();
-            pushLine(`::::cardgroup${buildDirectiveAttributes(attributes)}`);
+            pushLine(
+                `${cgColons}cardgroup${buildDirectiveAttributes(attributes)}`,
+            );
             pushLine('');
             mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('CardGroup');
+            mintlifyTagStack.push({
+                name: 'CardGroup',
+                colonCount: cgColons.length,
+            });
 
             continue;
         }
 
         if (trimmedLine === '</CardGroup>') {
-            if (mintlifyTagStack.at(-1) === 'CardGroup') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'CardGroup') {
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine('::::');
+            pushLine(':'.repeat(top?.colonCount ?? colonC().length));
 
             continue;
         }
@@ -615,23 +639,32 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 columnsOpenMatch.groups?.attributes ?? '',
             );
 
+            const colColons = colonC();
+
             pushBlankLineIfNeeded();
-            pushLine(`::::cardgroup${buildDirectiveAttributes(attributes)}`);
+            pushLine(
+                `${colColons}cardgroup${buildDirectiveAttributes(attributes)}`,
+            );
             pushLine('');
             mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('Columns');
+            mintlifyTagStack.push({
+                name: 'Columns',
+                colonCount: colColons.length,
+            });
 
             continue;
         }
 
         if (trimmedLine === '</Columns>') {
-            if (mintlifyTagStack.at(-1) === 'Columns') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'Columns') {
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine('::::');
+            pushLine(':'.repeat(top?.colonCount ?? colonC().length));
 
             continue;
         }
@@ -646,28 +679,39 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 : rawAttrs;
             const attributes = parseJsxAttributes(cleanAttrs);
 
+            const cardColons = colonI();
+
             pushBlankLineIfNeeded();
-            pushLine(`:::card${buildDirectiveAttributes(attributes)}`);
+            pushLine(
+                `${cardColons}card${buildDirectiveAttributes(attributes)}`,
+            );
             pushLine('');
 
             if (isSelfClosing) {
-                pushLine(':::');
+                pushLine(cardColons);
             } else {
+                mintlifyItemDepth++;
                 mintlifyTagLeadingSpaces.push(leadingSpaces);
-                mintlifyTagStack.push('Card');
+                mintlifyTagStack.push({
+                    name: 'Card',
+                    colonCount: cardColons.length,
+                });
             }
 
             continue;
         }
 
         if (trimmedLine === '</Card>') {
-            if (mintlifyTagStack.at(-1) === 'Card') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'Card') {
+                mintlifyItemDepth--;
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine(':::');
+            pushLine(':'.repeat(top?.colonCount ?? colonI().length));
 
             continue;
         }
@@ -679,12 +723,18 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 tabsOpenMatch.groups?.attributes ?? '',
             );
 
+            const tabsColons = colonC();
+
             pushBlankLineIfNeeded();
-            pushLine(`::::tabs${buildDirectiveAttributes(attributes)}`);
+            pushLine(
+                `${tabsColons}tabs${buildDirectiveAttributes(attributes)}`,
+            );
             pushLine('');
-            mintlifyTabsDepth++;
             mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('Tabs');
+            mintlifyTagStack.push({
+                name: 'Tabs',
+                colonCount: tabsColons.length,
+            });
 
             continue;
         }
@@ -696,58 +746,75 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 tabOpenMatch.groups?.attributes ?? '',
             );
 
+            const tabColons = colonI();
+
             pushBlankLineIfNeeded();
-            pushLine(`:::tab${buildDirectiveAttributes(attributes)}`);
+            pushLine(`${tabColons}tab${buildDirectiveAttributes(attributes)}`);
             pushLine('');
+            mintlifyItemDepth++;
             mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('Tab');
+            mintlifyTagStack.push({
+                name: 'Tab',
+                colonCount: tabColons.length,
+            });
 
             continue;
         }
 
         if (trimmedLine === '</Tab>') {
-            if (mintlifyTagStack.at(-1) === 'Tab') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'Tab') {
+                mintlifyItemDepth--;
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine(':::');
+            pushLine(':'.repeat(top?.colonCount ?? colonI().length));
 
             continue;
         }
 
         if (trimmedLine === '</Tabs>') {
-            if (mintlifyTagStack.at(-1) === 'Tabs') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'Tabs') {
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine(mintlifyTabsDepth > 0 ? '::::' : ':::');
-            mintlifyTabsDepth = Math.max(0, mintlifyTabsDepth - 1);
+            pushLine(':'.repeat(top?.colonCount ?? colonC().length));
 
             continue;
         }
 
         if (trimmedLine === '<AccordionGroup>') {
+            const agColons = colonC();
+
             pushBlankLineIfNeeded();
-            pushLine('::::accordion-group');
+            pushLine(`${agColons}accordion-group`);
             pushLine('');
             mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('AccordionGroup');
+            mintlifyTagStack.push({
+                name: 'AccordionGroup',
+                colonCount: agColons.length,
+            });
 
             continue;
         }
 
         if (trimmedLine === '</AccordionGroup>') {
-            if (mintlifyTagStack.at(-1) === 'AccordionGroup') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'AccordionGroup') {
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine('::::');
+            pushLine(':'.repeat(top?.colonCount ?? colonC().length));
 
             continue;
         }
@@ -762,24 +829,32 @@ export function preprocessMintlifySyntax(markdown: string): string {
             );
             const title =
                 typeof attributes.title === 'string' ? attributes.title : '';
+            const accColons = colonI();
 
             pushBlankLineIfNeeded();
-            pushLine(`:::details ${title}`);
+            pushLine(`${accColons}details ${title}`);
             pushLine('');
+            mintlifyItemDepth++;
             mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('Accordion');
+            mintlifyTagStack.push({
+                name: 'Accordion',
+                colonCount: accColons.length,
+            });
 
             continue;
         }
 
         if (trimmedLine === '</Accordion>') {
-            if (mintlifyTagStack.at(-1) === 'Accordion') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'Accordion') {
+                mintlifyItemDepth--;
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine(':::');
+            pushLine(':'.repeat(top?.colonCount ?? colonI().length));
 
             continue;
         }
@@ -793,23 +868,34 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 updateOpenMatch.groups?.attributes ?? '',
             );
 
+            const updColons = colonI();
+
             pushBlankLineIfNeeded();
-            pushLine(`:::update${buildDirectiveAttributes(attributes)}`);
+            pushLine(
+                `${updColons}update${buildDirectiveAttributes(attributes)}`,
+            );
             pushLine('');
+            mintlifyItemDepth++;
             mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('Update');
+            mintlifyTagStack.push({
+                name: 'Update',
+                colonCount: updColons.length,
+            });
 
             continue;
         }
 
         if (trimmedLine === '</Update>') {
-            if (mintlifyTagStack.at(-1) === 'Update') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'Update') {
+                mintlifyItemDepth--;
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine(':::');
+            pushLine(':'.repeat(top?.colonCount ?? colonI().length));
 
             continue;
         }
@@ -819,23 +905,30 @@ export function preprocessMintlifySyntax(markdown: string): string {
         );
 
         if (stepsOpenMatch) {
+            const stepsColons = colonC();
+
             pushBlankLineIfNeeded();
-            pushLine('::::steps');
+            pushLine(`${stepsColons}steps`);
             pushLine('');
             mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('Steps');
+            mintlifyTagStack.push({
+                name: 'Steps',
+                colonCount: stepsColons.length,
+            });
 
             continue;
         }
 
         if (trimmedLine === '</Steps>') {
-            if (mintlifyTagStack.at(-1) === 'Steps') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'Steps') {
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine('::::');
+            pushLine(':'.repeat(top?.colonCount ?? colonC().length));
 
             continue;
         }
@@ -847,23 +940,34 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 stepOpenMatch.groups?.attributes ?? '',
             );
 
+            const stepColons = colonI();
+
             pushBlankLineIfNeeded();
-            pushLine(`:::step${buildDirectiveAttributes(attributes)}`);
+            pushLine(
+                `${stepColons}step${buildDirectiveAttributes(attributes)}`,
+            );
             pushLine('');
+            mintlifyItemDepth++;
             mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('Step');
+            mintlifyTagStack.push({
+                name: 'Step',
+                colonCount: stepColons.length,
+            });
 
             continue;
         }
 
         if (trimmedLine === '</Step>') {
-            if (mintlifyTagStack.at(-1) === 'Step') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'Step') {
+                mintlifyItemDepth--;
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine(':::');
+            pushLine(':'.repeat(top?.colonCount ?? colonI().length));
 
             continue;
         }
@@ -879,28 +983,39 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 : rawAttrs;
             const attributes = parseJsxAttributes(cleanAttrs);
 
+            const rfColons = colonI();
+
             pushBlankLineIfNeeded();
-            pushLine(`:::responsefield${buildDirectiveAttributes(attributes)}`);
+            pushLine(
+                `${rfColons}responsefield${buildDirectiveAttributes(attributes)}`,
+            );
             pushLine('');
 
             if (isSelfClosing) {
-                pushLine(':::');
+                pushLine(rfColons);
             } else {
+                mintlifyItemDepth++;
                 mintlifyTagLeadingSpaces.push(leadingSpaces);
-                mintlifyTagStack.push('ResponseField');
+                mintlifyTagStack.push({
+                    name: 'ResponseField',
+                    colonCount: rfColons.length,
+                });
             }
 
             continue;
         }
 
         if (trimmedLine === '</ResponseField>') {
-            if (mintlifyTagStack.at(-1) === 'ResponseField') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'ResponseField') {
+                mintlifyItemDepth--;
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine(':::');
+            pushLine(':'.repeat(top?.colonCount ?? colonI().length));
 
             continue;
         }
@@ -917,50 +1032,70 @@ export function preprocessMintlifySyntax(markdown: string): string {
                 : rawAttrs;
             const attributes = parseJsxAttributes(cleanAttrs);
 
+            const pfColons = colonI();
+
             pushBlankLineIfNeeded();
-            pushLine(`:::paramfield${buildDirectiveAttributes(attributes)}`);
+            pushLine(
+                `${pfColons}paramfield${buildDirectiveAttributes(attributes)}`,
+            );
             pushLine('');
 
             if (isSelfClosing) {
-                pushLine(':::');
+                pushLine(pfColons);
             } else {
+                mintlifyItemDepth++;
                 mintlifyTagLeadingSpaces.push(leadingSpaces);
-                mintlifyTagStack.push('ParamField');
+                mintlifyTagStack.push({
+                    name: 'ParamField',
+                    colonCount: pfColons.length,
+                });
             }
 
             continue;
         }
 
         if (trimmedLine === '</ParamField>') {
-            if (mintlifyTagStack.at(-1) === 'ParamField') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'ParamField') {
+                mintlifyItemDepth--;
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine(':::');
+            pushLine(':'.repeat(top?.colonCount ?? colonI().length));
 
             continue;
         }
 
         if (trimmedLine === '<CodeGroup>') {
+            const cgroupColons = colonI();
+
             pushBlankLineIfNeeded();
-            pushLine(':::codegroup');
+            pushLine(`${cgroupColons}codegroup`);
             pushLine('');
+            mintlifyItemDepth++;
             mintlifyTagLeadingSpaces.push(leadingSpaces);
-            mintlifyTagStack.push('CodeGroup');
+            mintlifyTagStack.push({
+                name: 'CodeGroup',
+                colonCount: cgroupColons.length,
+            });
 
             continue;
         }
 
         if (trimmedLine === '</CodeGroup>') {
-            if (mintlifyTagStack.at(-1) === 'CodeGroup') {
+            const top = mintlifyTagStack.at(-1);
+
+            if (top?.name === 'CodeGroup') {
+                mintlifyItemDepth--;
                 mintlifyTagStack.pop();
                 mintlifyTagLeadingSpaces.pop();
             }
 
             pushBlankLineIfNeeded();
-            pushLine(':::');
+            pushLine(':'.repeat(top?.colonCount ?? colonI().length));
 
             continue;
         }
@@ -1557,7 +1692,7 @@ export function preprocessMarkdownSyntax(markdown: string): string {
                         ':::message{.$1}',
                     )
                     // Convert :::details title to the label form remark-directive expects.
-                    .replace(/:::details\s+(.+?)$/, ':::details[$1]')
+                    .replace(/(:{3,})details\s+(.+?)$/, '$1details[$2]')
                     // Convert Zenn embeds to bare URL lines so remark-linkify-to-card picks them up.
                     .replace(
                         new RegExp(
