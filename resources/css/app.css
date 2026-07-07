@@ -1,8 +1,6 @@
 @import 'tailwindcss';
 @plugin '@tailwindcss/typography';
 
-@import 'prismjs/themes/prism-tomorrow.css';
-
 @import 'tw-animate-css';
 
 @source '../views';
@@ -162,4 +160,22 @@ details.details-block > summary + div > :first-child {
 
 details.details-block > summary + div > :last-child {
     margin-bottom: 0;
+}
+
+/* Shiki emits both theme palettes as CSS variables per token
+   (defaultColor: false in resources/js/lib/shiki.ts); these rules pick the
+   active palette. Elements wrapping token spans carry the shiki-tokens
+   class so non-token spans (diff gutters, line numbers) stay untouched. */
+.shiki-tokens span {
+    color: var(--shiki-light, inherit);
+    font-style: var(--shiki-light-font-style, inherit);
+    font-weight: var(--shiki-light-font-weight, inherit);
+    text-decoration: var(--shiki-light-text-decoration, inherit);
+}
+
+.dark .shiki-tokens span {
+    color: var(--shiki-dark, inherit);
+    font-style: var(--shiki-dark-font-style, inherit);
+    font-weight: var(--shiki-dark-font-weight, inherit);
+    text-decoration: var(--shiki-dark-text-decoration, inherit);
 }

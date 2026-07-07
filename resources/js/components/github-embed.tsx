@@ -1,6 +1,8 @@
 import { ExternalLink, FileCode } from 'lucide-react';
 import React from 'react';
-import Prism, { ensurePrismLoaded } from '@/lib/prism';
+import { ShikiTokenSpans } from '@/components/code-block';
+import { useShikiHighlighter } from '@/hooks/use-shiki-highlighter';
+import { tokenizeLines } from '@/lib/shiki';
 import { parseGithubUrl } from '@/lib/url-matcher';
 
 /** Maximum number of lines to display when no line range is specified. */
@@ -30,13 +32,6 @@ function detectLanguage(path: string): string {
     return EXTENSION_TO_LANGUAGE[ext] ?? ext;
 }
 
-function escapeHtml(value: string): string {
-    return value
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
-}
-
 interface GithubEmbedProps {
     url: string;
 }
@@ -46,27 +41,18 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
     const [lines, setLines] = React.useState<string[] | null>(null);
     const [loading, setLoading] = React.useState(true);
     const [error, setError] = React.useState(false);
-    const [prismReady, setPrismReady] = React.useState(() =>
-        Boolean(Prism.languages.php),
+    const highlighter = useShikiHighlighter();
+    const language = info ? detectLanguage(info.path) : '';
+
+    // Tokenize the fetched lines as one block so multi-line constructs keep
+    // their grammar context; the result stays line-aligned with `lines`.
+    const tokenLines = React.useMemo(
+        () =>
+            highlighter && lines
+                ? tokenizeLines(highlighter, lines.join('\n'), language)
+                : null,
+        [highlighter, lines, language],
     );
-
-    React.useEffect(() => {
-        if (prismReady) {
-            return;
-        }
-
-        let active = true;
-
-        void ensurePrismLoaded().then(() => {
-            if (active) {
-                setPrismReady(true);
-            }
-        });
-
-        return () => {
-            active = false;
-        };
-    }, [prismReady]);
 
     React.useEffect(() => {
         // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -132,7 +118,6 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
     }
 
     const filename = info.path.split('/').at(-1) ?? info.path;
-    const language = detectLanguage(info.path);
     const lineStart = info.lineStart ?? 1;
 
     const lineLabel =
@@ -205,22 +190,6 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
         );
     }
 
-    const highlightedLines = lines.map((line) => {
-        if (prismReady && language && Prism.languages[language]) {
-            try {
-                return Prism.highlight(
-                    line,
-                    Prism.languages[language],
-                    language,
-                );
-            } catch {
-                return escapeHtml(line);
-            }
-        }
-
-        return escapeHtml(line);
-    });
-
     return (
         <div
             className="not-prose my-4 overflow-hidden rounded-lg border border-border bg-card"
@@ -259,30 +228,38 @@ export function GithubEmbed({ url }: GithubEmbedProps) {
                 </a>
             </div>
             <div
-                className="max-h-[32rem] overflow-auto overscroll-contain bg-[#282c34]"
+                className="max-h-[32rem] overflow-auto overscroll-contain bg-white dark:bg-[#24292e]"
                 data-test="embed-github-scroll"
             >
                 <pre
-                    className="my-0 min-w-max font-mono text-sm text-gray-200"
+                    className="my-0 min-w-max font-mono text-sm text-[#24292e] dark:text-[#e1e4e8]"
                     data-test="embed-github-code"
                 >
                     <code>
-                        {highlightedLines.map((html, index) => (
-                            <div
-                                key={index}
-                                className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-start px-4 py-0.5 hover:bg-white/5"
-                            >
-                                <span
-                                    className="pr-4 text-right text-xs text-gray-500 select-none"
-                                    aria-hidden="true"
+                        {lines.map((line, index) => {
+                            const tokens = tokenLines?.[index];
+
+                            return (
+                                <div
+                                    key={index}
+                                    className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-start px-4 py-0.5 hover:bg-black/5 dark:hover:bg-white/5"
                                 >
-                                    {lineStart + index}
-                                </span>
-                                <span
-                                    dangerouslySetInnerHTML={{ __html: html }}
-                                />
-                            </div>
-                        ))}
+                                    <span
+                                        className="pr-4 text-right text-xs text-gray-500 select-none"
+                                        aria-hidden="true"
+                                    >
+                                        {lineStart + index}
+                                    </span>
+                                    <span className="shiki-tokens">
+                                        {tokens ? (
+                                            <ShikiTokenSpans tokens={tokens} />
+                                        ) : (
+                                            line
+                                        )}
+                                    </span>
+                                </div>
+                            );
+                        })}
                     </code>
                 </pre>
             </div>

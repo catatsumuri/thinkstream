@@ -1,11 +1,12 @@
 import { Check, Copy, MoveHorizontal, WrapText } from 'lucide-react';
-import type { ComponentPropsWithoutRef } from 'react';
-import { lazy, Suspense, useEffect, useState } from 'react';
+import type { ComponentPropsWithoutRef, CSSProperties } from 'react';
+import { Fragment, lazy, Suspense, useMemo, useState } from 'react';
 import type { ExtraProps } from 'react-markdown';
+import type { ThemedToken } from 'shiki';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useClipboard } from '@/hooks/use-clipboard';
-
-import Prism, { ensurePrismLoaded } from '@/lib/prism';
+import { useShikiHighlighter } from '@/hooks/use-shiki-highlighter';
+import { tokenizeLines } from '@/lib/shiki';
 
 type CodeBlockProps = ComponentPropsWithoutRef<'code'> & ExtraProps;
 
@@ -31,8 +32,41 @@ const MermaidBlock = lazy(async () => {
     }
 });
 
-const escapeHtml = (value: string) =>
-    value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+/**
+ * Renders one line of Shiki tokens. Theme colors live in the tokens' CSS
+ * variables and are resolved by the .shiki-tokens rules in app.css, so the
+ * enclosing element must carry the `shiki-tokens` class.
+ */
+export function ShikiTokenSpans({ tokens }: { tokens: ThemedToken[] }) {
+    return (
+        <>
+            {tokens.map((token, index) => (
+                <span key={index} style={token.htmlStyle as CSSProperties}>
+                    {token.content}
+                </span>
+            ))}
+        </>
+    );
+}
+
+function HighlightedCode({
+    lines,
+    fallback,
+}: {
+    lines: ThemedToken[][] | null;
+    fallback: string;
+}) {
+    if (!lines) {
+        return fallback;
+    }
+
+    return lines.map((line, index) => (
+        <Fragment key={index}>
+            {index > 0 && '\n'}
+            <ShikiTokenSpans tokens={line} />
+        </Fragment>
+    ));
+}
 
 /**
  * Parses the fenced code block info string to extract language, filename, and
@@ -107,28 +141,59 @@ export function CodeBlock({
 }: CodeBlockProps & { metastring?: string }) {
     const [wrap, setWrap] = useState(false);
     const [copied, setCopied] = useState(false);
-    const [prismReady, setPrismReady] = useState(false);
     const [, copy] = useClipboard();
-
-    useEffect(() => {
-        let active = true;
-
-        void ensurePrismLoaded().then(() => {
-            if (active) {
-                setPrismReady(true);
-            }
-        });
-
-        return () => {
-            active = false;
-        };
-    }, []);
+    const highlighter = useShikiHighlighter();
 
     const rawContent = String(children);
     const content = rawContent.replace(/\n$/, '');
 
     // react-markdown v10: fenced code blocks always have a trailing newline in children
     const isInline = !className && !rawContent.endsWith('\n');
+
+    const codeMeta =
+        metastring ?? (node?.properties?.metastring as string | undefined);
+    const { language, filename, isDiff } = parseCodeMeta(className, codeMeta);
+
+    const highlightedLines = useMemo(() => {
+        if (!highlighter || isInline || isDiff || language === 'mermaid') {
+            return null;
+        }
+
+        return tokenizeLines(highlighter, content, language);
+    }, [highlighter, content, language, isInline, isDiff]);
+
+    const diffRows = useMemo(() => {
+        if (!isDiff) {
+            return null;
+        }
+
+        return content.split('\n').map((line) => {
+            let backgroundColor = 'transparent';
+            let symbol = ' ';
+            let code = line;
+
+            if (line.startsWith('@@')) {
+                backgroundColor = 'rgba(59,130,246,0.15)';
+            } else if (line.startsWith('+')) {
+                backgroundColor = 'rgba(16,185,129,0.15)';
+                symbol = '+';
+                code = line.slice(1);
+            } else if (line.startsWith('-')) {
+                backgroundColor = 'rgba(239,68,68,0.15)';
+                symbol = '-';
+                code = line.slice(1);
+            } else if (line.startsWith(' ')) {
+                code = line.slice(1);
+            }
+
+            const tokens =
+                highlighter && code.trim()
+                    ? (tokenizeLines(highlighter, code, language)?.[0] ?? null)
+                    : null;
+
+            return { backgroundColor, symbol, code, tokens };
+        });
+    }, [highlighter, content, language, isDiff]);
 
     if (isInline) {
         return (
@@ -138,12 +203,7 @@ export function CodeBlock({
         );
     }
 
-    const codeMeta =
-        metastring ?? (node?.properties?.metastring as string | undefined);
-    const { language, filename, isDiff } = parseCodeMeta(className, codeMeta);
-    const highlightLang = language === 'blade' ? 'html' : language;
-
-    if (highlightLang === 'mermaid') {
+    if (language === 'mermaid') {
         return (
             <Suspense
                 fallback={
@@ -192,7 +252,7 @@ export function CodeBlock({
             aria-label={
                 wrap ? 'Enable horizontal scrolling' : 'Enable line wrapping'
             }
-            className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-200"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             title={wrap ? 'Scroll' : 'Wrap'}
         >
             {wrap ? <MoveHorizontal size={16} /> : <WrapText size={16} />}
@@ -204,7 +264,7 @@ export function CodeBlock({
             type="button"
             onClick={handleCopy}
             aria-label={copied ? 'Copied code to clipboard' : 'Copy code'}
-            className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-200"
+            className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             title="Copy"
         >
             {copied ? <Check size={16} /> : <Copy size={16} />}
@@ -212,15 +272,10 @@ export function CodeBlock({
     );
 
     // --- diff rendering ---
-    if (isDiff) {
-        const prismLanguage =
-            prismReady && highlightLang && Prism.languages[highlightLang]
-                ? Prism.languages[highlightLang]
-                : null;
-
+    if (isDiff && diffRows) {
         return (
-            <div className="not-prose my-4 overflow-hidden rounded-lg border border-gray-700 bg-[#282c34]">
-                <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 px-4 py-2 font-mono text-sm text-gray-300">
+            <div className="not-prose my-4 overflow-hidden rounded-lg border border-border bg-white dark:bg-[#24292e]">
+                <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-2 font-mono text-sm text-foreground">
                     <span>{filename ?? language}</span>
                     <div className="flex gap-1">
                         {wrapToggleButton}
@@ -228,64 +283,33 @@ export function CodeBlock({
                     </div>
                 </div>
                 <div className={wrap ? '' : 'overflow-x-auto'}>
-                    <pre className="my-0 font-mono text-sm text-gray-300">
+                    <pre className="my-0 font-mono text-sm text-[#24292e] dark:text-[#e1e4e8]">
                         <code>
-                            {content.split('\n').map((line, index) => {
-                                let bgColor = 'transparent';
-                                let symbol = ' ';
-                                let codeContent = line;
-
-                                if (line.startsWith('@@')) {
-                                    bgColor = 'rgba(59,130,246,0.15)';
-                                    symbol = ' ';
-                                    codeContent = line;
-                                } else if (line.startsWith('+')) {
-                                    bgColor = 'rgba(16,185,129,0.15)';
-                                    symbol = '+';
-                                    codeContent = line.slice(1);
-                                } else if (line.startsWith('-')) {
-                                    bgColor = 'rgba(239,68,68,0.15)';
-                                    symbol = '-';
-                                    codeContent = line.slice(1);
-                                } else if (line.startsWith(' ')) {
-                                    symbol = ' ';
-                                    codeContent = line.slice(1);
-                                }
-
-                                let highlightedHtml = escapeHtml(codeContent);
-
-                                if (prismLanguage && codeContent.trim()) {
-                                    try {
-                                        highlightedHtml = Prism.highlight(
-                                            codeContent,
-                                            prismLanguage,
-                                            highlightLang,
-                                        );
-                                    } catch {
-                                        // fall back to escaped plain text
-                                    }
-                                }
-
-                                return (
-                                    <div
-                                        key={index}
-                                        style={{ backgroundColor: bgColor }}
-                                        className={`grid grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-1 px-4 py-0.5 ${wrap ? 'break-words whitespace-pre-wrap' : ''}`}
+                            {diffRows.map((row, index) => (
+                                <div
+                                    key={index}
+                                    style={{
+                                        backgroundColor: row.backgroundColor,
+                                    }}
+                                    className={`grid grid-cols-[1.25rem_minmax(0,1fr)] items-start gap-1 px-4 py-0.5 ${wrap ? 'break-words whitespace-pre-wrap' : ''}`}
+                                >
+                                    <span
+                                        className="text-center text-gray-500 select-none"
+                                        aria-hidden="true"
                                     >
-                                        <span
-                                            className="text-center text-gray-500 select-none"
-                                            aria-hidden="true"
-                                        >
-                                            {symbol}
-                                        </span>
-                                        <span
-                                            dangerouslySetInnerHTML={{
-                                                __html: highlightedHtml,
-                                            }}
-                                        />
-                                    </div>
-                                );
-                            })}
+                                        {row.symbol}
+                                    </span>
+                                    <span className="shiki-tokens">
+                                        {row.tokens ? (
+                                            <ShikiTokenSpans
+                                                tokens={row.tokens}
+                                            />
+                                        ) : (
+                                            row.code
+                                        )}
+                                    </span>
+                                </div>
+                            ))}
                         </code>
                     </pre>
                 </div>
@@ -296,8 +320,8 @@ export function CodeBlock({
     // --- code block with filename header ---
     if (filename) {
         return (
-            <div className="not-prose my-4 overflow-hidden rounded-lg border border-gray-700 bg-[#282c34]">
-                <div className="flex items-center justify-between border-b border-gray-700 bg-gray-800 px-4 py-2 font-mono text-sm text-gray-300">
+            <div className="not-prose my-4 overflow-hidden rounded-lg border border-border bg-white dark:bg-[#24292e]">
+                <div className="flex items-center justify-between border-b border-border bg-muted/40 px-4 py-2 font-mono text-sm text-foreground">
                     <span>{filename}</span>
                     <div className="flex gap-1">
                         {wrapToggleButton}
@@ -305,31 +329,17 @@ export function CodeBlock({
                     </div>
                 </div>
                 <pre
-                    className={`px-4 py-3 font-mono text-sm text-gray-300 ${wrap ? 'break-words whitespace-pre-wrap' : 'overflow-x-auto'}${className ? ` ${className}` : ''}`}
-                    style={{ background: '#282c34' }}
+                    className={`px-4 py-3 font-mono text-sm text-[#24292e] dark:text-[#e1e4e8] ${wrap ? 'break-words whitespace-pre-wrap' : 'overflow-x-auto'}`}
                     tabIndex={0}
                 >
                     <code
-                        className={
-                            highlightLang
-                                ? `language-${highlightLang}`
-                                : undefined
-                        }
-                        style={{ background: 'transparent' }}
-                        suppressHydrationWarning
-                        dangerouslySetInnerHTML={{
-                            __html:
-                                prismReady &&
-                                highlightLang &&
-                                Prism.languages[highlightLang]
-                                    ? Prism.highlight(
-                                          content,
-                                          Prism.languages[highlightLang],
-                                          highlightLang,
-                                      )
-                                    : escapeHtml(content),
-                        }}
-                    />
+                        className={`shiki-tokens${language ? ` language-${language}` : ''}`}
+                    >
+                        <HighlightedCode
+                            lines={highlightedLines}
+                            fallback={content}
+                        />
+                    </code>
                 </pre>
             </div>
         );
@@ -337,7 +347,7 @@ export function CodeBlock({
 
     // --- plain code block (existing behavior) ---
     return (
-        <div className="not-prose relative my-4 overflow-hidden rounded-lg border border-gray-700 bg-[#282c34]">
+        <div className="not-prose relative my-4 overflow-hidden rounded-lg border border-border bg-white dark:bg-[#24292e]">
             <div className="absolute top-2 right-2 flex gap-1">
                 <button
                     type="button"
@@ -347,7 +357,7 @@ export function CodeBlock({
                             ? 'Enable horizontal scrolling'
                             : 'Enable line wrapping'
                     }
-                    className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-200"
+                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     title={wrap ? 'Scroll' : 'Wrap'}
                 >
                     {wrap ? (
@@ -362,44 +372,24 @@ export function CodeBlock({
                     aria-label={
                         copied ? 'Copied code to clipboard' : 'Copy code'
                     }
-                    className="rounded p-1 text-gray-400 transition-colors hover:bg-gray-700 hover:text-gray-200"
+                    className="rounded p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                     title="Copy"
                 >
                     {copied ? <Check size={20} /> : <Copy size={20} />}
                 </button>
             </div>
             <pre
-                className={`px-4 py-3 pr-20 font-mono text-sm text-gray-300 ${wrap ? 'break-words whitespace-pre-wrap' : 'overflow-x-auto'}${className ? ` ${className}` : ''}`}
-                style={{ background: '#282c34' }}
+                className={`px-4 py-3 pr-20 font-mono text-sm text-[#24292e] dark:text-[#e1e4e8] ${wrap ? 'break-words whitespace-pre-wrap' : 'overflow-x-auto'}`}
                 tabIndex={0}
             >
                 <code
-                    className={
-                        highlightLang ? `language-${highlightLang}` : undefined
-                    }
-                    style={{
-                        background: 'transparent',
-                        ...(wrap
-                            ? {
-                                  whiteSpace: 'pre-wrap',
-                                  overflowWrap: 'break-word',
-                              }
-                            : {}),
-                    }}
-                    suppressHydrationWarning
-                    dangerouslySetInnerHTML={{
-                        __html:
-                            prismReady &&
-                            highlightLang &&
-                            Prism.languages[highlightLang]
-                                ? Prism.highlight(
-                                      content,
-                                      Prism.languages[highlightLang],
-                                      highlightLang,
-                                  )
-                                : escapeHtml(content),
-                    }}
-                />
+                    className={`shiki-tokens${language ? ` language-${language}` : ''}`}
+                >
+                    <HighlightedCode
+                        lines={highlightedLines}
+                        fallback={content}
+                    />
+                </code>
             </pre>
         </div>
     );
