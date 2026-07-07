@@ -35,7 +35,7 @@
         "unified": "^11.0.5"
     },
     "dependencies": {
-        "@catatsumuri/inkstream": "file:.tmp/catatsumuri-inkstream-0.0.0.tgz",
+        "@catatsumuri/inkstream": "git+https://github.com/catatsumuri/inkstream.git#be379c05f0cd88cb694c64d44ddd533e7ce59c80",
         "@dnd-kit/core": "^6.3.1",
         "@dnd-kit/sortable": "^10.0.0",
         "@dnd-kit/utilities": "^3.2.2",
