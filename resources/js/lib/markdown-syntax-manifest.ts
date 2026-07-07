@@ -1,3 +1,11 @@
+/**
+ * Frozen public syntax surface of the markdown renderer.
+ *
+ * Every list in this module is a compatibility contract for published
+ * content: additions are safe, renames and removals are breaking. Any change
+ * here must be mirrored in the deepEqual freeze test in
+ * tests-node/markdown/markdown-syntax.test.ts.
+ */
 export const MARKDOWN_DIRECTIVE_ATTRIBUTE_NAMES = [
     'title',
     'icon',
@@ -82,6 +90,19 @@ export const ZENN_MESSAGE_VARIANTS = [
 
 export const ZENN_EMBED_DIRECTIVES = ['card', 'github'] as const;
 
+/**
+ * GitHub blockquote alert markers (`> [!NOTE]` etc.) mapped onto the internal
+ * callout variants rendered by MessageBox. WARNING and CAUTION intentionally
+ * share the `alert` variant; there is no GitHub form for `check`.
+ */
+export const GITHUB_ALERT_VARIANTS = {
+    NOTE: 'note',
+    TIP: 'tip',
+    IMPORTANT: 'info',
+    WARNING: 'alert',
+    CAUTION: 'alert',
+} as const;
+
 export const MARKDOWN_CALLOUT_VARIANTS = [
     'note',
     'tip',
@@ -107,6 +128,20 @@ export const MARKDOWN_CUSTOM_COMPONENT_NAMES = [
     'tree',
 ] as const;
 
+/**
+ * Syntax the renderer intentionally does not support:
+ * - math: `$...$` / `$$...$$` render as literal text (no remark-math/KaTeX).
+ * - raw-html: raw HTML renders as escaped literal text (no rehype-raw).
+ * - frontmatter: leading `---` blocks are stripped at import time by
+ *   app/Services/SyncFileParser.php; the renderer treats them as plain
+ *   markdown.
+ */
+export const MARKDOWN_UNSUPPORTED_SYNTAX = [
+    'math',
+    'raw-html',
+    'frontmatter',
+] as const;
+
 export const MARKDOWN_SYNTAX_MANIFEST = {
     directiveAttributes: [...MARKDOWN_DIRECTIVE_ATTRIBUTE_NAMES],
     mintlify: {
@@ -120,6 +155,10 @@ export const MARKDOWN_SYNTAX_MANIFEST = {
         messageVariants: [...ZENN_MESSAGE_VARIANTS],
         embedDirectives: [...ZENN_EMBED_DIRECTIVES],
     },
+    github: {
+        alertVariants: { ...GITHUB_ALERT_VARIANTS },
+    },
     rendererComponents: [...MARKDOWN_CUSTOM_COMPONENT_NAMES],
     calloutVariants: [...MARKDOWN_CALLOUT_VARIANTS],
+    unsupported: [...MARKDOWN_UNSUPPORTED_SYNTAX],
 } as const;

@@ -42,6 +42,7 @@ import { remarkCodeGroupDirective } from '@/lib/remark-code-group-directive';
 import { remarkCodeMeta } from '@/lib/remark-code-meta';
 import { remarkFallbackDirective } from '@/lib/remark-fallback-directive';
 import { remarkFixUrlPorts } from '@/lib/remark-fix-url-ports';
+import { remarkGithubAlerts } from '@/lib/remark-github-alerts';
 import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
 import { remarkMark } from '@/lib/remark-mark';
 import { remarkQuizDirective } from '@/lib/remark-quiz-directive';
@@ -340,6 +341,7 @@ export default function MarkdownContent({
                     remarkDirective,
                     remarkFixUrlPorts,
                     remarkZennDirective,
+                    remarkGithubAlerts,
                     remarkAccordionGroupDirective,
                     remarkTabsDirective,
                     remarkCardDirective,

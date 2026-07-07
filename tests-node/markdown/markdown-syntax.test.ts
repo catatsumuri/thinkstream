@@ -265,6 +265,15 @@ test('markdown syntax manifest freezes the supported extension surface', () => {
             messageVariants: ['alert', 'note', 'tip', 'info', 'check'],
             embedDirectives: ['card', 'github'],
         },
+        github: {
+            alertVariants: {
+                NOTE: 'note',
+                TIP: 'tip',
+                IMPORTANT: 'info',
+                WARNING: 'alert',
+                CAUTION: 'alert',
+            },
+        },
         rendererComponents: [
             'tabs',
             'tab',
@@ -282,6 +291,7 @@ test('markdown syntax manifest freezes the supported extension surface', () => {
             'tree',
         ],
         calloutVariants: ['note', 'tip', 'info', 'alert', 'check'],
+        unsupported: ['math', 'raw-html', 'frontmatter'],
     });
 });
 

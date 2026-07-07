@@ -18,6 +18,9 @@
         "resources/js/lib/markdown-syntax.ts",
         "resources/js/lib/remark-tabs-directive.ts",
         "resources/js/lib/remark-card-directive.ts",
+        "resources/js/lib/remark-github-alerts.ts",
+        "resources/js/lib/remark-zenn-directive.ts",
+        "resources/js/lib/remark-fallback-directive.ts",
         "tests-node/**/*.ts"
     ]
 }

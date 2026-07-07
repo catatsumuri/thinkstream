@@ -566,6 +566,46 @@ The spec[^spec] describes the syntax. There are many implementations[^impl].
 
 ---
 
+## Alerts ✓ Renders here
+
+GitHub-style alerts turn a blockquote into a colored callout when its first line is a `[!TYPE]` marker on its own. Five types are supported.
+
+```
+> [!NOTE]
+> Useful information that users should know.
+
+> [!TIP]
+> Helpful advice for doing things better.
+
+> [!IMPORTANT]
+> Key information users need to achieve their goal.
+
+> [!WARNING]
+> Urgent info that needs immediate attention.
+
+> [!CAUTION]
+> Advises about risks or negative outcomes.
+```
+
+> [!NOTE]
+> Useful information that users should know.
+
+> [!TIP]
+> Helpful advice for doing things better.
+
+> [!IMPORTANT]
+> Key information users need to achieve their goal.
+
+> [!WARNING]
+> Urgent info that needs immediate attention.
+
+> [!CAUTION]
+> Advises about risks or negative outcomes.
+
+The marker must be alone on the first line — `> [!NOTE] text on the same line` stays a regular blockquote. Alerts share their styling with the `:::message` callouts described in [Zenn Syntax](/syntax/zenn-syntax).
+
+---
+
 ## Highlight ✗ Requires plugin
 
 The `==highlight==` syntax is **not** part of GFM. It requires a plugin such as `remark-mark-and-unmark`. Without it, the `==` delimiters are rendered as plain text.
