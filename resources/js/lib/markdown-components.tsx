@@ -1,3 +1,8 @@
+import {
+    extractRenderedHeadingText,
+    parseMarkdownImageMetadata,
+    slugify,
+} from '@catatsumuri/inkstream/syntax';
 import { Link as LinkIcon, Pencil } from 'lucide-react';
 import {
     Children,
@@ -10,9 +15,6 @@ import type { ComponentPropsWithoutRef, ReactNode } from 'react';
 import type { Components } from 'react-markdown';
 import { CodeBlock } from '@/components/code-block';
 import { MarkdownImage } from '@/components/markdown-image';
-import { extractRenderedHeadingText } from '@/lib/markdown-heading-text';
-import { parseMarkdownImageMetadata } from '@/lib/markdown-syntax';
-import { slugify } from '@/lib/slugify';
 import { cn } from '@/lib/utils';
 
 /**

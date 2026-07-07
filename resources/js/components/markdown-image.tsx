@@ -1,5 +1,5 @@
+import { parseMarkdownImageMetadata } from '@catatsumuri/inkstream/syntax';
 import type { ComponentPropsWithoutRef } from 'react';
-import { parseMarkdownImageMetadata } from '@/lib/markdown-syntax';
 import { cn } from '@/lib/utils';
 
 type MarkdownImageProps = ComponentPropsWithoutRef<'img'>;

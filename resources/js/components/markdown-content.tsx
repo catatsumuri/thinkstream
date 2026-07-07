@@ -1,3 +1,28 @@
+import {
+    createHeadingIdDispenser,
+    preprocessMarkdownContent,
+    preprocessMarkdownSyntax,
+    remarkAccordionGroupDirective,
+    remarkApiFieldsDirective,
+    remarkBadgeDirective,
+    remarkCardDirective,
+    remarkChartDirective,
+    remarkCodeGroupDirective,
+    remarkCodeMeta,
+    remarkFallbackDirective,
+    remarkFixUrlPorts,
+    remarkGithubAlerts,
+    remarkLinkifyToCard,
+    remarkMark,
+    remarkQuizDirective,
+    remarkStepsDirective,
+    remarkTabsDirective,
+    remarkTooltipDirective,
+    remarkTreeDirective,
+    remarkUpdateDirective,
+    remarkWikilinks,
+    remarkZennDirective,
+} from '@catatsumuri/inkstream/syntax';
 import { AlertTriangle, CircleCheck, Info, Lightbulb } from 'lucide-react';
 import { lazy, Suspense } from 'react';
 import type { Components } from 'react-markdown';
@@ -27,33 +52,8 @@ import { MarkdownTab, MarkdownTabs } from '@/components/markdown-tabs';
 import { MarkdownTooltip } from '@/components/markdown-tooltip';
 import { MarkdownTree } from '@/components/markdown-tree';
 import { MarkdownUpdate } from '@/components/markdown-update';
-import { HeadingIdContext } from '@/lib/markdown-components';
-import { createHeadingIdDispenser } from '@/lib/markdown-heading-ids';
-import {
-    preprocessMarkdownContent,
-    preprocessMarkdownSyntax,
-} from '@/lib/markdown-syntax';
-import { remarkApiFieldsDirective } from '@/lib/remark-api-fields-directive';
-import { remarkBadgeDirective } from '@/lib/remark-badge-directive';
-import { remarkCardDirective } from '@/lib/remark-card-directive';
-import { remarkChartDirective } from '@/lib/remark-chart-directive';
-import { remarkAccordionGroupDirective } from '@/lib/remark-accordion-group-directive';
-import { remarkCodeGroupDirective } from '@/lib/remark-code-group-directive';
-import { remarkCodeMeta } from '@/lib/remark-code-meta';
-import { remarkFallbackDirective } from '@/lib/remark-fallback-directive';
-import { remarkFixUrlPorts } from '@/lib/remark-fix-url-ports';
-import { remarkGithubAlerts } from '@/lib/remark-github-alerts';
-import { remarkLinkifyToCard } from '@/lib/remark-linkify-to-card';
-import { remarkMark } from '@/lib/remark-mark';
-import { remarkQuizDirective } from '@/lib/remark-quiz-directive';
-import { remarkStepsDirective } from '@/lib/remark-steps-directive';
-import { remarkTabsDirective } from '@/lib/remark-tabs-directive';
-import { remarkTooltipDirective } from '@/lib/remark-tooltip-directive';
-import { remarkTreeDirective } from '@/lib/remark-tree-directive';
-import { remarkUpdateDirective } from '@/lib/remark-update-directive';
-import { remarkWikilinks } from '@/lib/remark-wikilinks';
-import { remarkZennDirective } from '@/lib/remark-zenn-directive';
 import { Skeleton } from '@/components/ui/skeleton';
+import { HeadingIdContext } from '@/lib/markdown-components';
 import { cn } from '@/lib/utils';
 
 function MarkdownChartLoadFallback() {

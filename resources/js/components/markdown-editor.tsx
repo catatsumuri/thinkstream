@@ -1,3 +1,7 @@
+import {
+    normalizeMarkdownHeadingText,
+    slugify,
+} from '@catatsumuri/inkstream/syntax';
 import { router, usePage } from '@inertiajs/react';
 import { ArrowLeft, ArrowRight, Code2, Eye } from 'lucide-react';
 import {
@@ -14,9 +18,7 @@ import InputError from '@/components/input-error';
 import MarkdownContent from '@/components/markdown-content';
 import { Label } from '@/components/ui/label';
 import { createMarkdownComponents } from '@/lib/markdown-components';
-import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
 import { getMarkdownLinkPasteResult } from '@/lib/markdown-link-paste';
-import { slugify } from '@/lib/slugify';
 import { cn } from '@/lib/utils';
 
 export type MarkdownEditorRef = {

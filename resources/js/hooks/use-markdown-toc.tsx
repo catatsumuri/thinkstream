@@ -1,9 +1,9 @@
+import type { MarkdownHeading } from '@catatsumuri/inkstream/syntax';
+import { extractMarkdownHeadings } from '@catatsumuri/inkstream/syntax';
 import { useMemo } from 'react';
 import type { Components } from 'react-markdown';
 import { createMarkdownComponents } from '@/lib/markdown-components';
 import type { MarkdownComponentOptions } from '@/lib/markdown-components';
-import { extractMarkdownHeadings } from '@/lib/markdown-headings';
-import type { MarkdownHeading } from '@/lib/markdown-headings';
 
 export type Heading = MarkdownHeading;
 

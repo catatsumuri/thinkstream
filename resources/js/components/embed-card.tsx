@@ -1,7 +1,7 @@
+import { extractYoutubeVideoParameters } from '@catatsumuri/inkstream/syntax';
 import { ExternalLink } from 'lucide-react';
 import React from 'react';
 import { GithubEmbed } from '@/components/github-embed';
-import { extractYoutubeVideoParameters } from '@/lib/url-matcher';
 
 interface EmbedCardProps {
     url: string;

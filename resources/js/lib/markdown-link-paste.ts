@@ -1,4 +1,4 @@
-import { isAbsoluteUrl } from './markdown-syntax.js';
+import { isAbsoluteUrl } from '@catatsumuri/inkstream/syntax';
 
 type MarkdownLinkPasteInput = {
     currentValue: string;

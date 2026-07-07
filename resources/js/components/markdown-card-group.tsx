@@ -1,3 +1,4 @@
+import { sanitizeMarkdownCardHref } from '@catatsumuri/inkstream/syntax';
 import {
     AlertCircle,
     ArrowRight,
@@ -51,7 +52,6 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Icon } from '@/components/ui/icon';
-import { sanitizeMarkdownCardHref } from '@/lib/markdown-card-href';
 import type { SimpleIcon } from '@/lib/simple-icon-lookup';
 import { getSimpleIcon } from '@/lib/simple-icon-lookup';
 import { cn } from '@/lib/utils';

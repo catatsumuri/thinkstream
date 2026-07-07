@@ -1,3 +1,4 @@
+import { normalizeMarkdownHeadingText } from '@catatsumuri/inkstream/syntax';
 import {
     Form,
     Head,
@@ -45,7 +46,6 @@ import ViewContextBadge from '@/components/view-context-badge';
 import { useBelowDesktop } from '@/hooks/use-below-desktop';
 import { useCurrentUrl } from '@/hooks/use-current-url';
 import { useMarkdownToc } from '@/hooks/use-markdown-toc';
-import { normalizeMarkdownHeadingText } from '@/lib/markdown-heading-text';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import {

@@ -1,3 +1,4 @@
+import { getChartDomain, parseChart } from '@catatsumuri/inkstream/syntax';
 import { useEffect, useState } from 'react';
 import {
     Bar,
@@ -13,7 +14,6 @@ import {
     XAxis,
     YAxis,
 } from 'recharts';
-import { getChartDomain, parseChart } from '@/lib/markdown-chart';
 
 interface MarkdownChartProps {
     'data-chart'?: string;
