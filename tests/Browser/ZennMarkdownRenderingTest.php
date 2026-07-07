@@ -118,7 +118,7 @@ MARKDOWN,
         ->assertPresent('[data-test="details-block"]')
         ->assertPresent('[data-test="details-block"]:not(.not-prose)')
         ->assertPresent('[data-test="details-block"] summary.not-prose')
-        ->assertPresent('[data-test="details-block"] pre.text-gray-300')
+        ->assertPresent('[data-test="details-block"] pre.font-mono')
         ->assertSee('Show details');
 });
 
