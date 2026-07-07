@@ -1,6 +1,6 @@
+import { parseQuiz } from '@catatsumuri/inkstream/syntax';
 import { CircleCheck, CircleX } from 'lucide-react';
 import { useState } from 'react';
-import { parseQuiz } from '@/lib/markdown-quiz';
 import { cn } from '@/lib/utils';
 
 interface MarkdownQuizProps {

@@ -1,9 +1,9 @@
+import { parseGithubUrl } from '@catatsumuri/inkstream/syntax';
 import { ExternalLink, FileCode } from 'lucide-react';
 import React from 'react';
 import { ShikiTokenSpans } from '@/components/code-block';
 import { useShikiHighlighter } from '@/hooks/use-shiki-highlighter';
 import { tokenizeLines } from '@/lib/shiki';
-import { parseGithubUrl } from '@/lib/url-matcher';
 
 /** Maximum number of lines to display when no line range is specified. */
 const MAX_LINES = 200;

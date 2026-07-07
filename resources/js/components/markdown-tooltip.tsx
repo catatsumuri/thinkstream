@@ -1,10 +1,10 @@
+import { sanitizeMarkdownCardHref } from '@catatsumuri/inkstream/syntax';
 import type { ReactNode } from 'react';
 import {
     Tooltip,
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { sanitizeMarkdownCardHref } from '@/lib/markdown-card-href';
 
 interface MarkdownTooltipProps {
     'data-tooltip-tip'?: string;
