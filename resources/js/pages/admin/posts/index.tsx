@@ -67,6 +67,12 @@ type Namespace = {
     children: Namespace[];
 };
 
+type RawNamespace = Omit<Namespace, 'children'> & { children?: RawNamespace[] };
+
+function normalizeNamespace(raw: RawNamespace): Namespace {
+    return { ...raw, children: (raw.children ?? []).map(normalizeNamespace) };
+}
+
 type Sort = {
     column: string;
     direction: 'asc' | 'desc';
@@ -694,13 +700,15 @@ function ChildRow({
 }
 
 export default function Index({
-    namespaces: initialNamespaces,
+    namespaces: rawNamespaces,
     sort,
 }: {
-    namespaces: Namespace[];
+    namespaces: RawNamespace[];
     sort: Sort;
 }) {
-    const [namespaces, setNamespaces] = useState(initialNamespaces);
+    const [namespaces, setNamespaces] = useState(() =>
+        rawNamespaces.map(normalizeNamespace),
+    );
     const [reorderMode, setReorderMode] = useState(false);
     const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set());
 
@@ -722,8 +730,8 @@ export default function Index({
     }
 
     useEffect(() => {
-        setNamespaces(initialNamespaces);
-    }, [initialNamespaces]);
+        setNamespaces(rawNamespaces.map(normalizeNamespace));
+    }, [rawNamespaces]);
 
     const sensors = useSensors(
         useSensor(PointerSensor),
